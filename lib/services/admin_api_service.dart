@@ -1,0 +1,111 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'api_service.dart';
+
+class AdminApiService {
+  static const _baseUrl = 'https://assist-legislature-temporarily-trackbacks.trycloudflare.com';
+
+  Future<Map<String, String>> _authHeader() async {
+    final token = await ApiService().getToken();
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ${token ?? ''}',
+    };
+  }
+
+  Future<Map<String, dynamic>> getStats() async {
+    final res = await http.get(Uri.parse('$_baseUrl/api/admin/stats'), headers: await _authHeader());
+    if (res.statusCode != 200) throw ApiException('Failed to load stats');
+    return jsonDecode(res.body);
+  }
+
+  Future<List<dynamic>> getProducts() async {
+    final res = await http.get(Uri.parse('$_baseUrl/api/admin/products'), headers: await _authHeader());
+    if (res.statusCode != 200) throw ApiException('Failed to load products');
+    return jsonDecode(res.body);
+  }
+
+  Future<void> createProduct(Map<String, dynamic> data) async {
+    final res = await http.post(Uri.parse('$_baseUrl/api/admin/products'), headers: await _authHeader(), body: jsonEncode(data));
+    if (res.statusCode != 201) throw ApiException(jsonDecode(res.body)['detail'] ?? 'Failed to create product');
+  }
+
+  Future<void> updateProduct(String id, Map<String, dynamic> data) async {
+    final res = await http.put(Uri.parse('$_baseUrl/api/admin/products/$id'), headers: await _authHeader(), body: jsonEncode(data));
+    if (res.statusCode != 200) throw ApiException(jsonDecode(res.body)['detail'] ?? 'Failed to update product');
+  }
+
+  Future<void> deleteProduct(String id) async {
+    final res = await http.delete(Uri.parse('$_baseUrl/api/admin/products/$id'), headers: await _authHeader());
+    if (res.statusCode != 200) {
+      final msg = jsonDecode(res.body)['detail'] ?? 'Failed to delete product';
+      throw ApiException('$msg');
+    }
+  }
+
+  Future<List<dynamic>> getCategories() async {
+    final res = await http.get(Uri.parse('$_baseUrl/api/admin/categories'), headers: await _authHeader());
+    if (res.statusCode != 200) throw ApiException('Failed to load categories');
+    return jsonDecode(res.body);
+  }
+
+  Future<void> createCategory(Map<String, dynamic> data) async {
+    final res = await http.post(Uri.parse('$_baseUrl/api/admin/categories'), headers: await _authHeader(), body: jsonEncode(data));
+    if (res.statusCode != 201) throw ApiException(jsonDecode(res.body)['detail'] ?? 'Failed to create category');
+  }
+
+  Future<void> updateCategory(String id, Map<String, dynamic> data) async {
+    final res = await http.put(Uri.parse('$_baseUrl/api/admin/categories/$id'), headers: await _authHeader(), body: jsonEncode(data));
+    if (res.statusCode != 200) throw ApiException(jsonDecode(res.body)['detail'] ?? 'Failed to update category');
+  }
+
+  Future<void> deleteCategory(String id) async {
+    final res = await http.delete(Uri.parse('$_baseUrl/api/admin/categories/$id'), headers: await _authHeader());
+    if (res.statusCode != 200) {
+      final msg = jsonDecode(res.body)['detail'] ?? 'Failed to delete category';
+      throw ApiException('$msg');
+    }
+  }
+
+  Future<List<dynamic>> getOrders() async {
+    final res = await http.get(Uri.parse('$_baseUrl/api/admin/orders'), headers: await _authHeader());
+    if (res.statusCode != 200) throw ApiException('Failed to load orders');
+    return jsonDecode(res.body);
+  }
+
+  Future<void> updateOrderStatus(String orderId, String status) async {
+    final res = await http.put(Uri.parse('$_baseUrl/api/admin/orders/$orderId/status'), headers: await _authHeader(), body: jsonEncode({'status': status}));
+    if (res.statusCode != 200) throw ApiException(jsonDecode(res.body)['detail'] ?? 'Failed to update order');
+  }
+
+  Future<void> deleteOrder(String orderId) async {
+    final res = await http.delete(Uri.parse('$_baseUrl/api/admin/orders/$orderId'), headers: await _authHeader());
+    if (res.statusCode != 200) {
+      final msg = jsonDecode(res.body)['detail'] ?? 'Failed to delete order';
+      throw ApiException('$msg');
+    }
+  }
+
+  Future<List<dynamic>> getUsers() async {
+    final res = await http.get(Uri.parse('$_baseUrl/api/admin/users'), headers: await _authHeader());
+    if (res.statusCode != 200) throw ApiException('Failed to load users');
+    return jsonDecode(res.body);
+  }
+
+  Future<List<dynamic>> getDeliveryZones() async {
+    final res = await http.get(Uri.parse('$_baseUrl/api/admin/delivery-zones'), headers: await _authHeader());
+    if (res.statusCode != 200) throw ApiException('Failed to load delivery zones');
+    return jsonDecode(res.body);
+  }
+
+  Future<void> createDeliveryZone(String name, String geojsonData) async {
+    final res = await http.post(Uri.parse('$_baseUrl/api/admin/delivery-zone'), headers: await _authHeader(), body: jsonEncode({
+      'zone_name': name,
+      'geojson_data': geojsonData,
+    }));
+    if (res.statusCode != 201) {
+      final msg = jsonDecode(res.body)['detail'] ?? 'Failed to create zone';
+      throw ApiException('$msg');
+    }
+  }
+}
