@@ -20,10 +20,6 @@ from database import SessionLocal
 from models import TokenBlacklist
 from auth import decode_jwt
 
-from dotenv import load_dotenv
-
-load_dotenv()
-
 RATE_LIMIT_MAX_ATTEMPTS = int(os.getenv("RATE_LIMIT_MAX_ATTEMPTS", "10"))
 RATE_LIMIT_WINDOW_SECONDS = int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "60"))
 RATE_LIMIT_BLOCK_MINUTES = int(os.getenv("RATE_LIMIT_BLOCK_MINUTES", "5"))

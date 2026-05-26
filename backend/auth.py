@@ -20,9 +20,7 @@ from database import get_db
 from models import User, TokenBlacklist
 from schemas import RegisterRequest, LoginRequest, LogoutRequest
 
-from dotenv import load_dotenv
 
-load_dotenv()
 
 JWT_SECRET = os.getenv("JWT_SECRET")
 JWT_EXPIRY_MINUTES = int(os.getenv("JWT_EXPIRY_MINUTES", "30"))
