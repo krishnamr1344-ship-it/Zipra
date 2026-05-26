@@ -19,7 +19,6 @@ from datetime import datetime, timezone
 import bcrypt
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -30,8 +29,6 @@ from resources import router as resources_router
 from admin import router as admin_router
 from models import Category, Product, ProductImage, User
 import supabase_db
-
-load_dotenv()
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
