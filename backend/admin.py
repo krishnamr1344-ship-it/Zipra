@@ -63,7 +63,7 @@ def list_products(request: Request, db: Session = Depends(get_db)):
             category_name=p.category.name if p.category else None,
             name=p.name, description=p.description,
             price=float(p.price), unit=p.unit,
-            images=[img.image_url for img in p.images],
+            images=[img.image_url for img in p.images if not img.is_deleted],
             stock=p.stock,
         ) for p in products
     ]
@@ -92,7 +92,7 @@ def create_product(body: ProductCreate, request: Request, db: Session = Depends(
         category_name=cat.name,
         name=product.name, description=product.description,
         price=float(product.price), unit=product.unit,
-        images=[img.image_url for img in product.images],
+        images=[img.image_url for img in product.images if not img.is_deleted],
         stock=product.stock,
     )
 
@@ -124,7 +124,7 @@ def update_product(product_id: str, body: ProductCreate, request: Request, db: S
         category_name=cat.name,
         name=product.name, description=product.description,
         price=float(product.price), unit=product.unit,
-        images=[img.image_url for img in product.images],
+        images=[img.image_url for img in product.images if not img.is_deleted],
         stock=product.stock,
     )
 

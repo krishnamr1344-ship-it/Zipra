@@ -181,7 +181,7 @@ def list_products(category_id: Optional[str] = None, db: Session = Depends(get_d
             description=p.description,
             price=float(p.price),
             unit=p.unit,
-            images=[img.image_url for img in p.images],
+            images=[img.image_url for img in p.images if not img.is_deleted],
             stock=p.stock,
         ))
     return result
@@ -200,7 +200,7 @@ def get_product(product_id: str, db: Session = Depends(get_db)):
         description=p.description,
         price=float(p.price),
         unit=p.unit,
-        images=[img.image_url for img in p.images],
+        images=[img.image_url for img in p.images if not img.is_deleted],
         stock=p.stock,
     )
 
