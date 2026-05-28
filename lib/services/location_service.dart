@@ -44,9 +44,14 @@ class LocationService {
     }
 
     try {
-      Position position = await Geolocator.getCurrentPosition(
+      Position? position;
+      try {
+        position = await Geolocator.getLastKnownPosition();
+      } catch (_) {}
+      position ??= await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 8),
         ),
       );
       return LocationResult(

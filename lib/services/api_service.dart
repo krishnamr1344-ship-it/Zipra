@@ -19,7 +19,7 @@ final _initSsl = () {
 }();
 
 class ApiService {
-  static const _baseUrl = 'https://assist-legislature-temporarily-trackbacks.trycloudflare.com';
+  static const _baseUrl = 'https://delivery-app-api-16t0.onrender.com';
   static const _tokenKey = 'auth_token';
 
   // ─── Token Management ──────────────────────────────────────────
@@ -136,45 +136,48 @@ class ApiService {
     await _clearToken();
   }
 
+  Future<Map<String, String>> _authHeaders({bool required = false}) async {
+    final token = await getToken();
+    if (token == null && required) throw ApiException('Login required');
+    return {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+  }
+
   // ─── Addresses ──────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> createGpsAddress(double latitude, double longitude, {String? landmark}) async {
-    final token = await getToken();
+    final headers = await _authHeaders();
+    if (headers['Authorization'] == null) {
+      return {'id': '', 'address_line1': '', 'address_line2': '', 'city': '', 'latitude': latitude.toString(), 'longitude': longitude.toString()};
+    }
     final bodyMap = <String, dynamic>{'latitude': latitude, 'longitude': longitude};
     if (landmark != null && landmark.isNotEmpty) bodyMap['landmark'] = landmark;
-    final res = await http.post(
-      Uri.parse('$_baseUrl/api/addresses/auto'),
-      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
-      body: jsonEncode(bodyMap),
-    );
+    final res = await http.post(Uri.parse('$_baseUrl/api/addresses/auto'), headers: headers, body: jsonEncode(bodyMap));
     return _handleResponse(res);
   }
 
   Future<Map<String, dynamic>> createAddress(Map<String, dynamic> data) async {
-    final token = await getToken();
-    final res = await http.post(
-      Uri.parse('$_baseUrl/api/addresses'),
-      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
-      body: jsonEncode(data),
-    );
+    final headers = await _authHeaders();
+    if (headers['Authorization'] == null) {
+      return {'id': '', 'address_line1': data['address_line1'] ?? ''};
+    }
+    final res = await http.post(Uri.parse('$_baseUrl/api/addresses'), headers: headers, body: jsonEncode(data));
     return _handleResponse(res);
   }
 
   Future<List<dynamic>> getAddresses() async {
-    final token = await getToken();
-    final res = await http.get(
-      Uri.parse('$_baseUrl/api/addresses'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
+    final headers = await _authHeaders();
+    if (headers['Authorization'] == null) return [];
+    final res = await http.get(Uri.parse('$_baseUrl/api/addresses'), headers: headers);
     return _handleListResponse(res);
   }
 
   Future<void> deleteAddress(String addressId) async {
-    final token = await getToken();
-    final res = await http.delete(
-      Uri.parse('$_baseUrl/api/addresses/$addressId'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
+    final headers = await _authHeaders();
+    if (headers['Authorization'] == null) throw ApiException('Login required');
+    final res = await http.delete(Uri.parse('$_baseUrl/api/addresses/$addressId'), headers: headers);
     if (res.statusCode != 200) {
       debugPrint('API Error ${res.statusCode}: ${res.body}');
       throw ApiException(_tryDecodeDetail(res.body) ?? 'Failed to delete address');
@@ -182,20 +185,17 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> updateAddress(String addressId, Map<String, dynamic> data) async {
-    final token = await getToken();
-    final res = await http.put(
-      Uri.parse('$_baseUrl/api/addresses/$addressId'),
-      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
-      body: jsonEncode(data),
-    );
+    final headers = await _authHeaders();
+    if (headers['Authorization'] == null) throw ApiException('Login required');
+    final res = await http.put(Uri.parse('$_baseUrl/api/addresses/$addressId'), headers: headers, body: jsonEncode(data));
     return _handleResponse(res);
   }
 
   Future<List<dynamic>> searchPlaces(String query) async {
-    final token = await getToken();
+    final headers = await _authHeaders();
     final res = await http.get(
       Uri.parse('$_baseUrl/api/places/search?q=${Uri.encodeQueryComponent(query)}'),
-      headers: {'Authorization': 'Bearer $token'},
+      headers: headers,
     );
     if (res.statusCode != 200) {
       debugPrint('API Error ${res.statusCode}: ${res.body}');
@@ -207,46 +207,32 @@ class ApiService {
   // ─── Products & Categories (user-facing) ───────────────────────
 
   Future<List<dynamic>> getCategories() async {
-    final token = await getToken();
-    final res = await http.get(
-      Uri.parse('$_baseUrl/api/categories'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
+    final headers = await _authHeaders();
+    final res = await http.get(Uri.parse('$_baseUrl/api/categories'), headers: headers);
     return _handleListResponse(res);
   }
 
   Future<List<dynamic>> getProducts() async {
-    final token = await getToken();
-    final res = await http.get(
-      Uri.parse('$_baseUrl/api/products'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
+    final headers = await _authHeaders();
+    final res = await http.get(Uri.parse('$_baseUrl/api/products'), headers: headers);
     return _handleListResponse(res);
   }
 
   Future<Map<String, dynamic>> createOrder(List<Map<String, dynamic>> items, String paymentMethod, {String? addressId}) async {
-    final token = await getToken();
+    final headers = await _authHeaders(required: true);
     final bodyMap = <String, dynamic>{
       'items': items,
       'payment_method': paymentMethod,
     };
-    if (addressId != null) {
-      bodyMap['address_id'] = addressId;
-    }
-    final res = await http.post(
-      Uri.parse('$_baseUrl/api/orders/direct'),
-      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
-      body: jsonEncode(bodyMap),
-    );
+    if (addressId != null) bodyMap['address_id'] = addressId;
+    final res = await http.post(Uri.parse('$_baseUrl/api/orders/direct'), headers: headers, body: jsonEncode(bodyMap));
     return _handleResponse(res);
   }
 
   Future<List<dynamic>> getOrders() async {
-    final token = await getToken();
-    final res = await http.get(
-      Uri.parse('$_baseUrl/api/orders'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
+    final headers = await _authHeaders();
+    if (headers['Authorization'] == null) return [];
+    final res = await http.get(Uri.parse('$_baseUrl/api/orders'), headers: headers);
     return _handleListResponse(res);
   }
 }

@@ -1,8 +1,13 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../services/location_service.dart';
 import '../services/delivery_zone_service.dart';
 import '../models/cart_model.dart';
+import '../models/grocery_product.dart';
+import '../widgets/product_grid.dart';
 import 'login_page.dart';
 import 'cart_page.dart';
 import 'wishlist_page.dart';
@@ -79,8 +84,53 @@ class _HomePageState extends State<HomePage> {
         setState(() { _serviceable = result.serviceable; _zoneChecked = true; });
       }
     } else {
-      setState(() { _locationArea = 'Your Area'; _locationDetail = ''; _zoneChecked = true; });
+      _detectCurrentLocation();
     }
+  }
+
+  Future<void> _detectCurrentLocation() async {
+    setState(() { _locationArea = 'Detecting...'; _locationDetail = ''; });
+    final loc = await LocationService().getCurrentLocation();
+    if (!mounted) return;
+    if (loc.error != null) {
+      setState(() { _locationArea = 'Your Area'; _locationDetail = ''; _zoneChecked = true; });
+      return;
+    }
+    try {
+      final resp = await http.get(
+        Uri.parse('https://nominatim.openstreetmap.org/reverse?lat=${loc.latitude}&lon=${loc.longitude}&format=json&addressdetails=1'),
+        headers: {'User-Agent': 'DeliveryApp/1.0'},
+      );
+      if (!mounted) return;
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        final a = data['address'] as Map<String, dynamic>?;
+        if (a != null) {
+          final road = a['road'] ?? '';
+          final house = a['house_number'] ?? '';
+          final area_raw = a['suburb'] ?? a['city_district'] ?? '';
+          final area = area_raw.replaceAll(RegExp(r'^Zone\s+\d+\s*', caseSensitive: false), '').trim();
+          final city_raw = a['city'] ?? a['town'] ?? a['village'] ?? a['county'] ?? '';
+          final city = city_raw.replaceAll(RegExp(r'\s+(Corporation|Municipal|Municipality|Municipal\s+Corporation)\s*$', caseSensitive: false), '').trim();
+          final parts = <String>[];
+          if (road.isNotEmpty) parts.add(road);
+          if (house.isNotEmpty) parts.add(house);
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('gps_address_line', parts.isNotEmpty ? parts.join(', ') : (data['display_name'] ?? ''));
+          await prefs.setString('gps_address_line2', area.isNotEmpty && city.isNotEmpty ? '$area, $city' : area);
+          await prefs.setString('gps_city', city);
+          await prefs.setString('gps_latitude', '${loc.latitude}');
+          await prefs.setString('gps_longitude', '${loc.longitude}');
+          if (mounted) setState(() {
+            _locationArea = area.isNotEmpty && city.isNotEmpty ? '$area, $city' : city.isNotEmpty ? city : 'Your Area';
+            _locationDetail = parts.isNotEmpty ? parts.join(', ') : (data['display_name'] ?? '');
+          });
+        }
+      }
+    } catch (_) {
+      if (mounted) setState(() { _locationArea = 'Your Area'; _locationDetail = ''; });
+    }
+    if (mounted) setState(() => _zoneChecked = true);
   }
 
   List<_ProductData> get _filteredProducts {
@@ -125,6 +175,13 @@ class _HomePageState extends State<HomePage> {
     final userData = await _api.getSavedUser();
     if (!mounted) return;
     setState(() => _user = userData);
+  }
+
+  Future<bool> _requireLogin() async {
+    final token = await _api.getToken();
+    if (token != null) return true;
+    final loggedIn = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => const LoginPage()));
+    return loggedIn == true;
   }
 
   Future<void> _logout() async {
@@ -176,7 +233,17 @@ class _HomePageState extends State<HomePage> {
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: BottomNavigationBar(
               currentIndex: _selectedIndex,
-              onTap: (i) => setState(() => _selectedIndex = i),
+              onTap: (i) async {
+                if (i >= 3) {
+                  final token = await _api.getToken();
+                  if (token == null) {
+                    final loggedIn = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => const LoginPage()));
+                    if (loggedIn != true) return;
+                    await _loadProfile();
+                  }
+                }
+                setState(() => _selectedIndex = i);
+              },
               backgroundColor: Colors.transparent,
               elevation: 0,
               selectedItemColor: const Color(0xFF6C63FF),
@@ -465,8 +532,24 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(_selectedCategory == 'All' ? 'Featured Products' : _selectedCategory, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1A1A2E))),
-            const SizedBox(height: 12),
+            Row(
+              children: [
+                Container(
+                  width: 4, height: 20,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4CAF50),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(_selectedCategory == 'All' ? 'Featured Products' : _selectedCategory,
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1A1A2E))),
+                const Spacer(),
+                Text('${products.length} items',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
+              ],
+            ),
+            const SizedBox(height: 14),
             if (_zoneChecked && !_serviceable)
               Container(
                 padding: const EdgeInsets.all(20),
@@ -501,36 +584,40 @@ class _HomePageState extends State<HomePage> {
                 child: Center(child: Text('No products in this category', style: TextStyle(color: Color(0xFF9E9E9E)))),
               )
             else
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  childAspectRatio: 0.72,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                ),
-                itemCount: products.length,
-                itemBuilder: (_, i) {
-                  final p = products[i];
+              ProductGrid(
+                products: products.map((p) => _toGroceryProduct(p)).toList(),
+                cartMap: {for (final p in products) p.id.hashCode: cartNotifier.items.any((e) => e.name == p.name)},
+                favMap: {for (final p in products) p.name: wishlistNotifier.contains(p.name)},
+                getImages: (gp) {
+                  final p = products.firstWhere((e) => e.name == gp.name);
+                  return p.images;
+                },
+                onAdd: (gp) async {
+                  final p = products.firstWhere((e) => e.name == gp.name);
+                  if (!await _requireLogin()) return;
+                  if (!mounted) return;
+                  cartNotifier.add(CartItem(name: p.name, qty: p.qty, price: p.price, icon: p.icon, color: const Color(0xFF4CAF50), productId: p.id));
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text('${p.name} added'),
+                    duration: const Duration(seconds: 1),
+                    backgroundColor: const Color(0xFF4CAF50),
+                  ));
+                },
+                onFav: (gp) => wishlistNotifier.toggle(gp.name),
+                onTap: (gp) {
+                  final p = products.firstWhere((e) => e.name == gp.name);
                   final count = cartNotifier.items.where((e) => e.name == p.name).firstOrNull?.count ?? 0;
-                  final isFav = wishlistNotifier.contains(p.name);
-                  return _ProductCard(
-                    icon: p.icon, name: p.name, price: p.price, images: p.images,
-                    isFav: isFav, inCart: count > 0,
-                    onAdd: () {
-                      cartNotifier.add(CartItem(name: p.name, qty: p.qty, price: p.price, icon: p.icon, color: const Color(0xFF4CAF50), productId: p.id));
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${p.name} added'), duration: const Duration(seconds: 1), backgroundColor: const Color(0xFF4CAF50)));
-                    },
-                    onFav: () => wishlistNotifier.toggle(p.name),
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProductDetailPage(
+                  Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => ProductDetailPage(
                       icon: p.icon, color: const Color(0xFF4CAF50), name: p.name, price: p.price, qty: p.qty, images: p.images,
                       inCart: count > 0,
-                      onAdd: () {
+                      onAdd: () async {
+                        if (!await _requireLogin()) return;
+                        if (!mounted) return;
                         cartNotifier.add(CartItem(name: p.name, qty: p.qty, price: p.price, icon: p.icon, color: const Color(0xFF4CAF50), productId: p.id));
                       },
-                    ))),
-                  );
+                    ),
+                  ));
                 },
               ),
           ],
@@ -699,6 +786,40 @@ class _ProductData {
   const _ProductData(this.id, this.icon, this.name, this.price, this.qty, this.category, this.images);
 }
 
+String _emojiFor(String name) {
+  final n = name.toLowerCase();
+  if (n.contains('rice')) return '🍚';
+  if (n.contains('milk') || n.contains('curd') || n.contains('paneer') || n.contains('cheese') || n.contains('butter') || n.contains('ghee'))
+    return '🥛';
+  if (n.contains('coffee') || n.contains('boost') || n.contains('horlicks') || n.contains('tea')) return '☕';
+  if (n.contains('biscuit') || n.contains('cookie')) return '🍪';
+  if (n.contains('chip') || n.contains('popcorn') || n.contains('noodle')) return '🍿';
+  if (n.contains('banana') || n.contains('apple') || n.contains('fruit')) return '🍌';
+  if (n.contains('notebook') || n.contains('pen') || n.contains('pencil')) return '📝';
+  return '🛒';
+}
+
+Color _colorFor(String category) {
+  final c = category.toLowerCase();
+  if (c.contains('rice')) return const Color(0xFFEFF6FF);
+  if (c.contains('dairy')) return const Color(0xFFF0FDF4);
+  if (c.contains('beverage')) return const Color(0xFFFFF3EA);
+  if (c.contains('snack')) return const Color(0xFFFFFBEB);
+  if (c.contains('stationery')) return const Color(0xFFF5F3FF);
+  return const Color(0xFFFFF3EA);
+}
+
+GroceryProduct _toGroceryProduct(_ProductData p) {
+  return GroceryProduct(
+    id: p.id.hashCode,
+    name: p.name,
+    weight: p.qty,
+    price: p.price.toDouble(),
+    emoji: _emojiFor(p.name),
+    imageBg: _colorFor(p.category),
+  );
+}
+
 Widget _placeholder(String letter, Color color) {
   return Container(
     alignment: Alignment.center,
@@ -744,65 +865,115 @@ class _ProductCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(18),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 12, offset: const Offset(0, 3)),
+            BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 14, offset: const Offset(0, 4)),
           ],
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
-              children: [
-                Stack(
-                  children: [
-                    Container(
-                      height: 65,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: color.withAlpha(25),
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: images.isNotEmpty && images[0].startsWith('http')
-                          ? Image.network(images[0], fit: BoxFit.cover, width: double.infinity, height: 65, errorBuilder: (_, __, ___) => _placeholder(name[0], color))
-                          : _placeholder(name[0], color),
-                    ),
-                    Positioned(
-                      top: 2,
-                      right: 2,
-                      child: GestureDetector(
-                        onTap: onFav,
-                        child: Container(
-                          padding: const EdgeInsets.all(3),
-                          decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
-                          child: Icon(isFav ? Icons.favorite : Icons.favorite_outline, size: 12, color: isFav ? Colors.red : const Color(0xFFBDBDBD)),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+          children: [
             Expanded(
+              flex: 5,
+              child: Stack(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [color.withAlpha(20), color.withAlpha(40)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: images.isNotEmpty && images[0].startsWith('http')
+                        ? Image.network(images[0], fit: BoxFit.cover, width: double.infinity, height: double.infinity, errorBuilder: (_, __, ___) => _placeholder(name[0], color))
+                        : _placeholder(name[0], color),
+                  ),
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: GestureDetector(
+                      onTap: onFav,
+                      child: Container(
+                        padding: const EdgeInsets.all(5),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withValues(alpha: 0.9),
+                          boxShadow: [
+                            BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 6),
+                          ],
+                        ),
+                        child: Icon(isFav ? Icons.favorite : Icons.favorite_border, size: 16, color: isFav ? Colors.red : Colors.grey.shade400),
+                      ),
+                    ),
+                  ),
+                  if (inCart)
+                    Positioned(
+                      top: 6,
+                      left: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: color,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text('In Cart', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white)),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Expanded(
+              flex: 4,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(5, 4, 5, 5),
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 10, color: Color(0xFF1A1A2E)), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    const SizedBox(height: 1),
-                    Text('₹$price', style: const TextStyle(color: Color(0xFF6C63FF), fontWeight: FontWeight.bold, fontSize: 12)),
+                    SizedBox(
+                      height: 22,
+                      child: Text(
+                        name,
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF1A1A2E)),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Text(
+                          '₹',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey.shade500),
+                        ),
+                        Text(
+                          '$price',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF1A1A2E)),
+                        ),
+                      ],
+                    ),
                     const Spacer(),
                     SizedBox(
                       width: double.infinity,
-                      height: 24,
+                      height: 32,
                       child: ElevatedButton(
                         onPressed: onAdd,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: inCart ? color.withValues(alpha: 0.15) : color,
+                          backgroundColor: inCart ? color.withValues(alpha: 0.12) : color,
                           foregroundColor: inCart ? color : Colors.white,
                           elevation: 0,
                           padding: EdgeInsets.zero,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
-                        child: Text(inCart ? 'Added' : 'Add', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(inCart ? Icons.check : Icons.add, size: 16),
+                            const SizedBox(width: 4),
+                            Text(inCart ? 'Added' : 'Add', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                          ],
+                        ),
                       ),
                     ),
                   ],

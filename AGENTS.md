@@ -38,7 +38,7 @@ Implement Zepto/Swiggy/Blinkit-style GPS delivery location system with editable 
 - Fixed MainActivity class path for release builds
 
 ### In Progress
-- Deploy backend to Render.com (GitHub repo: selvaabi5555/delivery-app)
+- (none)
 
 ### Known Issues
 - ⚠️ trycloudflare tunnel URL is EPHEMERAL — changes every time cloudflared restarts. Need a permanent domain before Play Store publish.

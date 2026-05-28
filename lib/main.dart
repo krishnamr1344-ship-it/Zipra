@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'pages/login_page.dart';
 import 'pages/home_page.dart';
 import 'pages/admin_home_page.dart';
 import 'services/api_service.dart';
@@ -106,7 +105,7 @@ class _AppEntryState extends State<_AppEntry> {
       }
     } else {
       if (mounted) {
-        setState(() => _startPage = const LoginPage());
+        setState(() => _startPage = const HomePage());
       }
     }
   }
