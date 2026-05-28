@@ -856,8 +856,7 @@ def _pack_to_response(pack: ComboPack) -> dict:
 
 
 @router.get("/combo-packs")
-def list_combo_packs(request: Request, db: Session = Depends(get_db)):
-    _get_user_id(request)
+def list_combo_packs(db: Session = Depends(get_db)):
     packs = db.query(ComboPack).filter(
         ComboPack.is_deleted == False,
         ComboPack.is_enabled == True,
