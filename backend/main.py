@@ -61,6 +61,78 @@ app.include_router(resources_router)
 app.include_router(admin_router)
 
 
+def _seed_combo_packs(db: Session):
+    """Seed sample combo packs if none exist."""
+    if db.query(ComboPack).count() > 0:
+        return
+    products_map = {p.name.lower(): p for p in db.query(Product).filter(Product.is_deleted == False).all()}
+
+    def _p(name):
+        return products_map.get(name.lower())
+
+    packs_data = [
+        {
+            "name": "Family Pack",
+            "description": "Everything your family needs for a week",
+            "total_price": Decimal("1499.00"),
+            "discount_label": "25% OFF",
+            "savings_text": "Save ₹500",
+            "items": [
+                (_p("Milk"), 5), (_p("Bread"), 2), (_p("Eggs"), 2),
+                (_p("Butter"), 1), (_p("Juice"), 2),
+            ],
+        },
+        {
+            "name": "PG / Hostel Pack",
+            "description": "Perfect for students & bachelors",
+            "total_price": Decimal("599.00"),
+            "discount_label": "15% OFF",
+            "savings_text": "Save ₹100",
+            "items": [
+                (_p("Milk"), 2), (_p("Bread"), 1), (_p("Eggs"), 1),
+                (_p("Chips"), 3), (_p("Soda"), 3),
+            ],
+        },
+        {
+            "name": "Small Hotel Pack",
+            "description": "Essential supplies for small eateries",
+            "total_price": Decimal("2499.00"),
+            "discount_label": "30% OFF",
+            "savings_text": "Save ₹750",
+            "items": [
+                (_p("Milk"), 3), (_p("Butter"), 2), (_p("Bread"), 3),
+                (_p("Eggs"), 5), (_p("Chicken"), 3),
+            ],
+        },
+        {
+            "name": "Tea Shop Pack",
+            "description": "Keep your chai shop running smoothly",
+            "total_price": Decimal("899.00"),
+            "discount_label": "20% OFF",
+            "savings_text": "Save ₹200",
+            "items": [
+                (_p("Milk"), 10), (_p("Cookies"), 5),
+            ],
+        },
+    ]
+    for pd in packs_data:
+        items = [(p, q) for p, q in pd["items"] if p is not None]
+        if len(items) < 1:
+            continue
+        pack = ComboPack(
+            name=pd["name"],
+            description=pd.get("description"),
+            total_price=pd["total_price"],
+            discount_label=pd.get("discount_label"),
+            savings_text=pd.get("savings_text"),
+        )
+        db.add(pack)
+        db.flush()
+        for prod, qty in items:
+            db.add(ComboPackItem(pack_id=pack.id, product_id=prod.id, quantity=qty))
+    db.commit()
+
+
 def _seed_data():
     """Populate categories, products, and admin user on first run."""
     db: Session = SessionLocal()
@@ -89,6 +161,9 @@ def _seed_data():
             db.commit()
 
         if db.query(Category).count() > 0:
+            # Categories exist — only seed combo packs if needed
+            if db.query(ComboPack).count() == 0:
+                _seed_combo_packs(db)
             return
 
         fruits = Category(id=uuid.uuid4(), name="Fruits", description="Fresh fruits", image="🍎")
@@ -141,74 +216,8 @@ def _seed_data():
                 db.add(ProductImage(product_id=p.id, image_url=f"https://picsum.photos/seed/{seed}{i}/400/400", sort_order=i))
         db.commit()
 
-        # Seed sample combo packs if none exist
-        if db.query(ComboPack).count() == 0:
-            products_map = {p.name.lower(): p for p in db.query(Product).filter(Product.is_deleted == False).all()}
-
-            def _p(name):
-                return products_map.get(name.lower())
-
-            packs_data = [
-                {
-                    "name": "Family Pack",
-                    "description": "Everything your family needs for a week",
-                    "total_price": Decimal("1499.00"),
-                    "discount_label": "25% OFF",
-                    "savings_text": "Save ₹500",
-                    "items": [
-                        (_p("Milk"), 5), (_p("Bread"), 2), (_p("Eggs"), 2),
-                        (_p("Butter"), 1), (_p("Juice"), 2),
-                    ],
-                },
-                {
-                    "name": "PG / Hostel Pack",
-                    "description": "Perfect for students & bachelors",
-                    "total_price": Decimal("599.00"),
-                    "discount_label": "15% OFF",
-                    "savings_text": "Save ₹100",
-                    "items": [
-                        (_p("Milk"), 2), (_p("Bread"), 1), (_p("Eggs"), 1),
-                        (_p("Chips"), 3), (_p("Soda"), 3),
-                    ],
-                },
-                {
-                    "name": "Small Hotel Pack",
-                    "description": "Essential supplies for small eateries",
-                    "total_price": Decimal("2499.00"),
-                    "discount_label": "30% OFF",
-                    "savings_text": "Save ₹750",
-                    "items": [
-                        (_p("Milk"), 3), (_p("Butter"), 2), (_p("Bread"), 3),
-                        (_p("Eggs"), 5), (_p("Chicken"), 3),
-                    ],
-                },
-                {
-                    "name": "Tea Shop Pack",
-                    "description": "Keep your chai shop running smoothly",
-                    "total_price": Decimal("899.00"),
-                    "discount_label": "20% OFF",
-                    "savings_text": "Save ₹200",
-                    "items": [
-                        (_p("Milk"), 10), (_p("Cookies"), 5),
-                    ],
-                },
-            ]
-            for pd in packs_data:
-                items = [(p, q) for p, q in pd["items"] if p is not None]
-                if len(items) < 1:
-                    continue
-                pack = ComboPack(
-                    name=pd["name"],
-                    description=pd.get("description"),
-                    total_price=pd["total_price"],
-                    discount_label=pd.get("discount_label"),
-                    savings_text=pd.get("savings_text"),
-                )
-                db.add(pack)
-                db.flush()
-                for prod, qty in items:
-                    db.add(ComboPackItem(pack_id=pack.id, product_id=prod.id, quantity=qty))
-            db.commit()
+        # Seed combo packs
+        _seed_combo_packs(db)
     finally:
         db.close()
 
