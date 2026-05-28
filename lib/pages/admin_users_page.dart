@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/theme.dart';
 import '../services/admin_api_service.dart';
 
 class AdminUsersPage extends StatefulWidget {
@@ -60,11 +61,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
             backgroundColor: primary,
             flexibleSpace: Container(
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [primary, primary.withAlpha(180), const Color(0xFF1A1A2E)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                gradient: AppColors.adminHeaderGradient,
               ),
               child: SafeArea(
                 bottom: false,

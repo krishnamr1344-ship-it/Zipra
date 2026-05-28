@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/theme.dart';
 import '../services/api_service.dart';
 
 class EditProfilePage extends StatefulWidget {
@@ -46,13 +47,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
   InputDecoration _fieldStyle(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
-      labelStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14, fontWeight: FontWeight.w500),
-      floatingLabelStyle: const TextStyle(color: Color(0xFF6C63FF), fontWeight: FontWeight.w600),
-      prefixIcon: Icon(icon, size: 20, color: Colors.grey.shade400),
+      labelStyle: TextStyle(color: AppColors.textSecondary, fontSize: 14, fontWeight: FontWeight.w500),
+      floatingLabelStyle: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
+      prefixIcon: Icon(icon, size: 20, color: AppColors.textHint),
       prefixIconConstraints: const BoxConstraints(minWidth: 40),
-      border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey.shade300)),
-      enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey.shade200)),
-      focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF6C63FF), width: 2)),
+      border: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.textHint)),
+      enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.divider)),
+      focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary, width: 2)),
       contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 20),
     );
   }
@@ -68,17 +69,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F7FF),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Edit Profile', style: TextStyle(color: Colors.white)),
         centerTitle: true,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF6C63FF), Color(0xFF8B83FF)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            gradient: AppColors.appBarGradient,
           ),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
@@ -93,16 +90,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
-                boxShadow: [BoxShadow(color: const Color(0xFF6C63FF).withValues(alpha: 0.06), blurRadius: 24, offset: const Offset(0, 8))],
+                boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.06), blurRadius: 24, offset: const Offset(0, 8))],
               ),
               child: Column(
                 children: [
                   CircleAvatar(
                     radius: 44,
-                    backgroundColor: const Color(0xFF6C63FF).withValues(alpha: 0.1),
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                     child: CircleAvatar(
                       radius: 40,
-                      backgroundColor: const Color(0xFF6C63FF),
+                        backgroundColor: AppColors.primary,
                       child: Text(
                         (_nameCtl.text.isNotEmpty ? _nameCtl.text[0] : 'U').toUpperCase(),
                         style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
@@ -135,7 +132,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     child: ElevatedButton(
                       onPressed: _saving ? null : _save,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF6C63FF),
+                      backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

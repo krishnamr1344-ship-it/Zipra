@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../constants/theme.dart';
 import '../services/api_service.dart';
 
 class PlaceSearchPage extends StatefulWidget {
@@ -92,7 +93,7 @@ class _PlaceSearchPageState extends State<PlaceSearchPage> {
                         '${r['address_line2'] ?? ''}, ${r['city'] ?? ''}'.replaceAll(RegExp(r'^,\s*'), ''),
                         style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                       ),
-                      subtitle: Text(r['display_name'] ?? '', style: TextStyle(fontSize: 11, color: Colors.grey.shade500), maxLines: 2, overflow: TextOverflow.ellipsis),
+                      subtitle: Text(r['display_name'] ?? '', style: TextStyle(fontSize: 11, color: AppColors.textSecondary), maxLines: 2, overflow: TextOverflow.ellipsis),
                       trailing: const Icon(Icons.add_circle_outline, color: Colors.green, size: 22),
                       onTap: () => Navigator.pop(context, r),
                     );

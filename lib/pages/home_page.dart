@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../constants/theme.dart';
 import '../services/api_service.dart';
 import '../services/location_service.dart';
 import '../services/delivery_zone_service.dart';
@@ -247,8 +248,8 @@ class _HomePageState extends State<HomePage> {
               },
               backgroundColor: Colors.transparent,
               elevation: 0,
-              selectedItemColor: const Color(0xFF6C63FF),
-              unselectedItemColor: const Color(0xFFBDBDBD),
+              selectedItemColor: AppColors.primary,
+              unselectedItemColor: AppColors.textHint,
               type: BottomNavigationBarType.fixed,
               selectedFontSize: 11,
               unselectedFontSize: 11,
@@ -271,11 +272,7 @@ class _HomePageState extends State<HomePage> {
     return Container(
       padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 12, left: 20, right: 20, bottom: 24),
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF6C63FF), Color(0xFF483D8B)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: AppColors.headerGradient,
         borderRadius: BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32)),
       ),
       child: Column(
@@ -288,7 +285,7 @@ class _HomePageState extends State<HomePage> {
                 child: CircleAvatar(
                   radius: 19,
                   backgroundColor: Colors.white,
-                  child: Text(initial, style: const TextStyle(color: Color(0xFF6C63FF), fontWeight: FontWeight.bold, fontSize: 15)),
+                  child: Text(initial, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 15)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -305,7 +302,7 @@ class _HomePageState extends State<HomePage> {
                       children: [
                         Container(
                           padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(color: const Color(0xFF6C63FF).withAlpha(30), borderRadius: BorderRadius.circular(8)),
+                          decoration: BoxDecoration(color: AppColors.primary.withAlpha(30), borderRadius: BorderRadius.circular(8)),
                           child: const Icon(Icons.location_on, size: 16, color: Colors.white),
                         ),
                         const SizedBox(width: 8),
@@ -357,7 +354,7 @@ class _HomePageState extends State<HomePage> {
                         top: 2,
                         child: Container(
                           padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
+                          decoration: const BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
                           child: Text('${wishlistNotifier.itemCount}', style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
                         ),
                       ),
@@ -378,7 +375,7 @@ class _HomePageState extends State<HomePage> {
                         top: 2,
                         child: Container(
                           padding: const EdgeInsets.all(5),
-                          decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
+                          decoration: const BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
                           child: Text('${cartNotifier.itemCount}', style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
                         ),
                       ),
@@ -400,12 +397,12 @@ class _HomePageState extends State<HomePage> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: const Color(0xFF6C63FF).withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 4))],
+          boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 4))],
         ),
         child: Row(
           children: [
             const SizedBox(width: 14),
-            const Icon(Icons.search, color: Color(0xFF6C63FF), size: 22),
+            const Icon(Icons.search, color: AppColors.primary, size: 22),
             const SizedBox(width: 10),
             Expanded(
               child: SizedBox(
@@ -423,7 +420,7 @@ class _HomePageState extends State<HomePage> {
             Container(
               margin: const EdgeInsets.all(6),
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(color: const Color(0xFF6C63FF), borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(12)),
               child: const Center(child: Icon(Icons.tune, color: Colors.white, size: 20)),
             ),
           ],
@@ -456,12 +453,12 @@ class _HomePageState extends State<HomePage> {
             return Padding(
               padding: const EdgeInsets.only(right: 8),
               child: FilterChip(
-                label: Text(cat, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isSelected ? Colors.white : const Color(0xFF2D2D3A))),
+                label: Text(cat, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isSelected ? Colors.white : AppColors.textPrimary)),
                 selected: isSelected,
                 onSelected: (_) => setState(() => _selectedCategory = cat),
-                selectedColor: const Color(0xFF6C63FF),
+                selectedColor: AppColors.primary,
                 checkmarkColor: Colors.white,
-                backgroundColor: const Color(0xFFF5F5FF),
+                backgroundColor: AppColors.chipBg,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide.none),
                 padding: const EdgeInsets.symmetric(horizontal: 4),
               ),
@@ -480,12 +477,12 @@ class _HomePageState extends State<HomePage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 20),
-          const Text('Shop by Category', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1A1A2E))),
+          const Text('Shop by Category', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
           const SizedBox(height: 20),
           if (cats.isEmpty)
             const Center(child: Padding(
               padding: EdgeInsets.only(top: 60),
-              child: Text('No categories available', style: TextStyle(color: Color(0xFF9E9E9E))),
+              child: Text('No categories available', style: TextStyle(color: AppColors.textSecondary)),
             ))
           else
             Wrap(
@@ -504,14 +501,14 @@ class _HomePageState extends State<HomePage> {
                     width: (MediaQuery.of(context).size.width - 52) / 2,
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF5F5FF),
+                      color: AppColors.chipBg,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Column(
                       children: [
-                        Icon(icon, size: 40, color: const Color(0xFF6C63FF)),
+                        Icon(icon, size: 40, color: AppColors.primary),
                         const SizedBox(height: 12),
-                        Text(cat, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Color(0xFF1A1A2E)), textAlign: TextAlign.center),
+                        Text(cat, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary), textAlign: TextAlign.center),
                       ],
                     ),
                   ),
@@ -538,13 +535,13 @@ class _HomePageState extends State<HomePage> {
                 Container(
                   width: 4, height: 20,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF4CAF50),
+                    color: AppColors.success,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
                 const SizedBox(width: 10),
                 Text(_selectedCategory == 'All' ? 'Featured Products' : _selectedCategory,
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1A1A2E))),
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                 const Spacer(),
                 Text('${products.length} items',
                   style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
@@ -564,7 +561,7 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     Icon(Icons.map, size: 48, color: Colors.orange.shade400),
                     const SizedBox(height: 12),
-                    const Text('Coming Soon!', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1A1A2E))),
+                    const Text('Coming Soon!', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                     const SizedBox(height: 6),
                     Text(
                       'Delivery service is not yet available in your area.\nWe are expanding soon!',
@@ -582,7 +579,7 @@ class _HomePageState extends State<HomePage> {
             else if (products.isEmpty)
               const Padding(
                 padding: EdgeInsets.only(top: 40),
-                child: Center(child: Text('No products in this category', style: TextStyle(color: Color(0xFF9E9E9E)))),
+                child: Center(child: Text('No products in this category', style: TextStyle(color: AppColors.textSecondary))),
               )
             else
               ProductGrid(
@@ -597,11 +594,11 @@ class _HomePageState extends State<HomePage> {
                   final p = products.firstWhere((e) => e.name == gp.name);
                   if (!await _requireLogin()) return;
                   if (!mounted) return;
-                  cartNotifier.add(CartItem(name: p.name, qty: p.qty, price: p.price, icon: p.icon, color: const Color(0xFF4CAF50), productId: p.id));
+                  cartNotifier.add(CartItem(name: p.name, qty: p.qty, price: p.price, icon: p.icon, color: AppColors.success, productId: p.id));
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                     content: Text('${p.name} added'),
                     duration: const Duration(seconds: 1),
-                    backgroundColor: const Color(0xFF4CAF50),
+                    backgroundColor: AppColors.success,
                   ));
                 },
                 onFav: (gp) => wishlistNotifier.toggle(gp.name),
@@ -610,12 +607,12 @@ class _HomePageState extends State<HomePage> {
                   final count = cartNotifier.items.where((e) => e.name == p.name).firstOrNull?.count ?? 0;
                   Navigator.push(context, MaterialPageRoute(
                     builder: (_) => ProductDetailPage(
-                      icon: p.icon, color: const Color(0xFF4CAF50), name: p.name, price: p.price, qty: p.qty, images: p.images,
+                      icon: p.icon, color: AppColors.success, name: p.name, price: p.price, qty: p.qty, images: p.images,
                       inCart: count > 0,
                       onAdd: () async {
                         if (!await _requireLogin()) return;
                         if (!mounted) return;
-                        cartNotifier.add(CartItem(name: p.name, qty: p.qty, price: p.price, icon: p.icon, color: const Color(0xFF4CAF50), productId: p.id));
+                        cartNotifier.add(CartItem(name: p.name, qty: p.qty, price: p.price, icon: p.icon, color: AppColors.success, productId: p.id));
                       },
                     ),
                   ));
@@ -638,17 +635,17 @@ class _HomePageState extends State<HomePage> {
               SizedBox(height: (constraints.maxHeight * 0.06).clamp(30, 50)),
               CircleAvatar(
                 radius: avatarR + 5,
-                backgroundColor: const Color(0xFF6C63FF).withValues(alpha: 0.1),
+                backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                 child: CircleAvatar(
                   radius: avatarR,
-                  backgroundColor: const Color(0xFF6C63FF),
+                  backgroundColor: AppColors.primary,
                   child: Text(initial, style: TextStyle(color: Colors.white, fontSize: avatarR * 0.8, fontWeight: FontWeight.bold)),
                 ),
               ),
               const SizedBox(height: 14),
-              Text(name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1A1A2E))),
+              Text(name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               const SizedBox(height: 4),
-              Text(email, style: const TextStyle(fontSize: 14, color: Color(0xFF9E9E9E))),
+              Text(email, style: const TextStyle(fontSize: 14, color: AppColors.textSecondary)),
               const SizedBox(height: 6),
               GestureDetector(
                 onTap: () async {
@@ -660,15 +657,15 @@ class _HomePageState extends State<HomePage> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF6C63FF).withValues(alpha: 0.08),
+                    color: AppColors.primary.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.edit, size: 14, color: Color(0xFF6C63FF)),
+                      Icon(Icons.edit, size: 14, color: AppColors.primary),
                       SizedBox(width: 4),
-                      Text('Edit Profile', style: TextStyle(fontSize: 12, color: Color(0xFF6C63FF), fontWeight: FontWeight.w600)),
+                      Text('Edit Profile', style: TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ),
@@ -684,7 +681,7 @@ class _HomePageState extends State<HomePage> {
                 padding: EdgeInsets.symmetric(horizontal: 24),
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: Text('OTHER INFORMATION', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFBDBDBD), letterSpacing: 1.2)),
+                  child: Text('OTHER INFORMATION', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textHint, letterSpacing: 1.2)),
                 ),
               ),
               const SizedBox(height: 8),
@@ -748,12 +745,12 @@ class _HomePageState extends State<HomePage> {
           children: [
             Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: const Color(0xFFF5F5FF), borderRadius: BorderRadius.circular(10)),
-              child: Icon(icon, size: 20, color: const Color(0xFF6C63FF)),
+              decoration: BoxDecoration(color: AppColors.chipBg, borderRadius: BorderRadius.circular(10)),
+              child: Icon(icon, size: 20, color: AppColors.primary),
             ),
             const SizedBox(width: 14),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF2D2D3A))), Text(subtitle, style: const TextStyle(fontSize: 11, color: Color(0xFFBDBDBD)))])),
-            const Icon(Icons.chevron_right, color: Color(0xFFBDBDBD), size: 20),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)), Text(subtitle, style: const TextStyle(fontSize: 11, color: AppColors.textHint))])),
+            const Icon(Icons.chevron_right, color: AppColors.textHint, size: 20),
           ],
         ),
       ),
@@ -845,7 +842,7 @@ class _ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = const Color(0xFF4CAF50);
+    final color = AppColors.success;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -921,7 +918,7 @@ class _ProductCard extends StatelessWidget {
                       height: 22,
                       child: Text(
                         name,
-                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF1A1A2E)),
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.textPrimary),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -935,7 +932,7 @@ class _ProductCard extends StatelessWidget {
                         ),
                         Text(
                           '$price',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF1A1A2E)),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.textPrimary),
                         ),
                       ],
                     ),

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import '../constants/theme.dart';
 import '../services/admin_api_service.dart';
 
 class AdminDeliveryZonePage extends StatefulWidget {
@@ -99,7 +100,7 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
         centerTitle: true,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
-            gradient: LinearGradient(colors: [Color(0xFF6C63FF), Color(0xFF8B83FF)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+            gradient: AppColors.appBarGradient,
           ),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
@@ -213,7 +214,7 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
                             : const Icon(Icons.save, size: 18),
                         label: Text(_saving ? 'Saving...' : 'Save Zone'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF6C63FF),
+                          backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),

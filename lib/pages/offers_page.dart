@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/combo_pack.dart';
-import '../models/cart_model.dart';
 import '../services/api_service.dart';
+import 'pack_detail_sheet.dart';
 
 class OffersPage extends StatefulWidget {
   const OffersPage({super.key});
@@ -14,7 +14,6 @@ class _OffersPageState extends State<OffersPage> {
   final _api = ApiService();
   List<ComboPack> _packs = [];
   bool _loading = true;
-  bool _adding = false;
 
   @override
   void initState() {
@@ -34,41 +33,6 @@ class _OffersPageState extends State<OffersPage> {
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
-  }
-
-  Future<void> _addPackToCart(ComboPack pack) async {
-    setState(() => _adding = true);
-    try {
-      final result = await _api.addPackToCart(pack.id);
-      if (!mounted) return;
-      for (final item in result['items'] as List<dynamic>) {
-        cartNotifier.add(CartItem(
-          name: item['product_name'] ?? '',
-          qty: '${item['quantity'] ?? 1}',
-          price: 0,
-          icon: Icons.shopping_bag,
-          color: Colors.orange,
-          productId: item['product_id']?.toString() ?? '',
-          count: item['quantity'] ?? 1,
-        ));
-      }
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${pack.name} added to cart!'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e'), behavior: SnackBarBehavior.floating),
-        );
-      }
-    }
-    if (mounted) setState(() => _adding = false);
   }
 
   @override
@@ -118,116 +82,126 @@ class _OffersPageState extends State<OffersPage> {
     );
   }
 
+  void _showPackDetail(ComboPack pack) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => PackDetailSheet(pack: pack),
+    );
+  }
+
   Widget _buildPackCard(ComboPack pack) {
     final totalMrp = pack.items.fold<double>(0, (sum, item) => sum + item.productPrice * item.quantity);
     final savings = totalMrp - pack.totalPrice;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 16, offset: const Offset(0, 4)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Stack(
-            children: [
-              Container(
-                width: double.infinity,
-                height: 48,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(colors: [Color(0xFFFF6B00), Color(0xFFFF8C38)]),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                ),
-                child: Center(
-                  child: Text(pack.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                ),
-              ),
-              if (pack.discountLabel != null)
-                Positioned(
-                  top: 0, right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: const BorderRadius.only(topRight: Radius.circular(20), bottomLeft: Radius.circular(12)),
-                    ),
-                    child: Text(pack.discountLabel!, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                  ),
-                ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return GestureDetector(
+      onTap: () => _showPackDetail(pack),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 16, offset: const Offset(0, 4)),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
               children: [
-                if (pack.description != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Text(pack.description!, style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+                Container(
+                  width: double.infinity,
+                  height: 48,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(colors: [Color(0xFFFF6B00), Color(0xFFFF8C38)]),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                   ),
-                ...pack.items.map((item) => Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Row(
-                    children: [
-                      Container(width: 6, height: 6, decoration: BoxDecoration(color: const Color(0xFFFF6B00), shape: BoxShape.circle)),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text('${item.productName} × ${item.quantity}${item.productUnit}', style: const TextStyle(fontSize: 14, color: Color(0xFF333333))),
-                      ),
-                      Text('₹${(item.productPrice * item.quantity).toStringAsFixed(0)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF555555))),
-                    ],
+                  child: Center(
+                    child: Text(pack.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                   ),
-                )),
-                const Divider(height: 20),
-                Row(
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Text('Total: ', style: TextStyle(fontSize: 14, color: Color(0xFF888888))),
-                            if (totalMrp > pack.totalPrice)
-                              Text('₹${totalMrp.toStringAsFixed(0)}', style: const TextStyle(fontSize: 14, color: Color(0xFFAAAAAA), decoration: TextDecoration.lineThrough)),
-                            const SizedBox(width: 8),
-                            Text('₹${pack.totalPrice.toStringAsFixed(0)}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A))),
-                          ],
-                        ),
-                        if (savings > 0)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: Text('Save ₹${savings.toStringAsFixed(0)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF4CAF50))),
-                          ),
-                      ],
-                    ),
-                    const Spacer(),
-                    SizedBox(
-                      height: 42,
-                      child: ElevatedButton.icon(
-                        onPressed: _adding ? null : () => _addPackToCart(pack),
-                        icon: _adding
-                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                            : const Icon(Icons.add_shopping_cart, size: 18),
-                        label: Text(_adding ? 'Adding...' : 'Add Pack', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFF6B00),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
+                if (pack.discountLabel != null)
+                  Positioned(
+                    top: 0, right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: const BorderRadius.only(topRight: Radius.circular(20), bottomLeft: Radius.circular(12)),
+                      ),
+                      child: Text(pack.discountLabel!, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
               ],
             ),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (pack.description != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Text(pack.description!, style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+                    ),
+                  ...pack.items.map((item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      children: [
+                        Container(width: 6, height: 6, decoration: BoxDecoration(color: const Color(0xFFFF6B00), shape: BoxShape.circle)),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text('${item.productName} × ${item.quantity}${item.productUnit}', style: const TextStyle(fontSize: 14, color: Color(0xFF333333))),
+                        ),
+                        Text('₹${(item.productPrice * item.quantity).toStringAsFixed(0)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF555555))),
+                      ],
+                    ),
+                  )),
+                  const Divider(height: 20),
+                  Row(
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Text('Total: ', style: TextStyle(fontSize: 14, color: Color(0xFF888888))),
+                              if (totalMrp > pack.totalPrice)
+                                Text('₹${totalMrp.toStringAsFixed(0)}', style: const TextStyle(fontSize: 14, color: Color(0xFFAAAAAA), decoration: TextDecoration.lineThrough)),
+                              const SizedBox(width: 8),
+                              Text('₹${pack.totalPrice.toStringAsFixed(0)}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A))),
+                            ],
+                          ),
+                          if (savings > 0)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text('Save ₹${savings.toStringAsFixed(0)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF4CAF50))),
+                            ),
+                        ],
+                      ),
+                      const Spacer(),
+                      SizedBox(
+                        height: 42,
+                        child: ElevatedButton.icon(
+                          onPressed: () => _showPackDetail(pack),
+                          icon: const Icon(Icons.visibility, size: 18),
+                          label: const Text('View Pack', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFF6B00),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

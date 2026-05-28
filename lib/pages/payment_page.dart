@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../constants/theme.dart';
 import '../models/cart_model.dart';
 import '../services/api_service.dart';
 import 'home_page.dart';
@@ -119,9 +120,9 @@ class _PaymentPageState extends State<PaymentPage> {
                   ),
                   child: Row(
                     children: [
-                      const Text('Total Amount', style: TextStyle(fontSize: 14, color: Color(0xFF9E9E9E))),
+                      const Text('Total Amount', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
                       const Spacer(),
-                      Text('₹${widget.total}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF6C63FF))),
+                      Text('₹${widget.total}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.primary)),
                     ],
                   ),
                 ),
@@ -132,35 +133,35 @@ class _PaymentPageState extends State<PaymentPage> {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: _addressId.isNotEmpty ? const Color(0xFFF0FFF0) : const Color(0xFFFFF8E1),
+                      color: _addressId.isNotEmpty ? const Color(0xFFF0FFF0) : AppColors.warningLight,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: _addressId.isNotEmpty ? const Color(0xFF4CAF50).withAlpha(80) : Colors.orange.withAlpha(80)),
+                      border: Border.all(color: _addressId.isNotEmpty ? AppColors.success.withAlpha(80) : Colors.orange.withAlpha(80)),
                     ),
                     child: Row(
                       children: [
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: _addressId.isNotEmpty ? const Color(0xFF4CAF50).withAlpha(20) : Colors.orange.withAlpha(20),
+                            color: _addressId.isNotEmpty ? AppColors.success.withAlpha(20) : Colors.orange.withAlpha(20),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Icon(_addressId.isNotEmpty ? Icons.location_on : Icons.add_location, size: 24, color: _addressId.isNotEmpty ? const Color(0xFF4CAF50) : Colors.orange),
+                          child: Icon(_addressId.isNotEmpty ? Icons.location_on : Icons.add_location, size: 24, color: _addressId.isNotEmpty ? AppColors.success : Colors.orange),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(_addressId.isNotEmpty ? 'Delivery Location' : 'Set Delivery Location', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: _addressId.isNotEmpty ? const Color(0xFF1A1A2E) : Colors.orange.shade800)),
+                              Text(_addressId.isNotEmpty ? 'Delivery Location' : 'Set Delivery Location', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: _addressId.isNotEmpty ? AppColors.textPrimary : Colors.orange.shade800)),
                               if (_addressId.isNotEmpty) ...[
                                 const SizedBox(height: 2),
-                                Text(_deliveryArea, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
+                                Text(_deliveryArea, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
                                 if (_deliveryDetail.isNotEmpty)
                                   Text(_deliveryDetail, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
                                 if (_deliveryLandmark.isNotEmpty)
                                   Text('📍 ${_deliveryLandmark}', style: TextStyle(fontSize: 11, color: Colors.blue.shade600)),
                               ] else
-                                Text('Tap to add delivery address', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                                Text('Tap to add delivery address', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                             ],
                           ),
                         ),
@@ -173,31 +174,31 @@ class _PaymentPageState extends State<PaymentPage> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF5F5FF),
+                    color: AppColors.chipBg,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFF6C63FF), width: 1.5),
+                    border: Border.all(color: AppColors.primary, width: 1.5),
                   ),
                   child: Row(
                     children: [
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF6C63FF).withValues(alpha: 0.1),
+                          color: AppColors.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.money_outlined, color: Color(0xFF6C63FF), size: 24),
+                        child: const Icon(Icons.money_outlined, color: AppColors.primary, size: 24),
                       ),
                       const SizedBox(width: 14),
                       const Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Cash on Delivery', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Color(0xFF1A1A2E))),
-                            Text('Pay when you receive', style: TextStyle(fontSize: 12, color: Color(0xFF9E9E9E))),
+                            Text('Cash on Delivery', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: AppColors.textPrimary)),
+                            Text('Pay when you receive', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                           ],
                         ),
                       ),
-                      const Icon(Icons.radio_button_checked, color: Color(0xFF6C63FF), size: 22),
+                      const Icon(Icons.radio_button_checked, color: AppColors.primary, size: 22),
                     ],
                   ),
                 ),
@@ -278,20 +279,20 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE8F5E9),
+                  color: AppColors.successLight,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.check_circle, size: 64, color: Color(0xFF4CAF50)),
+                child: const Icon(Icons.check_circle, size: 64, color: AppColors.success),
               ),
               const SizedBox(height: 24),
-              const Text('Order Placed!', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1A1A2E))),
+              const Text('Order Placed!', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               const SizedBox(height: 8),
               Text('Your order has been placed successfully.', style: TextStyle(fontSize: 14, color: Colors.grey[600]), textAlign: TextAlign.center),
               const SizedBox(height: 32),
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFF8E1),
+                  color: AppColors.warningLight,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
@@ -302,16 +303,16 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                         color: const Color(0xFFFFF3CD),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.hourglass_empty, color: Color(0xFFFF8F00), size: 28),
+                      child: const Icon(Icons.hourglass_empty, color: AppColors.primaryLight, size: 28),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Order Pending', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1A1A2E))),
+                          const Text('Order Pending', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                           const SizedBox(height: 2),
-                          Text('Redirecting to home in $_seconds s...', style: const TextStyle(fontSize: 13, color: Color(0xFF9E9E9E))),
+                          Text('Redirecting to home in $_seconds s...', style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                         ],
                       ),
                     ),
@@ -330,7 +331,7 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6C63FF),
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -350,7 +351,7 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                     );
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const OrdersPage()));
                   },
-                  child: const Text('View My Orders', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF6C63FF))),
+                  child: const Text('View My Orders', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.primary)),
                 ),
               ),
             ],

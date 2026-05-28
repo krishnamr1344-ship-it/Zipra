@@ -4,6 +4,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import '../constants/theme.dart';
 import '../services/location_service.dart';
 import '../services/api_service.dart';
 import 'address_form_page.dart';
@@ -160,7 +161,7 @@ class _MapPickerPageState extends State<MapPickerPage> {
                           point: _selected,
                           width: 40,
                           height: 40,
-                          child: const Icon(Icons.location_on, color: Color(0xFF6C63FF), size: 40),
+                          child: const Icon(Icons.location_on, color: AppColors.primary, size: 40),
                         ),
                       ],
                     ),
@@ -182,7 +183,7 @@ class _MapPickerPageState extends State<MapPickerPage> {
                       decoration: InputDecoration(
                         hintText: 'Search area...',
                         hintStyle: TextStyle(color: Colors.grey.shade400),
-                        prefixIcon: const Icon(Icons.search, color: Color(0xFF6C63FF)),
+                        prefixIcon: const Icon(Icons.search, color: AppColors.primary),
                         suffixIcon: _searchCtl.text.isNotEmpty
                             ? IconButton(
                                 icon: const Icon(Icons.clear, size: 18),
@@ -215,12 +216,12 @@ class _MapPickerPageState extends State<MapPickerPage> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+                          Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.textHint, borderRadius: BorderRadius.circular(2))),
                           const SizedBox(height: 16),
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(Icons.location_on, color: Color(0xFF6C63FF), size: 20),
+                              const Icon(Icons.location_on, color: AppColors.primary, size: 20),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: _geocoding
@@ -245,7 +246,7 @@ class _MapPickerPageState extends State<MapPickerPage> {
                             child: ElevatedButton(
                               onPressed: _confirmLocation,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF6C63FF),
+                                backgroundColor: AppColors.primary,
                                 foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(vertical: 14),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -281,7 +282,7 @@ class _MapPickerPageState extends State<MapPickerPage> {
                         heroTag: 'my_location',
                         backgroundColor: Colors.white,
                         onPressed: _goToCurrentLocation,
-                        child: const Icon(Icons.my_location, color: Color(0xFF6C63FF)),
+                        child: const Icon(Icons.my_location, color: AppColors.primary),
                       ),
                     ],
                   ),

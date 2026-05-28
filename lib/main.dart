@@ -6,6 +6,7 @@ import 'pages/admin_home_page.dart';
 import 'services/api_service.dart';
 import 'services/theme_service.dart';
 import 'services/supabase_service.dart';
+import 'constants/theme.dart';
 
 void main() async {
   HttpOverrides.global = _AllowSelfSignedCert();
@@ -57,14 +58,50 @@ class MyApp extends StatelessWidget {
           themeMode: mode,
           theme: ThemeData(
             colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xFF6C63FF),
+              seedColor: AppColors.primary,
               brightness: Brightness.light,
             ),
             useMaterial3: true,
+            appBarTheme: const AppBarTheme(
+              centerTitle: true,
+              elevation: 0,
+              foregroundColor: AppColors.onPrimary,
+              backgroundColor: AppColors.primary,
+            ),
+            elevatedButtonTheme: ElevatedButtonThemeData(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.onPrimary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              ),
+            ),
+            floatingActionButtonTheme: const FloatingActionButtonThemeData(
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.onPrimary,
+            ),
+            inputDecorationTheme: InputDecorationTheme(
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 2)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              fillColor: AppColors.surface,
+              filled: true,
+            ),
+            chipTheme: ChipThemeData(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              selectedColor: AppColors.primary,
+              labelStyle: const TextStyle(fontSize: 13),
+            ),
+            cardTheme: CardThemeData(
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              color: AppColors.surface,
+            ),
           ),
           darkTheme: ThemeData(
             colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xFF6C63FF),
+              seedColor: AppColors.primary,
               brightness: Brightness.dark,
             ),
             useMaterial3: true,

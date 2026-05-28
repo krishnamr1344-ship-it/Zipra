@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/theme.dart';
 import '../models/cart_model.dart';
 import '../services/api_service.dart';
 import 'order_detail_page.dart';
@@ -38,17 +39,13 @@ class _OrdersPageState extends State<OrdersPage> {
     final hasApi = _apiOrders.isNotEmpty;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F7FF),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('My Orders', style: TextStyle(color: Colors.white)),
         centerTitle: true,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF6C63FF), Color(0xFF8B83FF)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            gradient: AppColors.appBarGradient,
           ),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
@@ -68,15 +65,15 @@ class _OrdersPageState extends State<OrdersPage> {
                         Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF5F5FF),
+                            color: AppColors.chipBg,
                             borderRadius: BorderRadius.circular(24),
                           ),
-                          child: const Icon(Icons.shopping_bag_outlined, size: 64, color: Color(0xFF6C63FF)),
+                          child: const Icon(Icons.shopping_bag_outlined, size: 64, color: AppColors.primary),
                         ),
                         const SizedBox(height: 20),
-                        const Text('No orders yet', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
+                        const Text('No orders yet', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
                         const SizedBox(height: 8),
-                        const Text('Your placed orders will appear here', style: TextStyle(fontSize: 14, color: Color(0xFF9E9E9E))),
+                        const Text('Your placed orders will appear here', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
                       ],
                     ),
                   )
@@ -130,7 +127,7 @@ class _OrdersPageState extends State<OrdersPage> {
         qty: '',
         price: (i['product_price'] ?? 0).toInt(),
         icon: Icons.shopping_bag,
-        color: const Color(0xFF4CAF50),
+        color: AppColors.success,
         productId: i['product_id'] ?? '',
         count: i['quantity'] ?? 1,
       )).toList(),
@@ -158,12 +155,12 @@ class _OrderCard extends StatelessWidget {
 
   Color _color(String s) {
     switch (s) {
-      case 'Pending': return const Color(0xFFFF8F00);
-      case 'Confirmed': return const Color(0xFF6C63FF);
+      case 'Pending': return AppColors.primaryLight;
+      case 'Confirmed': return AppColors.primary;
       case 'Shipped': return const Color(0xFF2196F3);
-      case 'Delivered': return const Color(0xFF4CAF50);
-      case 'Cancelled': return Colors.red;
-      default: return const Color(0xFF9E9E9E);
+      case 'Delivered': return AppColors.success;
+      case 'Cancelled': return AppColors.error;
+      default: return AppColors.textSecondary;
     }
   }
 
@@ -195,9 +192,9 @@ class _OrderCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('#${id.length > 10 ? id.substring(0, 10).toUpperCase() : id.toUpperCase()}',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1A1A2E))),
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary)),
                         const SizedBox(height: 2),
-                        Text('${date.day}/${date.month}/${date.year}', style: const TextStyle(fontSize: 11, color: Color(0xFF9E9E9E))),
+                        Text('${date.day}/${date.month}/${date.year}', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                       ],
                     ),
                   ),
@@ -228,10 +225,10 @@ class _OrderCard extends StatelessWidget {
                     padding: const EdgeInsets.only(right: 8),
                     child: Container(
                       width: 32, height: 32,
-                      decoration: BoxDecoration(color: const Color(0xFFF5F5FF), borderRadius: BorderRadius.circular(8)),
+                      decoration: BoxDecoration(color: AppColors.chipBg, borderRadius: BorderRadius.circular(8)),
                       child: Center(
                         child: Text(item.name.isNotEmpty ? item.name[0].toUpperCase() : '?',
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF6C63FF))),
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary)),
                       ),
                     ),
                   )),
@@ -244,8 +241,8 @@ class _OrderCard extends StatelessWidget {
                       ),
                     ),
                   const Spacer(),
-                  Text('$itemCount item${itemCount > 1 ? 's' : ''} · ₹$total',
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF2D2D3A))),
+                      Text('$itemCount item${itemCount > 1 ? 's' : ''} · ₹$total',
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
                 ],
               ),
             ),

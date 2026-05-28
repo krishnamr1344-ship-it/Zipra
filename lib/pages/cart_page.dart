@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/theme.dart';
 import '../models/cart_model.dart';
 import 'payment_page.dart';
 
@@ -15,9 +16,9 @@ class CartPage extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.shopping_cart_outlined, size: 80, color: Color(0xFFBDBDBD)),
+                Icon(Icons.shopping_cart_outlined, size: 80, color: AppColors.textHint),
                 SizedBox(height: 16),
-                Text('Your cart is empty', style: TextStyle(fontSize: 18, color: Color(0xFF9E9E9E))),
+                Text('Your cart is empty', style: TextStyle(fontSize: 18, color: AppColors.textSecondary)),
               ],
             ),
           );
@@ -50,7 +51,7 @@ class CartPage extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                                  Text('${item.qty} · ₹${item.price}', style: const TextStyle(color: Color(0xFF9E9E9E), fontSize: 13)),
+                                  Text('${item.qty} · ₹${item.price}', style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                                 ],
                               ),
                             ),
@@ -85,8 +86,8 @@ class CartPage extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Total', style: TextStyle(color: Color(0xFF9E9E9E), fontSize: 12)),
-                            Text('₹${cartNotifier.total}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1A1A2E))),
+                            const Text('Total', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                            Text('₹${cartNotifier.total}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                           ],
                         ),
                       ),
@@ -95,7 +96,7 @@ class CartPage extends StatelessWidget {
                           Navigator.push(context, MaterialPageRoute(builder: (_) => PaymentPage(total: cartNotifier.total)));
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF6C63FF),
+                          backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                           padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
@@ -119,10 +120,10 @@ class CartPage extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: const Color(0xFFF5F5FF),
+          color: AppColors.chipBg,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(icon, size: 18, color: const Color(0xFF6C63FF)),
+        child: Icon(icon, size: 18, color: AppColors.primary),
       ),
     );
   }

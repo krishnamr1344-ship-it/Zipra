@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/theme.dart';
 import '../services/admin_api_service.dart';
 import '../services/api_service.dart';
 
@@ -66,8 +67,8 @@ class _AdminComboPacksPageState extends State<AdminComboPacksPage> {
                 children: [
                   Container(
                     width: 40, height: 40,
-                    decoration: BoxDecoration(color: const Color(0xFFFF6B00).withAlpha(25), borderRadius: BorderRadius.circular(12)),
-                    child: const Icon(Icons.inventory_2, color: Color(0xFFFF6B00)),
+                    decoration: BoxDecoration(color: AppColors.primary.withAlpha(25), borderRadius: BorderRadius.circular(12)),
+                    child: const Icon(Icons.inventory_2, color: AppColors.primary),
                   ),
                   const SizedBox(width: 12),
                   Text(pack == null ? 'Add Combo Pack' : 'Edit Combo Pack', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
@@ -188,7 +189,7 @@ class _AdminComboPacksPageState extends State<AdminComboPacksPage> {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6C63FF),
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),

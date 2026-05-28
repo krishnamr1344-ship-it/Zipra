@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../constants/theme.dart';
 import '../services/admin_api_service.dart';
 
 class AdminOrderDetailPage extends StatefulWidget {
@@ -265,15 +266,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
             backgroundColor: primary,
             flexibleSpace: Container(
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    primary,
-                    primary.withAlpha(180),
-                    const Color(0xFF1A1A2E),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                gradient: AppColors.adminHeaderGradient,
               ),
               child: SafeArea(
                 bottom: false,

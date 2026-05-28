@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../constants/theme.dart';
 import '../models/cart_model.dart';
 
 class ProductDetailPage extends StatefulWidget {
@@ -171,13 +172,13 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(widget.name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1A1A2E))),
+                            Text(widget.name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                             const SizedBox(height: 4),
                             Row(
                               children: [
                                 Text('₹${widget.price}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF999999), decoration: TextDecoration.lineThrough)),
                                 const SizedBox(width: 8),
-                                Text('₹$totalPrice', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1A1A2E))),
+                                Text('₹$totalPrice', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                                 const SizedBox(width: 8),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -218,7 +219,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         child: Icon(Icons.check_circle, color: Colors.green.shade600, size: 18),
                       ),
                       const SizedBox(width: 10),
-                      const Text('Free Delivery', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
+                      const Text('Free Delivery', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
                       const Spacer(),
                       Container(
                         padding: const EdgeInsets.all(8),
@@ -229,11 +230,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         child: const Icon(Icons.replay, color: Color(0xFFF59E0B), size: 18),
                       ),
                       const SizedBox(width: 10),
-                      const Text('Easy Returns', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
+                      const Text('Easy Returns', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
                     ],
                   ),
                   const Divider(height: 24),
-                  const Text('Description', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1A1A2E))),
+                  const Text('Description', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                   const SizedBox(height: 8),
                   Text(
                     'Fresh and high-quality ${widget.name}. Carefully sourced to ensure the best taste and nutrition for your family.',
@@ -262,7 +263,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Why choose us?', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Color(0xFF1A1A2E))),
+                              const Text('Why choose us?', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary)),
                               const SizedBox(height: 2),
                               Text('100% fresh products · Fast delivery · Best price guarantee', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
                             ],
@@ -301,7 +302,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text('Total', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                          Text('Total', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                           Text('₹$totalPrice', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: widget.color)),
                         ],
                       ),
