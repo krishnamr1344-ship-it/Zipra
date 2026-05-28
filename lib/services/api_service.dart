@@ -239,9 +239,7 @@ class ApiService {
   // ─── Combo Packs ──────────────────────────────────────────────────
 
   Future<List<dynamic>> getComboPacks() async {
-    final headers = await _authHeaders();
-    if (headers['Authorization'] == null) return [];
-    final res = await http.get(Uri.parse('$_baseUrl/api/combo-packs'), headers: headers);
+    final res = await http.get(Uri.parse('$_baseUrl/api/combo-packs'));
     if (res.statusCode != 200) return [];
     return jsonDecode(res.body) as List<dynamic>;
   }
