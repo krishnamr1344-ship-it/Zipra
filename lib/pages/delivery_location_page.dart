@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../constants/theme.dart';
 import '../services/location_service.dart';
 import '../services/api_service.dart';
 import 'login_page.dart';
@@ -168,17 +169,17 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
                       children: [
                         Container(
                           padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(color: const Color(0xFF4CAF50).withAlpha(20), borderRadius: BorderRadius.circular(12)),
-                          child: const Icon(Icons.my_location, color: Color(0xFF4CAF50), size: 24),
+                          decoration: BoxDecoration(color: AppColors.success.withAlpha(20), borderRadius: BorderRadius.circular(12)),
+                          child: const Icon(Icons.my_location, color: AppColors.success, size: 24),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Current Location', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF4CAF50))),
+                              const Text('Current Location', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.success)),
                               const SizedBox(height: 2),
-                              Text(_locationArea, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E))),
+                              Text(_locationArea, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
                               if (_locationDetail.isNotEmpty) ...[
                                 const SizedBox(height: 2),
                                 Text(_locationDetail, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
@@ -273,7 +274,7 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
                         children: [
                           const Icon(Icons.map, size: 16, color: Colors.grey),
                           const SizedBox(width: 8),
-                          Text('${_latitude.toStringAsFixed(4)}, ${_longitude.toStringAsFixed(4)}', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                          Text('${_latitude.toStringAsFixed(4)}, ${_longitude.toStringAsFixed(4)}', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                         ],
                       ),
                     ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/theme.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -13,17 +14,13 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F7FF),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Settings', style: TextStyle(color: Colors.white)),
         centerTitle: true,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF6C63FF), Color(0xFF8B83FF)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            gradient: AppColors.appBarGradient,
           ),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
@@ -54,7 +51,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _section(String title) {
     return Padding(
       padding: const EdgeInsets.only(left: 4),
-      child: Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF9E9E9E), letterSpacing: 0.5)),
+      child: Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary, letterSpacing: 0.5)),
     );
   }
 
@@ -73,11 +70,11 @@ class _SettingsPageState extends State<SettingsPage> {
           child: Icon(icon, size: 20, color: const Color(0xFF6C63FF)),
         ),
         title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-        subtitle: subtitle != null ? Text(subtitle, style: const TextStyle(fontSize: 11, color: Color(0xFFBDBDBD))) : null,
+        subtitle: subtitle != null ? Text(subtitle, style: const TextStyle(fontSize: 11, color: AppColors.textHint)) : null,
         value: value,
         onChanged: onChanged,
-        activeTrackColor: const Color(0xFF6C63FF).withValues(alpha: 0.4),
-        activeThumbColor: const Color(0xFF6C63FF),
+        activeTrackColor: AppColors.primary.withValues(alpha: 0.4),
+        activeThumbColor: AppColors.primary,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     );
@@ -98,8 +95,8 @@ class _SettingsPageState extends State<SettingsPage> {
           child: Icon(icon, size: 20, color: const Color(0xFF6C63FF)),
         ),
         title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-        subtitle: Text(subtitle, style: const TextStyle(fontSize: 12, color: Color(0xFF9E9E9E))),
-        trailing: const Icon(Icons.chevron_right, color: Color(0xFFBDBDBD), size: 20),
+        subtitle: Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+        trailing: const Icon(Icons.chevron_right, color: AppColors.textHint, size: 20),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     );
@@ -118,12 +115,12 @@ class _SettingsPageState extends State<SettingsPage> {
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: const Color(0xFFF5F5FF), borderRadius: BorderRadius.circular(10)),
-            child: Icon(icon, size: 20, color: const Color(0xFF6C63FF)),
+          decoration: BoxDecoration(color: AppColors.chipBg, borderRadius: BorderRadius.circular(10)),
+          child: Icon(icon, size: 20, color: AppColors.primary),
           ),
           const SizedBox(width: 14),
           Expanded(child: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500))),
-          Text(subtitle, style: const TextStyle(fontSize: 13, color: Color(0xFF9E9E9E))),
+          Text(subtitle, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
         ],
       ),
     );

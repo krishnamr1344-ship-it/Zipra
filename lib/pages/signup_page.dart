@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/theme.dart';
 import '../services/api_service.dart';
 import 'login_page.dart';
 
@@ -67,13 +68,13 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
     return InputDecoration(
       labelText: label,
       labelStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14, fontWeight: FontWeight.w500),
-      floatingLabelStyle: const TextStyle(color: Color(0xFF6C63FF), fontWeight: FontWeight.w600),
+      floatingLabelStyle: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
       prefixIcon: Icon(icon, size: 20, color: Colors.grey.shade400),
       prefixIconConstraints: const BoxConstraints(minWidth: 40),
       suffixIcon: suffix,
       border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey.shade300)),
       enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey.shade200)),
-      focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF6C63FF), width: 2)),
+      focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary, width: 2)),
       contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 20),
     );
   }
@@ -92,7 +93,7 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F7FF),
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
@@ -101,11 +102,7 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
                 width: double.infinity,
                 padding: const EdgeInsets.fromLTRB(28, 50, 28, 60),
                 decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF6C63FF), Color(0xFF7B73FF)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  gradient: AppColors.headerGradient,
                   borderRadius: BorderRadius.only(bottomLeft: Radius.circular(60)),
                 ),
                 child: Column(
@@ -140,7 +137,7 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(28),
                           boxShadow: [
-                            BoxShadow(color: const Color(0xFF6C63FF).withValues(alpha: 0.10), blurRadius: 40, offset: const Offset(0, 15)),
+                            BoxShadow(color: AppColors.shadow, blurRadius: 40, offset: const Offset(0, 15)),
                             BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 5)),
                           ],
                         ),
@@ -195,11 +192,11 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
                               child: ElevatedButton(
                                 onPressed: _loading ? null : _signup,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF6C63FF),
+                                  backgroundColor: AppColors.primary,
                                   foregroundColor: Colors.white,
                                   elevation: 0,
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                  shadowColor: const Color(0xFF6C63FF).withValues(alpha: 0.3),
+                                  shadowColor: AppColors.primary.withValues(alpha: 0.3),
                                 ),
                                 child: _loading
                                     ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
@@ -218,7 +215,7 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
                 Text("Already have an account? ", style: TextStyle(color: Colors.grey.shade500, fontSize: 14)),
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
-                  child: const Text('Sign In', style: TextStyle(color: Color(0xFF6C63FF), fontWeight: FontWeight.w700, fontSize: 14)),
+                  child: const Text('Sign In', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700, fontSize: 14)),
                 ),
               ]),
               const SizedBox(height: 30),

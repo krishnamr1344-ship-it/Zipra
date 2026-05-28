@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/theme.dart';
 
 class SuggestProductsPage extends StatefulWidget {
   const SuggestProductsPage({super.key});
@@ -22,7 +23,7 @@ class _SuggestProductsPageState extends State<SuggestProductsPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Thanks for your suggestion!'),
-        backgroundColor: Color(0xFF6C63FF),
+        backgroundColor: AppColors.primary,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
       ),
@@ -34,17 +35,13 @@ class _SuggestProductsPageState extends State<SuggestProductsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F7FF),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Suggest a Product', style: TextStyle(color: Colors.white)),
         centerTitle: true,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF6C63FF), Color(0xFF8B83FF)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            gradient: AppColors.appBarGradient,
           ),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
@@ -55,35 +52,35 @@ class _SuggestProductsPageState extends State<SuggestProductsPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 8),
-            const Text('Product Name', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF9E9E9E), letterSpacing: 0.5)),
+            const Text('Product Name', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary, letterSpacing: 0.5)),
             const SizedBox(height: 8),
             TextField(
               controller: _productController,
               decoration: const InputDecoration(
                 hintText: 'Enter product name',
-                hintStyle: TextStyle(color: Color(0xFFBDBDBD)),
-                border: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE0E0E0))),
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE0E0E0))),
-                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF6C63FF), width: 2)),
+                hintStyle: TextStyle(color: AppColors.textHint),
+                border: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.divider)),
+                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.divider)),
+                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary, width: 2)),
               ),
-              style: const TextStyle(fontSize: 15, color: Color(0xFF1A1A2E)),
-              cursorColor: const Color(0xFF6C63FF),
+              style: const TextStyle(fontSize: 15, color: AppColors.textPrimary),
+              cursorColor: AppColors.primary,
             ),
             const SizedBox(height: 24),
-            const Text('Why do you need this?', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF9E9E9E), letterSpacing: 0.5)),
+            const Text('Why do you need this?', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary, letterSpacing: 0.5)),
             const SizedBox(height: 8),
             TextField(
               controller: _reasonController,
               maxLines: 3,
               decoration: const InputDecoration(
                 hintText: 'Tell us why...',
-                hintStyle: TextStyle(color: Color(0xFFBDBDBD)),
-                border: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE0E0E0))),
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE0E0E0))),
-                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF6C63FF), width: 2)),
+                hintStyle: TextStyle(color: AppColors.textHint),
+                border: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.divider)),
+                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.divider)),
+                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary, width: 2)),
               ),
-              style: const TextStyle(fontSize: 15, color: Color(0xFF1A1A2E)),
-              cursorColor: const Color(0xFF6C63FF),
+              style: const TextStyle(fontSize: 15, color: AppColors.textPrimary),
+              cursorColor: AppColors.primary,
             ),
             const Spacer(),
             SizedBox(
@@ -92,7 +89,7 @@ class _SuggestProductsPageState extends State<SuggestProductsPage> {
               child: ElevatedButton(
                 onPressed: _submit,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6C63FF),
+                  backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),

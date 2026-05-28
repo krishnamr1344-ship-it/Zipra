@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/theme.dart';
 import '../models/cart_model.dart';
 
 class OrderDetailPage extends StatelessWidget {
@@ -8,17 +9,13 @@ class OrderDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F7FF),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Order Details', style: TextStyle(color: Colors.white)),
         centerTitle: true,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF6C63FF), Color(0xFF8B83FF)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            gradient: AppColors.appBarGradient,
           ),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
@@ -45,12 +42,12 @@ class _StatusBox extends StatelessWidget {
 
   Color get _accent {
     switch (order.status) {
-      case 'Pending': return const Color(0xFFFF8F00);
-      case 'Confirmed': return const Color(0xFF6C63FF);
+      case 'Pending': return AppColors.primaryLight;
+      case 'Confirmed': return AppColors.primary;
       case 'Shipped': return const Color(0xFF2196F3);
-      case 'Delivered': return const Color(0xFF4CAF50);
-      case 'Cancelled': return Colors.red;
-      default: return const Color(0xFF9E9E9E);
+      case 'Delivered': return AppColors.success;
+      case 'Cancelled': return AppColors.error;
+      default: return AppColors.textSecondary;
     }
   }
 
@@ -89,7 +86,7 @@ class _StatusBox extends StatelessWidget {
                 child: Icon(Icons.checklist, size: 22, color: _accent),
               ),
               const SizedBox(width: 12),
-              const Text('Order Status', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1A1A2E))),
+              const Text('Order Status', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
@@ -124,7 +121,7 @@ class _StatusBox extends StatelessWidget {
                               : done
                                   ? const Icon(Icons.check, size: 16, color: Colors.white)
                                   : curr
-                                      ? const Icon(Icons.more_horiz, size: 16, color: Color(0xFF6C63FF))
+                                      ? const Icon(Icons.more_horiz, size: 16, color: AppColors.primary)
                                       : Icon(Icons.circle, size: 8, color: Colors.grey.shade300),
                         ),
                       ),
@@ -144,12 +141,12 @@ class _StatusBox extends StatelessWidget {
                         Text(steps[i], style: TextStyle(
                           fontSize: 14,
                           fontWeight: done || curr ? FontWeight.w600 : FontWeight.normal,
-                          color: done || curr ? const Color(0xFF1A1A2E) : const Color(0xFFBDBDBD),
+                          color: done || curr ? AppColors.textPrimary : AppColors.textHint,
                         )),
                         if (curr && !cancelled)
                           Text('In progress', style: TextStyle(fontSize: 11, color: _accent)),
                         if (cancelled && i == 0)
-                          const Text('Cancelled', style: TextStyle(fontSize: 11, color: Colors.red)),
+                          const Text('Cancelled', style: TextStyle(fontSize: 11, color: AppColors.error)),
                       ],
                     ),
                   ),
@@ -184,11 +181,11 @@ class _InfoBox extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: const Color(0xFF6C63FF).withAlpha(15), borderRadius: BorderRadius.circular(12)),
-                child: const Icon(Icons.receipt_outlined, size: 20, color: Color(0xFF6C63FF)),
+                decoration: BoxDecoration(color: AppColors.primary.withAlpha(15), borderRadius: BorderRadius.circular(12)),
+                child: const Icon(Icons.receipt_outlined, size: 20, color: AppColors.primary),
               ),
               const SizedBox(width: 12),
-              const Text('Order Info', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1A1A2E))),
+              const Text('Order Info', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
             ],
           ),
           const SizedBox(height: 16),
@@ -200,9 +197,9 @@ class _InfoBox extends StatelessWidget {
           const Divider(height: 24),
           Row(
             children: [
-              const Text('Total Amount', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1A1A2E))),
+              const Text('Total Amount', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               const Spacer(),
-              Text('₹${order.total}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF6C63FF))),
+              Text('₹${order.total}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.primary)),
             ],
           ),
         ],
@@ -215,9 +212,9 @@ class _InfoBox extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
-          Text(label, style: const TextStyle(fontSize: 13, color: Color(0xFF9E9E9E))),
+          Text(label, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
           const Spacer(),
-          Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF2D2D3A))),
+          Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
         ],
       ),
     );
@@ -245,11 +242,11 @@ class _ItemsBox extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: const Color(0xFF4CAF50).withAlpha(15), borderRadius: BorderRadius.circular(12)),
-                child: const Icon(Icons.shopping_bag_outlined, size: 20, color: Color(0xFF4CAF50)),
+                decoration: BoxDecoration(color: AppColors.success.withAlpha(15), borderRadius: BorderRadius.circular(12)),
+                child: const Icon(Icons.shopping_bag_outlined, size: 20, color: AppColors.success),
               ),
               const SizedBox(width: 12),
-              const Text('Items', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1A1A2E))),
+              const Text('Items', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
             ],
           ),
           const SizedBox(height: 16),
@@ -268,13 +265,13 @@ class _ItemsBox extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Color(0xFF2D2D3A))),
+                      Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary)),
                       const SizedBox(height: 2),
-                      Text('₹${item.price} × ${item.count}', style: const TextStyle(fontSize: 12, color: Color(0xFF9E9E9E))),
+                      Text('₹${item.price} × ${item.count}', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                     ],
                   ),
                 ),
-                Text('₹${item.price * item.count}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1A1A2E))),
+                Text('₹${item.price * item.count}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary)),
               ],
             ),
           )),

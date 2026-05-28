@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/theme.dart';
 import '../services/api_service.dart';
 import '../services/admin_api_service.dart';
 import 'login_page.dart';
@@ -82,11 +83,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
                 stretchModes: const [StretchMode.zoomBackground],
                 background: Container(
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [primary, primary.withAlpha(180), const Color(0xFF1A1A2E)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                    gradient: AppColors.adminHeaderGradient,
                   ),
                   child: SafeArea(
                     bottom: false,
@@ -205,7 +202,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
                   _menuCard(Colors.green, Icons.receipt_long, 'Orders', 'View & manage', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminOrdersPage()))),
                   _menuCard(Colors.blue, Icons.people, 'Users', 'Manage accounts', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminUsersPage()))),
                   _menuCard(Colors.deepPurple, Icons.map, 'Delivery Zones', 'Set service areas', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminDeliveryZonePage()))),
-                  _menuCard(const Color(0xFFFF6B00), Icons.inventory_2, 'Combo Packs', 'Monthly Needs packs', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminComboPacksPage())).then((_) => _load())),
+                  _menuCard(AppColors.primary, Icons.inventory_2, 'Combo Packs', 'Monthly Needs packs', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminComboPacksPage())).then((_) => _load())),
                 ]),
               ),
             ),

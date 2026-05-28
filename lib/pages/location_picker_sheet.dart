@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../constants/theme.dart';
 import '../services/api_service.dart';
 import 'address_form_page.dart';
 import 'map_picker_page.dart';
@@ -81,29 +82,29 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+          Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.textHint, borderRadius: BorderRadius.circular(2))),
           const SizedBox(height: 20),
           const Text('Choose Location', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 24),
           Container(
             decoration: BoxDecoration(
-              color: const Color(0xFF6C63FF).withAlpha(10),
+              color: AppColors.primary.withAlpha(10),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFF6C63FF).withAlpha(40)),
+              border: Border.all(color: AppColors.primary.withAlpha(40)),
             ),
             child: ListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               leading: Container(
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: const Color(0xFF6C63FF).withAlpha(20), borderRadius: BorderRadius.circular(12)),
-                child: const Icon(Icons.map, color: Color(0xFF6C63FF), size: 22),
+                decoration: BoxDecoration(color: AppColors.primary.withAlpha(20), borderRadius: BorderRadius.circular(12)),
+                child: const Icon(Icons.map, color: AppColors.primary, size: 22),
               ),
               title: const Text('Use Current Location', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-              subtitle: Text('Open map to confirm', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+              subtitle: Text('Open map to confirm', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
               trailing: Container(
                 padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(color: const Color(0xFF6C63FF).withAlpha(15), borderRadius: BorderRadius.circular(8)),
-                child: const Icon(Icons.arrow_forward_ios, size: 14, color: Color(0xFF6C63FF)),
+                decoration: BoxDecoration(color: AppColors.primary.withAlpha(15), borderRadius: BorderRadius.circular(8)),
+                child: const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.primary),
               ),
               onTap: () => Navigator.pop(context, true),
             ),
@@ -132,10 +133,10 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
                       decoration: BoxDecoration(color: Colors.grey.withAlpha(8), borderRadius: BorderRadius.circular(14)),
                       child: Column(
                         children: [
-                          Icon(Icons.location_off, size: 40, color: Colors.grey.shade300),
+                          Icon(Icons.location_off, size: 40, color: AppColors.textHint),
                           const SizedBox(height: 8),
-                          Text('No saved addresses', style: TextStyle(fontSize: 13, color: Colors.grey.shade400)),
-                          Text('Use GPS or search to add one', style: TextStyle(fontSize: 11, color: Colors.grey.shade300)),
+                          Text('No saved addresses', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                          Text('Use GPS or search to add one', style: TextStyle(fontSize: 11, color: AppColors.textHint)),
                         ],
                       ),
                     )
@@ -164,7 +165,7 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                             ),
-                            subtitle: Text('$line1', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                            subtitle: Text('$line1', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [

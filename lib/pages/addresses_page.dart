@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/theme.dart';
 import '../services/api_service.dart';
 import 'address_form_page.dart';
 
@@ -79,17 +80,13 @@ class _AddressesPageState extends State<AddressesPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F7FF),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Saved Addresses', style: TextStyle(color: Colors.white)),
         centerTitle: true,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF6C63FF), Color(0xFF8B83FF)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            gradient: AppColors.appBarGradient,
           ),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
@@ -101,7 +98,7 @@ class _AddressesPageState extends State<AddressesPage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.location_off, size: 60, color: Colors.grey.shade300),
+                      Icon(Icons.location_off, size: 60, color: AppColors.textHint),
                       const SizedBox(height: 12),
                       const Text('No saved addresses', style: TextStyle(fontSize: 16, color: Colors.grey)),
                       const SizedBox(height: 4),
@@ -155,24 +152,24 @@ class _AddressesPageState extends State<AddressesPage> {
                                 children: [
                                   Row(
                                     children: [
-                                      Text(type, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Color(0xFF1A1A2E))),
+                                      Text(type, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary)),
                                       const SizedBox(width: 8),
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                        decoration: BoxDecoration(color: const Color(0xFF6C63FF).withAlpha(15), borderRadius: BorderRadius.circular(6)),
+                                        decoration: BoxDecoration(color: AppColors.primary.withAlpha(15), borderRadius: BorderRadius.circular(6)),
                                         child: Text(landmark.isNotEmpty ? landmark : 'Default', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: theme.colorScheme.primary)),
                                       ),
                                     ],
                                   ),
                                   const SizedBox(height: 6),
-                                  Text(fullAddress, style: const TextStyle(fontSize: 13, color: Color(0xFF666666), height: 1.4)),
+                                  Text(fullAddress, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4)),
                                 ],
                               ),
                             ),
                             Column(
                               children: [
                                 IconButton(
-                                  icon: const Icon(Icons.edit_outlined, size: 18, color: Color(0xFFBDBDBD)),
+                                  icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.textHint),
                                   onPressed: () => _edit(addr),
                                 ),
                                 IconButton(
@@ -189,7 +186,7 @@ class _AddressesPageState extends State<AddressesPage> {
                 ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _add,
-        backgroundColor: const Color(0xFF6C63FF),
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
         label: const Text('Add New'),
