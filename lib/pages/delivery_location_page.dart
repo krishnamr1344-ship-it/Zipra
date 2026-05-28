@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/location_service.dart';
 import '../services/api_service.dart';
+import 'login_page.dart';
 
 class DeliveryLocationPage extends StatefulWidget {
   const DeliveryLocationPage({super.key});
@@ -101,6 +102,14 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
       return null;
     }
     try {
+      final token = await _api.getToken();
+      if (token == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Session expired. Please login again.'), behavior: SnackBarBehavior.floating));
+          Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginPage()), (r) => false);
+        }
+        return null;
+      }
       final addr = await _api.updateAddress(_gpsAddressId, {
         'address_line1': _line1Ctl.text.trim(),
         'address_line2': _line2Ctl.text.trim(),
@@ -110,7 +119,16 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
       });
       return addr;
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Save failed: $e'), behavior: SnackBarBehavior.floating));
+      final msg = e.toString();
+      if (msg.toLowerCase().contains('token') || msg.toLowerCase().contains('unauthorized') || msg.toLowerCase().contains('401')) {
+        await _api.clearToken();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Session expired. Please login again.'), behavior: SnackBarBehavior.floating));
+          Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginPage()), (r) => false);
+        }
+      } else {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Save failed: $e'), behavior: SnackBarBehavior.floating));
+      }
       return null;
     }
   }

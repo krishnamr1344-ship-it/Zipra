@@ -98,6 +98,41 @@ class AdminApiService {
     return jsonDecode(res.body);
   }
 
+  // ─── Combo Packs ──────────────────────────────────────────────────
+
+  Future<List<dynamic>> getComboPacks() async {
+    final res = await http.get(Uri.parse('$_baseUrl/api/admin/combo-packs'), headers: await _authHeader());
+    if (res.statusCode != 200) throw ApiException('Failed to load combo packs');
+    return jsonDecode(res.body);
+  }
+
+  Future<Map<String, dynamic>> createComboPack(Map<String, dynamic> data) async {
+    final res = await http.post(Uri.parse('$_baseUrl/api/admin/combo-packs'), headers: await _authHeader(), body: jsonEncode(data));
+    if (res.statusCode != 201) throw ApiException(jsonDecode(res.body)['detail'] ?? 'Failed to create pack');
+    return jsonDecode(res.body);
+  }
+
+  Future<Map<String, dynamic>> updateComboPack(String id, Map<String, dynamic> data) async {
+    final res = await http.put(Uri.parse('$_baseUrl/api/admin/combo-packs/$id'), headers: await _authHeader(), body: jsonEncode(data));
+    if (res.statusCode != 200) throw ApiException(jsonDecode(res.body)['detail'] ?? 'Failed to update pack');
+    return jsonDecode(res.body);
+  }
+
+  Future<void> deleteComboPack(String id) async {
+    final res = await http.delete(Uri.parse('$_baseUrl/api/admin/combo-packs/$id'), headers: await _authHeader());
+    if (res.statusCode != 200) {
+      final msg = jsonDecode(res.body)['detail'] ?? 'Failed to delete pack';
+      throw ApiException('$msg');
+    }
+  }
+
+  Future<bool> toggleComboPack(String id) async {
+    final res = await http.put(Uri.parse('$_baseUrl/api/admin/combo-packs/$id/toggle'), headers: await _authHeader());
+    if (res.statusCode != 200) throw ApiException('Failed to toggle pack');
+    final body = jsonDecode(res.body);
+    return body['is_enabled'] ?? false;
+  }
+
   Future<void> createDeliveryZone(String name, String geojsonData) async {
     final res = await http.post(Uri.parse('$_baseUrl/api/admin/delivery-zone'), headers: await _authHeader(), body: jsonEncode({
       'zone_name': name,

@@ -95,11 +95,12 @@ class _ProductCardState extends State<ProductCard> {
               padding: const EdgeInsets.fromLTRB(7, 5, 7, 6),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(p.weight, style: const TextStyle(fontSize: 10, color: Color(0xFF888888))),
                   const SizedBox(height: 1),
                   Text(p.name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF1A1A1A)), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  const Spacer(),
+                  const SizedBox(height: 4),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.end,
