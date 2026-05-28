@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../services/app_info.dart';
 import '../constants/theme.dart';
 import '../services/api_service.dart';
 import '../services/location_service.dart';
@@ -15,7 +14,6 @@ import 'cart_page.dart';
 import 'wishlist_page.dart';
 import 'help_support_page.dart';
 import 'settings_page.dart';
-import 'about_page.dart';
 import 'product_detail_page.dart';
 import 'orders_page.dart';
 import 'location_picker_sheet.dart';
@@ -695,7 +693,6 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 16),
               _menuCard([
                 _menuItem(Icons.settings_outlined, 'Settings', 'App preferences', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()))),
-                _menuItem(Icons.info_outline, 'About', 'Version ${AppInfo.version}', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutPage()))),
               ]),
               const SizedBox(height: 24),
               Container(
