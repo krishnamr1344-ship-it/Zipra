@@ -22,6 +22,7 @@ import 'addresses_page.dart';
 import 'payments_page.dart';
 import 'suggest_products_page.dart';
 import 'edit_profile_page.dart';
+import 'offers_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -216,7 +217,7 @@ class _HomePageState extends State<HomePage> {
     final pages = [
       _buildHome(initial, name),
       _buildCategoriesTab(),
-      _buildOffersTab(),
+      const OffersPage(),
       const CartPage(),
       _buildAccount(initial, name),
     ];
@@ -622,21 +623,6 @@ class _HomePageState extends State<HomePage> {
               ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildOffersTab() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.construction, size: 80, color: const Color(0xFF6C63FF).withValues(alpha: 0.5)),
-          const SizedBox(height: 20),
-          const Text('Coming Soon', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1A1A2E))),
-          const SizedBox(height: 8),
-          const Text('Offers feature is under development', style: TextStyle(fontSize: 14, color: Color(0xFF9E9E9E))),
-        ],
       ),
     );
   }

@@ -68,6 +68,20 @@ Implement Zepto/Swiggy/Blinkit-style GPS delivery location system with editable 
 - PSelva user: selva555@gmail.com (password unknown)
 - Tunnel URL (ephemeral): https://assist-legislature-temporarily-trackbacks.trycloudflare.com
 
+### Added
+- **Monthly Needs (Combo Packs)** — "Monthly Needs" section on Offers tab with ready-made grocery packs (Family Pack, PG/Hostel Pack, Small Hotel Pack, Tea Shop Pack)
+- `backend/models.py` — `ComboPack` + `ComboPackItem` models
+- `backend/schemas.py` — `ComboPackCreate/Update/Response`, `ComboPackItemInput/Response`, `PackAddRequest`
+- `backend/resources.py` — `GET /api/combo-packs`, `POST /api/combo-packs/add-to-cart`
+- `backend/admin.py` — Admin CRUD for packs (create/edit/delete/toggle enable)
+- `backend/migrations/create_combo_packs.sql` — schema migration
+- `lib/models/combo_pack.dart` — Flutter model
+- `lib/pages/offers_page.dart` — Offers tab with Monthly Needs UI, big combo cards, offer badge, savings text, one-click add to cart
+- `lib/pages/admin_combo_packs_page.dart` — Admin management page (list, create/edit bottom sheet, enable/disable toggle, delete)
+- `lib/services/api_service.dart` — `getComboPacks()`, `addPackToCart()`
+- `lib/services/admin_api_service.dart` — Admin CRUD methods for packs
+- **Token Expiry Fix** — `delivery_location_page.dart` now detects token expiry on "Confirm Address", clears session, and redirects to login
+
 ## Relevant Files
 - `backend/migrations/add_address_fields.sql` — schema migration
 - `lib/pages/address_form_page.dart` — address editor

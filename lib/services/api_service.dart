@@ -235,6 +235,26 @@ class ApiService {
     final res = await http.get(Uri.parse('$_baseUrl/api/orders'), headers: headers);
     return _handleListResponse(res);
   }
+
+  // ─── Combo Packs ──────────────────────────────────────────────────
+
+  Future<List<dynamic>> getComboPacks() async {
+    final headers = await _authHeaders();
+    if (headers['Authorization'] == null) return [];
+    final res = await http.get(Uri.parse('$_baseUrl/api/combo-packs'), headers: headers);
+    if (res.statusCode != 200) return [];
+    return jsonDecode(res.body) as List<dynamic>;
+  }
+
+  Future<Map<String, dynamic>> addPackToCart(String packId) async {
+    final headers = await _authHeaders(required: true);
+    final res = await http.post(
+      Uri.parse('$_baseUrl/api/combo-packs/add-to-cart'),
+      headers: headers,
+      body: jsonEncode({'pack_id': packId}),
+    );
+    return _handleResponse(res);
+  }
 }
 
 class ApiException implements Exception {

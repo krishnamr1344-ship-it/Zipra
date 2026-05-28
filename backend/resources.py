@@ -23,7 +23,7 @@ from typing import Optional
 from database import get_db
 from models import (
     User, Category, Product, ProductImage, Address, CartItem,
-    Order, OrderItem, Payment, DeliveryZone,
+    Order, OrderItem, Payment, DeliveryZone, ComboPack, ComboPackItem,
 )
 from schemas import (
     CategoryCreate, CategoryResponse,
@@ -33,6 +33,7 @@ from schemas import (
     OrderCreateRequest, OrderDirectCreateRequest, OrderResponse, OrderItemResponse, DeliveryAddress,
     PaymentProcessRequest, PaymentResponse, MessageResponse,
     ZoneCheckRequest, ZoneCheckResponse,
+    ComboPackItemInput, ComboPackItemResponse, ComboPackResponse, PackAddRequest,
 )
 
 router = APIRouter(prefix="/api")
@@ -821,3 +822,111 @@ def check_delivery_zone(body: ZoneCheckRequest, db: Session = Depends(get_db)):
         return ZoneCheckResponse(serviceable=False, message="Sorry, delivery not available in your area")
     except Exception:
         return ZoneCheckResponse(serviceable=False, message="Unable to verify delivery area")
+
+
+# ─── COMBO PACKS ──────────────────────────────────────────────────
+
+
+def _pack_to_response(pack: ComboPack) -> dict:
+    items = []
+    for pi in pack.items:
+        if not pi.is_deleted:
+            prod = pi.product
+            items.append({
+                "id": str(pi.id),
+                "product_id": str(pi.product_id),
+                "product_name": prod.name if prod else "",
+                "product_price": float(prod.price) if prod else 0,
+                "product_unit": prod.unit if prod else "",
+                "product_image": prod.images[0].image_url if prod and prod.images else None,
+                "quantity": pi.quantity,
+            })
+    return {
+        "id": str(pack.id),
+        "name": pack.name,
+        "description": pack.description,
+        "image_url": pack.image_url,
+        "total_price": float(pack.total_price),
+        "discount_label": pack.discount_label,
+        "savings_text": pack.savings_text,
+        "is_enabled": pack.is_enabled,
+        "items": items,
+        "created_at": pack.created_at,
+    }
+
+
+@router.get("/combo-packs")
+def list_combo_packs(request: Request, db: Session = Depends(get_db)):
+    _get_user_id(request)
+    packs = db.query(ComboPack).filter(
+        ComboPack.is_deleted == False,
+        ComboPack.is_enabled == True,
+    ).order_by(ComboPack.name).all()
+
+    result = []
+    for pack in packs:
+        # Check if all items have sufficient stock
+        all_in_stock = True
+        for pi in pack.items:
+            if not pi.is_deleted and pi.product:
+                if pi.product.stock < pi.quantity:
+                    all_in_stock = False
+                    break
+        if not all_in_stock:
+            continue
+        result.append(_pack_to_response(pack))
+    return result
+
+
+@router.post("/combo-packs/add-to-cart", status_code=status.HTTP_200_OK)
+def add_pack_to_cart(body: PackAddRequest, request: Request, db: Session = Depends(get_db)):
+    user_id = _get_user_id(request)
+    _get_user(user_id, db)
+
+    pack = db.query(ComboPack).filter(
+        ComboPack.id == body.pack_id,
+        ComboPack.is_deleted == False,
+        ComboPack.is_enabled == True,
+    ).first()
+    if not pack:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pack not found")
+
+    added = []
+    for pi in pack.items:
+        if pi.is_deleted:
+            continue
+        prod = _get_product_or_404(str(pi.product_id), db)
+        if prod.stock < pi.quantity:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Insufficient stock for {prod.name}",
+            )
+        existing = db.query(CartItem).filter(
+            CartItem.user_id == user_id,
+            CartItem.product_id == pi.product_id,
+            CartItem.is_deleted == False,
+        ).first()
+        if existing:
+            existing.quantity += pi.quantity
+            db.flush()
+        else:
+            soft = db.query(CartItem).filter(
+                CartItem.user_id == user_id,
+                CartItem.product_id == pi.product_id,
+                CartItem.is_deleted == True,
+            ).first()
+            if soft:
+                soft.is_deleted = False
+                soft.quantity = pi.quantity
+                db.flush()
+            else:
+                item = CartItem(user_id=user_id, product_id=pi.product_id, quantity=pi.quantity)
+                db.add(item)
+                db.flush()
+        added.append({
+            "product_id": str(pi.product_id),
+            "product_name": prod.name,
+            "quantity": pi.quantity,
+        })
+    db.commit()
+    return {"message": "Pack added to cart", "items": added}
