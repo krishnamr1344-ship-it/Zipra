@@ -58,8 +58,14 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       }
 
       if (!mounted) return;
-      final page = role == 'admin' ? const AdminHomePage() : const HomePage();
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => page));
+      final nav = Navigator.of(context);
+      if (role == 'admin') {
+        nav.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const AdminHomePage()), (route) => false);
+      } else if (nav.canPop()) {
+        nav.pop(true);
+      } else {
+        nav.pushReplacement(MaterialPageRoute(builder: (_) => const HomePage()));
+      }
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message), behavior: SnackBarBehavior.floating));

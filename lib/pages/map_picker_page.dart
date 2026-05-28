@@ -19,8 +19,9 @@ class _MapPickerPageState extends State<MapPickerPage> {
   final _locationService = LocationService();
   final _api = ApiService();
   final _searchCtl = TextEditingController();
+  final _mapCtl = MapController();
 
-  LatLng _center = const LatLng(13.05, 80.2125); // Default Chennai
+  LatLng _center = const LatLng(13.05, 80.2125);
   LatLng _selected = const LatLng(13.05, 80.2125);
   bool _loading = true;
   String _addressLine1 = '';
@@ -38,10 +39,12 @@ class _MapPickerPageState extends State<MapPickerPage> {
     final loc = await _locationService.getCurrentLocation();
     if (!mounted) return;
     if (loc.error == null) {
+      final pos = LatLng(loc.latitude, loc.longitude);
       setState(() {
-        _center = LatLng(loc.latitude, loc.longitude);
-        _selected = LatLng(loc.latitude, loc.longitude);
+        _center = pos;
+        _selected = pos;
       });
+      WidgetsBinding.instance.addPostFrameCallback((_) => _mapCtl.move(pos, 15));
     }
     setState(() => _loading = false);
     _reverseGeocode();
@@ -60,8 +63,10 @@ class _MapPickerPageState extends State<MapPickerPage> {
         if (addr != null) {
           final road = addr['road'] ?? '';
           final house = addr['house_number'] ?? '';
-          final area = addr['suburb'] ?? addr['city_district'] ?? '';
-          final city = addr['city'] ?? addr['town'] ?? addr['village'] ?? addr['county'] ?? '';
+          final area_raw = addr['suburb'] ?? addr['city_district'] ?? '';
+          final area = area_raw.replaceAll(RegExp(r'^Zone\s+\d+\s*', caseSensitive: false), '').trim();
+          final city_raw = addr['city'] ?? addr['town'] ?? addr['village'] ?? addr['county'] ?? '';
+          final city = city_raw.replaceAll(RegExp(r'\s+(Corporation|Municipal|Municipality|Municipal\s+Corporation)\s*$', caseSensitive: false), '').trim();
           final parts = <String>[];
           if (road.isNotEmpty) parts.add(road);
           if (house.isNotEmpty) parts.add(house);
@@ -81,29 +86,44 @@ class _MapPickerPageState extends State<MapPickerPage> {
     _reverseGeocode();
   }
 
-  Future<void> _confirmLocation() async {
-    try {
-      final addr = await _api.createGpsAddress(_selected.latitude, _selected.longitude);
-      if (!mounted) return;
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('gps_address_id', addr['id'] ?? '');
-      await prefs.setString('gps_address_line', addr['address_line1'] ?? '');
-      await prefs.setString('gps_address_line2', addr['address_line2'] ?? '');
-      await prefs.setString('gps_city', addr['city'] ?? '');
-      await prefs.setString('gps_address_type', addr['address_type'] ?? '');
-      await prefs.setString('gps_house_number', addr['house_number'] ?? '');
-      await prefs.setString('gps_floor_number', addr['floor_number'] ?? '');
-      await prefs.setString('gps_landmark', addr['landmark'] ?? '');
-      await prefs.setString('gps_latitude', '${addr['latitude'] ?? ''}');
-      await prefs.setString('gps_longitude', '${addr['longitude'] ?? ''}');
-      await prefs.setString('gps_pincode', addr['pincode'] ?? '');
-      if (!mounted) return;
-      Navigator.pop(context, true);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'), behavior: SnackBarBehavior.floating));
-      }
+  Future<void> _goToCurrentLocation() async {
+    final loc = await _locationService.getCurrentLocation();
+    if (!mounted) return;
+    if (loc.error == null) {
+      final pos = LatLng(loc.latitude, loc.longitude);
+      setState(() {
+        _center = pos;
+        _selected = pos;
+      });
+      _mapCtl.move(pos, 15);
+      _reverseGeocode();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(loc.error ?? 'Could not get location')),
+      );
     }
+  }
+
+  Future<void> _confirmLocation() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('gps_address_line', _addressLine1);
+    await prefs.setString('gps_address_line2', _addressLine2);
+    await prefs.setString('gps_city', _city);
+    await prefs.setString('gps_latitude', '${_selected.latitude}');
+    await prefs.setString('gps_longitude', '${_selected.longitude}');
+
+    final token = await _api.getToken();
+    if (token != null) {
+      try {
+        final addr = await _api.createGpsAddress(_selected.latitude, _selected.longitude);
+        await prefs.setString('gps_address_id', addr['id'] ?? '');
+        await prefs.setString('gps_pincode', addr['pincode'] ?? '');
+        await prefs.setString('gps_address_type', addr['address_type'] ?? '');
+      } catch (_) {}
+    }
+
+    if (!mounted) return;
+    Navigator.pop(context, true);
   }
 
   @override
@@ -123,6 +143,7 @@ class _MapPickerPageState extends State<MapPickerPage> {
           : Stack(
               children: [
                 FlutterMap(
+                  mapController: _mapCtl,
                   options: MapOptions(
                     initialCenter: _center,
                     initialZoom: 15,
@@ -216,10 +237,6 @@ class _MapPickerPageState extends State<MapPickerPage> {
                                         ],
                                       ),
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.my_location, color: Color(0xFF6C63FF)),
-                                onPressed: _initLocation,
-                              ),
                             ],
                           ),
                           const SizedBox(height: 16),
@@ -252,6 +269,21 @@ class _MapPickerPageState extends State<MapPickerPage> {
                       backgroundColor: Colors.black.withAlpha(60),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
+                  ),
+                ),
+                Positioned(
+                  bottom: 220,
+                  right: 16,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      FloatingActionButton.small(
+                        heroTag: 'my_location',
+                        backgroundColor: Colors.white,
+                        onPressed: _goToCurrentLocation,
+                        child: const Icon(Icons.my_location, color: Color(0xFF6C63FF)),
+                      ),
+                    ],
                   ),
                 ),
               ],
