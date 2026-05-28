@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/app_info.dart';
 import '../constants/theme.dart';
 import '../services/api_service.dart';
 import '../services/location_service.dart';
@@ -694,7 +695,7 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 16),
               _menuCard([
                 _menuItem(Icons.settings_outlined, 'Settings', 'App preferences', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()))),
-                _menuItem(Icons.info_outline, 'About', 'Version 1.0.0', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutPage()))),
+                _menuItem(Icons.info_outline, 'About', 'Version ${AppInfo.version}', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutPage()))),
               ]),
               const SizedBox(height: 24),
               Container(

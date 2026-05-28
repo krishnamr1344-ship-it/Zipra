@@ -6,6 +6,7 @@ import 'pages/admin_home_page.dart';
 import 'services/api_service.dart';
 import 'services/theme_service.dart';
 import 'services/supabase_service.dart';
+import 'services/app_info.dart';
 import 'constants/theme.dart';
 
 void main() async {
@@ -17,13 +18,14 @@ void main() async {
     debugPrint('FATAL: ${details.exception}\n${details.stack}');
   };
 
-  try {
-    await SupabaseService.initialize();
-  } catch (e, s) {
-    debugPrint('Supabase init failed: $e\n$s');
-  }
+    try {
+      await SupabaseService.initialize();
+    } catch (e, s) {
+      debugPrint('Supabase init failed: $e\n$s');
+    }
+    await AppInfo.load();
 
-  runApp(const MyApp());
+    runApp(const MyApp());
 }
 
 class _AllowSelfSignedCert extends HttpOverrides {

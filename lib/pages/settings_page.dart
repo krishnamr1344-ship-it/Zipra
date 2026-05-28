@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/theme.dart';
+import '../services/app_info.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -41,7 +42,7 @@ class _SettingsPageState extends State<SettingsPage> {
           const SizedBox(height: 24),
           _section('App Info'),
           const SizedBox(height: 8),
-          _infoTile(Icons.info_outline, 'Version', '1.0.0'),
+          _infoTile(Icons.info_outline, 'Version', AppInfo.version),
           _infoTile(Icons.update_outlined, 'Check for Updates', 'Tap to check'),
         ],
       ),
