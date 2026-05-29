@@ -19,6 +19,11 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
   bool _loading = false;
   bool _obscurePass = true;
   bool _obscureConfirm = true;
+  String? _nameError;
+  String? _emailError;
+  String? _phoneError;
+  String? _passError;
+  String? _confirmError;
   late AnimationController _animCtl;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
@@ -33,14 +38,17 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
   }
 
   Future<void> _signup() async {
-    if (_nameCtl.text.isEmpty || _emailCtl.text.isEmpty || _passCtl.text.isEmpty || _confirmPassCtl.text.isEmpty) {
-      _showSnack('Please fill all fields');
-      return;
-    }
-    if (_passCtl.text != _confirmPassCtl.text) {
-      _showSnack('Passwords do not match');
-      return;
-    }
+    setState(() {
+      _nameError = _nameCtl.text.trim().isEmpty ? 'Name is required' : null;
+      _emailError = _emailCtl.text.trim().isEmpty ? 'Email is required' : null;
+      _phoneError = null;
+      _passError = _passCtl.text.isEmpty ? 'Password is required' : null;
+      _confirmError = _confirmPassCtl.text.isEmpty ? 'Confirm your password' : null;
+      if (_passCtl.text.isNotEmpty && _confirmPassCtl.text.isNotEmpty && _passCtl.text != _confirmPassCtl.text) {
+        _confirmError = 'Passwords do not match';
+      }
+    });
+    if (_nameError != null || _emailError != null || _passError != null || _confirmError != null) return;
     setState(() => _loading = true);
     try {
       await ApiService().register(_nameCtl.text.trim(), _emailCtl.text.trim(), _phoneCtl.text.trim(), _passCtl.text);
@@ -145,20 +153,26 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
                           children: [
                             TextField(
                               controller: _nameCtl,
-                              decoration: _fieldStyle('Full Name', Icons.person_outline),
+                              decoration: _fieldStyle('Full Name', Icons.person_outline).copyWith(errorText: _nameError),
+                              onChanged: (_) { if (_nameError != null) setState(() => _nameError = null); },
                             ),
+                            if (_nameError != null)
+                              Padding(padding: const EdgeInsets.only(left: 4, top: 2), child: Text(_nameError!, style: const TextStyle(fontSize: 11, color: AppColors.error))),
                             const SizedBox(height: 12),
                             TextField(
                               controller: _phoneCtl,
                               keyboardType: TextInputType.phone,
-                              decoration: _fieldStyle('Phone Number', Icons.phone_outlined),
+                              decoration: _fieldStyle('Phone Number', Icons.phone_outlined).copyWith(errorText: _phoneError),
                             ),
                             const SizedBox(height: 12),
                             TextField(
                               controller: _emailCtl,
                               keyboardType: TextInputType.emailAddress,
-                              decoration: _fieldStyle('Email', Icons.email_outlined),
+                              decoration: _fieldStyle('Email', Icons.email_outlined).copyWith(errorText: _emailError),
+                              onChanged: (_) { if (_emailError != null) setState(() => _emailError = null); },
                             ),
+                            if (_emailError != null)
+                              Padding(padding: const EdgeInsets.only(left: 4, top: 2), child: Text(_emailError!, style: const TextStyle(fontSize: 11, color: AppColors.error))),
                             const SizedBox(height: 12),
                             TextField(
                               controller: _passCtl,
@@ -170,8 +184,11 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
                                   icon: Icon(_obscurePass ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20, color: Colors.grey.shade400),
                                   onPressed: () => setState(() => _obscurePass = !_obscurePass),
                                 ),
-                              ),
+                              ).copyWith(errorText: _passError),
+                              onChanged: (_) { if (_passError != null) setState(() => _passError = null); },
                             ),
+                            if (_passError != null)
+                              Padding(padding: const EdgeInsets.only(left: 4, top: 2), child: Text(_passError!, style: const TextStyle(fontSize: 11, color: AppColors.error))),
                             const SizedBox(height: 12),
                             TextField(
                               controller: _confirmPassCtl,
@@ -183,8 +200,11 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
                                   icon: Icon(_obscureConfirm ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20, color: Colors.grey.shade400),
                                   onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
                                 ),
-                              ),
+                              ).copyWith(errorText: _confirmError),
+                              onChanged: (_) { if (_confirmError != null) setState(() => _confirmError = null); },
                             ),
+                            if (_confirmError != null)
+                              Padding(padding: const EdgeInsets.only(left: 4, top: 2), child: Text(_confirmError!, style: const TextStyle(fontSize: 11, color: AppColors.error))),
                             const SizedBox(height: 24),
                             SizedBox(
                               width: double.infinity,

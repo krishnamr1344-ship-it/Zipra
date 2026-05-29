@@ -20,6 +20,16 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   final _passCtl = TextEditingController();
   bool _loading = false;
   bool _obscurePass = true;
+  String? _emailError;
+  String? _passError;
+
+  bool _validate() {
+    setState(() {
+      _emailError = _emailCtl.text.trim().isEmpty ? 'Email is required' : null;
+      _passError = _passCtl.text.isEmpty ? 'Password is required' : null;
+    });
+    return _emailError == null && _passError == null;
+  }
   late AnimationController _animCtl;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
@@ -34,7 +44,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   }
 
   Future<void> _login() async {
-    if (_emailCtl.text.isEmpty || _passCtl.text.isEmpty) return;
+    if (!_validate()) return;
     setState(() => _loading = true);
     try {
       final resp = await ApiService().login(_emailCtl.text.trim(), _passCtl.text);
@@ -45,13 +55,23 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
         try {
           final locResult = await LocationService().getCurrentLocation();
           if (locResult.error == null) {
-            final zoneCheck = await DeliveryZoneService().checkLocation(locResult.latitude, locResult.longitude);
-            if (!zoneCheck.serviceable && mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(zoneCheck.message ?? 'Sorry, delivery not available in your area'),
-                behavior: SnackBarBehavior.floating,
-                backgroundColor: AppColors.error,
-              ));
+            try {
+              final zoneCheck = await DeliveryZoneService().checkLocation(locResult.latitude, locResult.longitude);
+              if (!zoneCheck.serviceable && mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(zoneCheck.message ?? 'Sorry, delivery not available in your area'),
+                  behavior: SnackBarBehavior.floating,
+                  backgroundColor: AppColors.error,
+                ));
+              }
+            } catch (_) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: const Text('Could not verify delivery area. Please try again.'),
+                  behavior: SnackBarBehavior.floating,
+                  backgroundColor: AppColors.warning,
+                ));
+              }
             }
             await LocationService().saveLocationToServer(locResult.latitude, locResult.longitude);
           }
@@ -157,8 +177,14 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                             TextField(
                               controller: _emailCtl,
                               keyboardType: TextInputType.emailAddress,
-                              decoration: _fieldStyle('Email', Icons.email_outlined),
+                              decoration: _fieldStyle('Email', Icons.email_outlined).copyWith(errorText: _emailError),
+                              onChanged: (_) { if (_emailError != null) setState(() => _emailError = null); },
                             ),
+                            if (_emailError != null)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 4, top: 2),
+                                child: Text(_emailError!, style: const TextStyle(fontSize: 11, color: AppColors.error)),
+                              ),
                             const SizedBox(height: 12),
                             TextField(
                               controller: _passCtl,
@@ -170,8 +196,14 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                   icon: Icon(_obscurePass ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20, color: Colors.grey.shade400),
                                   onPressed: () => setState(() => _obscurePass = !_obscurePass),
                                 ),
-                              ),
+                              ).copyWith(errorText: _passError),
+                              onChanged: (_) { if (_passError != null) setState(() => _passError = null); },
                             ),
+                            if (_passError != null)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 4, top: 2),
+                                child: Text(_passError!, style: const TextStyle(fontSize: 11, color: AppColors.error)),
+                              ),
                             Align(
                               alignment: Alignment.centerRight,
                               child: TextButton(

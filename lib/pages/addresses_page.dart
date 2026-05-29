@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/theme.dart';
 import '../services/api_service.dart';
+import '../widgets/state_widgets.dart';
 import 'address_form_page.dart';
 
 class AddressesPage extends StatefulWidget {
@@ -14,6 +15,7 @@ class _AddressesPageState extends State<AddressesPage> {
   final _api = ApiService();
   List<Map<String, dynamic>> _addresses = [];
   bool _loading = true;
+  bool _error = false;
 
   @override
   void initState() {
@@ -22,7 +24,7 @@ class _AddressesPageState extends State<AddressesPage> {
   }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    setState(() { _loading = true; _error = false; });
     try {
       final data = await _api.getAddresses();
       if (!mounted) return;
@@ -31,7 +33,7 @@ class _AddressesPageState extends State<AddressesPage> {
         _loading = false;
       });
     } catch (_) {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) setState(() { _loading = false; _error = true; });
     }
   }
 
@@ -92,21 +94,18 @@ class _AddressesPageState extends State<AddressesPage> {
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _addresses.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.location_off, size: 60, color: AppColors.textHint),
-                      const SizedBox(height: 12),
-                      const Text('No saved addresses', style: TextStyle(fontSize: 16, color: Colors.grey)),
-                      const SizedBox(height: 4),
-                      Text('Add your first delivery address', style: TextStyle(fontSize: 13, color: Colors.grey.shade400)),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
+          ? const LoadingWidget(message: 'Loading addresses\u2026')
+          : _error
+              ? ErrorStateWidget(onRetry: _load)
+              : _addresses.isEmpty
+                  ? EmptyStateWidget(
+                      icon: Icons.location_off,
+                      title: 'No saved addresses',
+                      subtitle: 'Add your first delivery address',
+                      actionLabel: 'Add Address',
+                      onAction: _add,
+                    )
+                  : RefreshIndicator(
                   onRefresh: _load,
                   child: ListView.builder(
                     padding: const EdgeInsets.all(20),

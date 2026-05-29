@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../constants/theme.dart';
 import '../services/api_service.dart';
+import '../widgets/state_widgets.dart';
 
 class PlaceSearchPage extends StatefulWidget {
   const PlaceSearchPage({super.key});
@@ -15,6 +16,7 @@ class _PlaceSearchPageState extends State<PlaceSearchPage> {
   final _searchCtl = TextEditingController();
   List<Map<String, dynamic>> _results = [];
   bool _loading = false;
+  bool _error = false;
   Timer? _debounce;
 
   @override
@@ -34,14 +36,14 @@ class _PlaceSearchPageState extends State<PlaceSearchPage> {
   }
 
   Future<void> _search(String q) async {
-    setState(() => _loading = true);
+    setState(() { _loading = true; _error = false; });
     try {
       final data = await _api.searchPlaces(q);
       if (!mounted) return;
-      setState(() => _results = data.cast<Map<String, dynamic>>());
+      setState(() { _results = data.cast<Map<String, dynamic>>(); _error = false; });
     } catch (_) {
       if (!mounted) return;
-      setState(() => _results = []);
+      setState(() { _results = []; _error = true; });
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -66,17 +68,22 @@ class _PlaceSearchPageState extends State<PlaceSearchPage> {
         foregroundColor: Colors.white,
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _results.isEmpty
-              ? Center(child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.search, size: 64, color: Colors.grey.shade200),
-                    const SizedBox(height: 12),
-                    Text('Search for your area', style: TextStyle(fontSize: 16, color: Colors.grey.shade400)),
-                  ],
-                ))
-              : ListView.separated(
+          ? const LoadingWidget(message: 'Searching\u2026')
+          : _error
+              ? ErrorStateWidget(onRetry: () => _search(_searchCtl.text.trim()))
+              : _results.isEmpty && _searchCtl.text.trim().isNotEmpty
+                  ? const EmptyStateWidget(
+                      icon: Icons.search_off,
+                      title: 'No results found',
+                      subtitle: 'Try a different search term',
+                    )
+                  : _results.isEmpty
+                      ? const EmptyStateWidget(
+                          icon: Icons.search,
+                          title: 'Search for your area',
+                          subtitle: 'Type an area, street, or city name',
+                        )
+                      : ListView.separated(
                   padding: const EdgeInsets.all(8),
                   itemCount: _results.length,
                   separatorBuilder: (_, __) => const Divider(height: 1, indent: 60),

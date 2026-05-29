@@ -38,6 +38,8 @@ app.*.symbols
 
 # Environment files (contains secrets)
 .env
+.env.*
+!.env.example
 backend/.env
 
 # SSL certs (self-signed, local only)

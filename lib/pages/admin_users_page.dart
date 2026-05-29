@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/theme.dart';
 import '../services/admin_api_service.dart';
+import '../widgets/state_widgets.dart';
 
 class AdminUsersPage extends StatefulWidget {
   const AdminUsersPage({super.key});
@@ -14,6 +15,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
   List<dynamic> _users = [];
   List<dynamic> _filtered = [];
   bool _loading = true;
+  bool _error = false;
   String _search = '';
 
   @override
@@ -23,7 +25,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
   }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    setState(() { _loading = true; _error = false; });
     try {
       final data = await _api.getUsers();
       if (!mounted) return;
@@ -31,7 +33,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
       _applyFilter();
     } catch (_) {
       if (!mounted) return;
-      setState(() => _loading = false);
+      setState(() { _loading = false; _error = true; });
     }
   }
 
@@ -116,19 +118,14 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
             ),
           ),
           if (_loading)
-            const SliverFillRemaining(child: Center(child: CircularProgressIndicator()))
+            const SliverFillRemaining(child: LoadingWidget(message: 'Loading users\u2026'))
+          else if (_error)
+            SliverFillRemaining(child: ErrorStateWidget(onRetry: _load))
           else if (_filtered.isEmpty)
             SliverFillRemaining(
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.people_outline, size: 80, color: Colors.grey.shade200),
-                    const SizedBox(height: 12),
-                    Text('No users found', style: TextStyle(fontSize: 16, color: Colors.grey.shade500)),
-                  ],
-                ),
-              ),
+              child: _search.isNotEmpty
+                  ? const EmptyStateWidget(icon: Icons.search_off, title: 'No users found', subtitle: 'Try a different search')
+                  : const EmptyStateWidget(icon: Icons.people_outline, title: 'No users yet', subtitle: 'Users will appear here once they register'),
             )
           else
             SliverPadding(

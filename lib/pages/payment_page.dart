@@ -89,6 +89,9 @@ class _PaymentPageState extends State<PaymentPage> {
         'product_id': i.productId,
         'quantity': i.count,
       })).toList();
+
+      await _api.syncCart(items);
+
       await _api.createOrder(items, 'cod', addressId: _addressId.isNotEmpty ? _addressId : null);
     } catch (e) {
       setState(() => _processing = false);

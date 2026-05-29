@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../constants/theme.dart';
 import '../services/admin_api_service.dart';
 import '../services/api_service.dart';
+import '../widgets/state_widgets.dart';
 
 class AdminComboPacksPage extends StatefulWidget {
   const AdminComboPacksPage({super.key});
@@ -14,6 +15,7 @@ class _AdminComboPacksPageState extends State<AdminComboPacksPage> {
   final _api = AdminApiService();
   List<Map<String, dynamic>> _packs = [];
   bool _loading = true;
+  bool _error = false;
 
   @override
   void initState() {
@@ -22,7 +24,7 @@ class _AdminComboPacksPageState extends State<AdminComboPacksPage> {
   }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    setState(() { _loading = true; _error = false; });
     try {
       final data = await _api.getComboPacks();
       if (!mounted) return;
@@ -31,7 +33,7 @@ class _AdminComboPacksPageState extends State<AdminComboPacksPage> {
         _loading = false;
       });
     } catch (_) {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) setState(() { _loading = false; _error = true; });
     }
   }
 
@@ -51,6 +53,8 @@ class _AdminComboPacksPageState extends State<AdminComboPacksPage> {
     }
 
     bool saving = false;
+    String? nameError;
+    String? priceError;
 
     showModalBottomSheet(
       context: context,
@@ -75,13 +79,13 @@ class _AdminComboPacksPageState extends State<AdminComboPacksPage> {
                 ],
               ),
               const SizedBox(height: 24),
-              TextField(controller: nameCtl, decoration: InputDecoration(labelText: 'Pack Name', border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)), contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14))),
+              TextField(controller: nameCtl, decoration: InputDecoration(labelText: 'Pack Name', errorText: nameError, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)), contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14)), onChanged: (_) { if (nameError != null) setSheetState(() => nameError = null); }),
               const SizedBox(height: 12),
               TextField(controller: descCtl, decoration: InputDecoration(labelText: 'Description', border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)), contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14)), maxLines: 2),
               const SizedBox(height: 12),
               Row(
                 children: [
-                  Expanded(child: TextField(controller: priceCtl, decoration: InputDecoration(labelText: 'Total Price (₹)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)), contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14)), keyboardType: TextInputType.number)),
+                  Expanded(child: TextField(controller: priceCtl, decoration: InputDecoration(labelText: 'Total Price (₹)', errorText: priceError, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)), contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14)), keyboardType: TextInputType.number, onChanged: (_) { if (priceError != null) setSheetState(() => priceError = null); })),
                   const SizedBox(width: 12),
                   Expanded(child: TextField(controller: discountCtl, decoration: InputDecoration(labelText: 'Discount Label', hintText: 'e.g. 20% OFF', border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)), contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14)))),
                 ],
@@ -158,8 +162,11 @@ class _AdminComboPacksPageState extends State<AdminComboPacksPage> {
                 height: 50,
                 child: ElevatedButton(
                   onPressed: saving ? null : () async {
-                    if (nameCtl.text.trim().isEmpty) return;
-                    if (priceCtl.text.trim().isEmpty) return;
+                    setSheetState(() {
+                      nameError = nameCtl.text.trim().isEmpty ? 'Pack name is required' : null;
+                      priceError = priceCtl.text.trim().isEmpty ? 'Price is required' : (double.tryParse(priceCtl.text) == null ? 'Invalid price' : null);
+                    });
+                    if (nameError != null || priceError != null) return;
                     setSheetState(() => saving = true);
                     try {
                       final body = {
@@ -252,25 +259,17 @@ class _AdminComboPacksPageState extends State<AdminComboPacksPage> {
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _packs.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey.shade300),
-                      const SizedBox(height: 12),
-                      const Text('No combo packs yet', style: TextStyle(fontSize: 16, color: Colors.grey)),
-                      const SizedBox(height: 8),
-                      TextButton.icon(
-                        onPressed: () => _showForm(),
-                        icon: const Icon(Icons.add),
-                        label: const Text('Create First Pack'),
-                      ),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
+          ? const LoadingWidget(message: 'Loading packs\u2026')
+          : _error
+              ? ErrorStateWidget(onRetry: _load)
+              : _packs.isEmpty
+                  ? EmptyStateWidget(
+                      icon: Icons.inventory_2_outlined,
+                      title: 'No combo packs yet',
+                      actionLabel: 'Create First Pack',
+                      onAction: () => _showForm(),
+                    )
+                  : RefreshIndicator(
                   onRefresh: _load,
                   child: ListView.builder(
                     padding: const EdgeInsets.all(16),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/theme.dart';
 import '../services/admin_api_service.dart';
+import '../widgets/state_widgets.dart';
 import 'admin_order_detail_page.dart';
 
 class AdminOrdersPage extends StatefulWidget {
@@ -15,6 +16,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
   List<dynamic> _orders = [];
   List<dynamic> _filtered = [];
   bool _loading = true;
+  bool _error = false;
   String _search = '';
   String _statusFilter = 'All';
 
@@ -25,7 +27,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
   }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    setState(() { _loading = true; _error = false; });
     try {
       final data = await _api.getOrders();
       if (!mounted) return;
@@ -37,7 +39,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
       _applyFilters();
     } catch (_) {
       if (!mounted) return;
-      setState(() => _loading = false);
+      setState(() { _loading = false; _error = true; });
     }
   }
 
@@ -518,46 +520,28 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
             ),
             if (_loading)
               const SliverFillRemaining(
-                child: Center(child: CircularProgressIndicator()),
+                child: LoadingWidget(message: 'Loading orders\u2026'),
               )
+            else if (_error)
+              const SliverFillRemaining(child: ErrorStateWidget())
             else if (_filtered.isEmpty)
               SliverFillRemaining(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Spacer(flex: 2),
-                    Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.withAlpha(15),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.receipt_long,
-                          size: 48, color: Colors.grey.shade300),
-                    ),
-                    const SizedBox(height: 16),
-                    Text('No orders found',
-                        style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade500)),
-                    if (_search.isNotEmpty || _statusFilter != 'All') ...[
-                      const SizedBox(height: 6),
-                      TextButton(
-                        onPressed: () {
-                          setState(() {
-                            _search = '';
-                            _statusFilter = 'All';
-                          });
+                child: _search.isNotEmpty || _statusFilter != 'All'
+                    ? EmptyStateWidget(
+                        icon: Icons.search_off,
+                        title: 'No orders found',
+                        subtitle: 'Try adjusting your search or filters',
+                        actionLabel: 'Clear filters',
+                        onAction: () {
+                          setState(() { _search = ''; _statusFilter = 'All'; });
                           _applyFilters();
                         },
-                        child: const Text('Clear filters'),
+                      )
+                    : const EmptyStateWidget(
+                        icon: Icons.receipt_long,
+                        title: 'No orders yet',
+                        subtitle: 'Orders will appear here once customers place them',
                       ),
-                    ],
-                    const Spacer(flex: 3),
-                  ],
-                ),
               )
             else
               SliverPadding(

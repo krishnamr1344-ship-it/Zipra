@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/theme.dart';
 import '../models/cart_model.dart';
+import '../widgets/state_widgets.dart';
 import 'payment_page.dart';
 
 class CartPage extends StatelessWidget {
@@ -12,15 +13,10 @@ class CartPage extends StatelessWidget {
       listenable: cartNotifier,
       builder: (_, _) {
         if (cartNotifier.items.isEmpty) {
-          return const Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.shopping_cart_outlined, size: 80, color: AppColors.textHint),
-                SizedBox(height: 16),
-                Text('Your cart is empty', style: TextStyle(fontSize: 18, color: AppColors.textSecondary)),
-              ],
-            ),
+          return const EmptyStateWidget(
+            icon: Icons.shopping_cart_outlined,
+            title: 'Your cart is empty',
+            subtitle: 'Add items to get started',
           );
         }
         return Padding(

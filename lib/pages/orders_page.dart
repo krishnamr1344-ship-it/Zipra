@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../constants/theme.dart';
 import '../models/cart_model.dart';
 import '../services/api_service.dart';
+import '../widgets/state_widgets.dart';
 import 'order_detail_page.dart';
 
 class OrdersPage extends StatefulWidget {
@@ -14,6 +15,7 @@ class OrdersPage extends StatefulWidget {
 class _OrdersPageState extends State<OrdersPage> {
   List<Map<String, dynamic>> _apiOrders = [];
   bool _loading = false;
+  bool _error = false;
 
   @override
   void initState() {
@@ -22,19 +24,20 @@ class _OrdersPageState extends State<OrdersPage> {
   }
 
   Future<void> _refresh() async {
-    setState(() => _loading = true);
+    setState(() { _loading = true; _error = false; });
     try {
       final orders = await ApiService().getOrders();
       if (!mounted) return;
       setState(() { _apiOrders = orders.cast<Map<String, dynamic>>(); _loading = false; });
     } catch (_) {
       if (!mounted) return;
-      setState(() => _loading = false);
+      setState(() { _loading = false; _error = true; });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final hasLocal = orderNotifier.orders.isNotEmpty;
     final hasApi = _apiOrders.isNotEmpty;
 
     return Scaffold(
@@ -55,39 +58,41 @@ class _OrdersPageState extends State<OrdersPage> {
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : !hasApi
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: AppColors.chipBg,
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          child: const Icon(Icons.shopping_bag_outlined, size: 64, color: AppColors.primary),
-                        ),
-                        const SizedBox(height: 20),
-                        const Text('No orders yet', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                        const SizedBox(height: 8),
-                        const Text('Your placed orders will appear here', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-                      ],
-                    ),
-                  )
-                : ListView(
+            ? const LoadingWidget(message: 'Loading orders\u2026')
+            : _error
+                ? ErrorStateWidget(onRetry: _refresh)
+                : !hasApi && !hasLocal
+                    ? const EmptyStateWidget(
+                        icon: Icons.shopping_bag_outlined,
+                        title: 'No orders yet',
+                        subtitle: 'Your placed orders will appear here',
+                      )
+                    : ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
-                      ..._apiOrders.map((o) => _OrderCard(
-                        id: o['id']?.toString() ?? '',
-                        status: o['status'] ?? 'Pending',
-                        total: (o['total_amount'] ?? 0).toInt(),
-                        itemCount: (o['items'] as List?)?.length ?? 0,
-                        date: o['created_at'] != null ? DateTime.parse(o['created_at']) : DateTime.now(),
-                        items: ((o['items'] as List?)?.cast<Map<String, dynamic>>() ?? []).map((i) => _OrderItemPreview(name: i['product_name'] ?? '', qty: i['quantity'] ?? 1, price: (i['product_price'] ?? 0).toInt())).toList(),
-                        onTap: () => _openApiDetail(context, o),
-                      )),
+                      if (hasApi) ...[
+                        ..._apiOrders.map((o) => _OrderCard(
+                          id: o['id']?.toString() ?? '',
+                          status: o['status'] ?? 'Pending',
+                          total: (o['total_amount'] ?? 0).toInt(),
+                          itemCount: (o['items'] as List?)?.length ?? 0,
+                          date: o['created_at'] != null ? DateTime.parse(o['created_at']) : DateTime.now(),
+                          items: ((o['items'] as List?)?.cast<Map<String, dynamic>>() ?? []).map((i) => _OrderItemPreview(name: i['product_name'] ?? '', qty: i['quantity'] ?? 1, price: (i['product_price'] ?? 0).toInt())).toList(),
+                          onTap: () => _openApiDetail(context, o),
+                        )),
+                      ],
+                      if (hasLocal) ...[
+                        if (hasApi) const SizedBox(height: 8),
+                        ...orderNotifier.orders.map((order) => _OrderCard(
+                          id: order.id,
+                          status: order.status,
+                          total: order.total,
+                          itemCount: order.items.length,
+                          date: order.date,
+                          items: order.items.map((i) => _OrderItemPreview(name: i.name, qty: i.count, price: i.price)).toList(),
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OrderDetailPage(order: order))),
+                        )),
+                      ],
                     ],
                   ),
       ),
@@ -108,11 +113,12 @@ class _OrdersPageState extends State<OrdersPage> {
       date: o['created_at'] != null ? DateTime.parse(o['created_at']) : DateTime.now(),
       deliveryAddress: addr,
       items: items.map((i) => CartItem(
-        id: i['product_id'] ?? '',
-        productId: i['product_id'] ?? '',
         name: i['product_name'] ?? '',
         qty: '',
         price: (i['product_price'] ?? 0).toInt(),
+        icon: Icons.shopping_bag,
+        color: AppColors.success,
+        productId: i['product_id'] ?? '',
         count: i['quantity'] ?? 1,
       )).toList(),
     );

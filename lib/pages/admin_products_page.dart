@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/theme.dart';
 import '../services/admin_api_service.dart';
+import '../widgets/state_widgets.dart';
 
 class AdminProductsPage extends StatefulWidget {
   const AdminProductsPage({super.key});
@@ -15,6 +16,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
   List<dynamic> _filtered = [];
   List<dynamic> _categories = [];
   bool _loading = true;
+  bool _error = false;
   bool _gridMode = false;
   String _search = '';
 
@@ -25,7 +27,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
   }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    setState(() { _loading = true; _error = false; });
     try {
       final prods = await _api.getProducts();
       final cats = await _api.getCategories();
@@ -34,7 +36,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
       _applyFilter();
     } catch (_) {
       if (!mounted) return;
-      setState(() => _loading = false);
+      setState(() { _loading = false; _error = true; });
     }
   }
 
@@ -64,6 +66,9 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
     ));
     String? catId = product?['category_id'];
     bool saving = false;
+    String? nameError;
+    String? priceError;
+    String? catError;
 
     showModalBottomSheet(
       context: context,
@@ -93,9 +98,10 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                 ),
                 const SizedBox(height: 24),
                 DropdownButtonFormField<String>(
-                  initialValue: catId,
+                  value: catId,
                   decoration: InputDecoration(
                     labelText: 'Category',
+                    errorText: catError,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   ),
@@ -103,16 +109,18 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                     final cat = c as Map<String, dynamic>;
                     return DropdownMenuItem<String>(value: cat['id'] as String?, child: Text(cat['name'] ?? ''));
                   }).toList(),
-                  onChanged: (v) => setSheetState(() => catId = v),
+                  onChanged: (v) => setSheetState(() { catId = v; catError = null; }),
                 ),
                 const SizedBox(height: 14),
                 TextField(
                   controller: nameCtl,
                   decoration: InputDecoration(
                     labelText: 'Name',
+                    errorText: nameError,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   ),
+                  onChanged: (_) { if (nameError != null) setSheetState(() => nameError = null); },
                 ),
                 const SizedBox(height: 14),
                 Row(
@@ -122,10 +130,12 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                         controller: priceCtl,
                         decoration: InputDecoration(
                           labelText: 'Price (₹)',
+                          errorText: priceError,
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                         ),
                         keyboardType: TextInputType.number,
+                        onChanged: (_) { if (priceError != null) setSheetState(() => priceError = null); },
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -193,6 +203,12 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                       elevation: 0,
                     ),
                     onPressed: saving ? null : () async {
+                      setSheetState(() {
+                        nameError = nameCtl.text.trim().isEmpty ? 'Product name is required' : null;
+                        priceError = priceCtl.text.trim().isEmpty ? 'Price is required' : (double.tryParse(priceCtl.text) == null ? 'Invalid price' : null);
+                        catError = catId == null ? 'Select a category' : null;
+                      });
+                      if (nameError != null || priceError != null || catError != null) return;
                       if (images.any((c) => c.text.trim().isEmpty)) {
                         ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Please provide at least 3 images'), behavior: SnackBarBehavior.floating));
                         return;
@@ -314,21 +330,14 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
             ),
           ),
           if (_loading)
-            const SliverFillRemaining(child: Center(child: CircularProgressIndicator()))
+            const SliverFillRemaining(child: LoadingWidget(message: 'Loading products\u2026'))
+          else if (_error)
+            SliverFillRemaining(child: ErrorStateWidget(onRetry: _load))
           else if (_filtered.isEmpty)
             SliverFillRemaining(
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.inventory_2_outlined, size: 80, color: Colors.grey.shade200),
-                    const SizedBox(height: 12),
-                    Text('No products yet', style: TextStyle(fontSize: 16, color: Colors.grey.shade500)),
-                    const SizedBox(height: 4),
-                    Text('Tap + to add your first product', style: TextStyle(fontSize: 13, color: Colors.grey.shade400)),
-                  ],
-                ),
-              ),
+              child: _search.isNotEmpty
+                  ? const EmptyStateWidget(icon: Icons.search_off, title: 'No products found', subtitle: 'Try a different search')
+                  : const EmptyStateWidget(icon: Icons.inventory_2_outlined, title: 'No products yet', subtitle: 'Tap + to add your first product'),
             )
           else if (!_gridMode)
             SliverPadding(
