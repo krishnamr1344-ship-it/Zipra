@@ -37,7 +37,6 @@ class _OrdersPageState extends State<OrdersPage> {
 
   @override
   Widget build(BuildContext context) {
-    final hasLocal = orderNotifier.orders.isNotEmpty;
     final hasApi = _apiOrders.isNotEmpty;
 
     return Scaffold(
@@ -61,7 +60,7 @@ class _OrdersPageState extends State<OrdersPage> {
             ? const LoadingWidget(message: 'Loading orders\u2026')
             : _error
                 ? ErrorStateWidget(onRetry: _refresh)
-                : !hasApi && !hasLocal
+                : !hasApi
                     ? const EmptyStateWidget(
                         icon: Icons.shopping_bag_outlined,
                         title: 'No orders yet',
@@ -81,18 +80,7 @@ class _OrdersPageState extends State<OrdersPage> {
                           onTap: () => _openApiDetail(context, o),
                         )),
                       ],
-                      if (hasLocal) ...[
-                        if (hasApi) const SizedBox(height: 8),
-                        ...orderNotifier.orders.map((order) => _OrderCard(
-                          id: order.id,
-                          status: order.status,
-                          total: order.total,
-                          itemCount: order.items.length,
-                          date: order.date,
-                          items: order.items.map((i) => _OrderItemPreview(name: i.name, qty: i.count, price: i.price)).toList(),
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OrderDetailPage(order: order))),
-                        )),
-                      ],
+
                     ],
                   ),
       ),
@@ -113,12 +101,13 @@ class _OrdersPageState extends State<OrdersPage> {
       date: o['created_at'] != null ? DateTime.parse(o['created_at']) : DateTime.now(),
       deliveryAddress: addr,
       items: items.map((i) => CartItem(
+        id: i['product_id'] ?? '',
+        productId: i['product_id'] ?? '',
         name: i['product_name'] ?? '',
         qty: '',
         price: (i['product_price'] ?? 0).toInt(),
         icon: Icons.shopping_bag,
         color: AppColors.success,
-        productId: i['product_id'] ?? '',
         count: i['quantity'] ?? 1,
       )).toList(),
     );
