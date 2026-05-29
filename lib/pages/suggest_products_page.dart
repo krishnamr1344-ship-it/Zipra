@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/theme.dart';
+import '../services/api_service.dart';
 
 class SuggestProductsPage extends StatefulWidget {
   const SuggestProductsPage({super.key});
@@ -11,6 +12,7 @@ class SuggestProductsPage extends StatefulWidget {
 class _SuggestProductsPageState extends State<SuggestProductsPage> {
   final _productController = TextEditingController();
   final _reasonController = TextEditingController();
+  bool _submitting = false;
 
   @override
   void dispose() {
@@ -19,17 +21,31 @@ class _SuggestProductsPageState extends State<SuggestProductsPage> {
     super.dispose();
   }
 
-  void _submit() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Thanks for your suggestion!'),
-        backgroundColor: AppColors.primary,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-      ),
-    );
-    _productController.clear();
-    _reasonController.clear();
+  Future<void> _submit() async {
+    final productName = _productController.text.trim();
+    if (productName.isEmpty) return;
+    setState(() => _submitting = true);
+    try {
+      await ApiService().suggestProduct(productName, _reasonController.text.trim());
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Thanks for your suggestion!'),
+          backgroundColor: AppColors.primary,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+        ),
+      );
+      _productController.clear();
+      _reasonController.clear();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$e'), backgroundColor: AppColors.error, behavior: SnackBarBehavior.floating),
+      );
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 
   @override
@@ -87,7 +103,7 @@ class _SuggestProductsPageState extends State<SuggestProductsPage> {
               width: double.infinity,
               height: 48,
               child: ElevatedButton(
-                onPressed: _submit,
+                onPressed: _submitting ? null : _submit,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,

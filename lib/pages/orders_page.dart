@@ -35,7 +35,6 @@ class _OrdersPageState extends State<OrdersPage> {
 
   @override
   Widget build(BuildContext context) {
-    final hasLocal = orderNotifier.orders.isNotEmpty;
     final hasApi = _apiOrders.isNotEmpty;
 
     return Scaffold(
@@ -57,7 +56,7 @@ class _OrdersPageState extends State<OrdersPage> {
         onRefresh: _refresh,
         child: _loading
             ? const Center(child: CircularProgressIndicator())
-            : !hasApi && !hasLocal
+            : !hasApi
                 ? Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -80,29 +79,15 @@ class _OrdersPageState extends State<OrdersPage> {
                 : ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
-                      if (hasApi) ...[
-                        ..._apiOrders.map((o) => _OrderCard(
-                          id: o['id']?.toString() ?? '',
-                          status: o['status'] ?? 'Pending',
-                          total: (o['total_amount'] ?? 0).toInt(),
-                          itemCount: (o['items'] as List?)?.length ?? 0,
-                          date: o['created_at'] != null ? DateTime.parse(o['created_at']) : DateTime.now(),
-                          items: ((o['items'] as List?)?.cast<Map<String, dynamic>>() ?? []).map((i) => _OrderItemPreview(name: i['product_name'] ?? '', qty: i['quantity'] ?? 1, price: (i['product_price'] ?? 0).toInt())).toList(),
-                          onTap: () => _openApiDetail(context, o),
-                        )),
-                      ],
-                      if (hasLocal) ...[
-                        if (hasApi) const SizedBox(height: 8),
-                        ...orderNotifier.orders.map((order) => _OrderCard(
-                          id: order.id,
-                          status: order.status,
-                          total: order.total,
-                          itemCount: order.items.length,
-                          date: order.date,
-                          items: order.items.map((i) => _OrderItemPreview(name: i.name, qty: i.count, price: i.price)).toList(),
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OrderDetailPage(order: order))),
-                        )),
-                      ],
+                      ..._apiOrders.map((o) => _OrderCard(
+                        id: o['id']?.toString() ?? '',
+                        status: o['status'] ?? 'Pending',
+                        total: (o['total_amount'] ?? 0).toInt(),
+                        itemCount: (o['items'] as List?)?.length ?? 0,
+                        date: o['created_at'] != null ? DateTime.parse(o['created_at']) : DateTime.now(),
+                        items: ((o['items'] as List?)?.cast<Map<String, dynamic>>() ?? []).map((i) => _OrderItemPreview(name: i['product_name'] ?? '', qty: i['quantity'] ?? 1, price: (i['product_price'] ?? 0).toInt())).toList(),
+                        onTap: () => _openApiDetail(context, o),
+                      )),
                     ],
                   ),
       ),
@@ -123,12 +108,11 @@ class _OrdersPageState extends State<OrdersPage> {
       date: o['created_at'] != null ? DateTime.parse(o['created_at']) : DateTime.now(),
       deliveryAddress: addr,
       items: items.map((i) => CartItem(
+        id: i['product_id'] ?? '',
+        productId: i['product_id'] ?? '',
         name: i['product_name'] ?? '',
         qty: '',
         price: (i['product_price'] ?? 0).toInt(),
-        icon: Icons.shopping_bag,
-        color: AppColors.success,
-        productId: i['product_id'] ?? '',
         count: i['quantity'] ?? 1,
       )).toList(),
     );

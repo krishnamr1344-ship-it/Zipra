@@ -143,4 +143,23 @@ class AdminApiService {
       throw ApiException('$msg');
     }
   }
+
+  Future<void> updateDeliveryZone(String id, String name, String geojsonData) async {
+    final res = await http.put(Uri.parse('$_baseUrl/api/admin/delivery-zones/$id'), headers: await _authHeader(), body: jsonEncode({
+      'zone_name': name,
+      'geojson_data': geojsonData,
+    }));
+    if (res.statusCode != 200) {
+      final msg = jsonDecode(res.body)['detail'] ?? 'Failed to update zone';
+      throw ApiException('$msg');
+    }
+  }
+
+  Future<void> deleteDeliveryZone(String id) async {
+    final res = await http.delete(Uri.parse('$_baseUrl/api/admin/delivery-zones/$id'), headers: await _authHeader());
+    if (res.statusCode != 200) {
+      final msg = jsonDecode(res.body)['detail'] ?? 'Failed to delete zone';
+      throw ApiException('$msg');
+    }
+  }
 }

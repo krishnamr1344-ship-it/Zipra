@@ -67,9 +67,9 @@ class LocationService {
     }
   }
 
-  Future<void> saveLocationToServer(double latitude, double longitude) async {
+  Future<void> saveLocationToServer(double latitude, double longitude, {String? landmark, String? addressType, String? houseNumber, String? floorNumber}) async {
     try {
-      final addr = await _api.createGpsAddress(latitude, longitude);
+      final addr = await _api.createGpsAddress(latitude, longitude, landmark: landmark, addressType: addressType, houseNumber: houseNumber, floorNumber: floorNumber);
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('gps_address_id', addr['id'] ?? '');
       await prefs.setString('gps_address_line', addr['address_line1'] ?? '');
@@ -79,6 +79,9 @@ class LocationService {
       await prefs.setString('gps_latitude', '${addr['latitude'] ?? ''}');
       await prefs.setString('gps_longitude', '${addr['longitude'] ?? ''}');
       await prefs.setString('gps_pincode', addr['pincode'] ?? '');
+      await prefs.setString('gps_address_type', addr['address_type'] ?? '');
+      await prefs.setString('gps_house_number', addr['house_number'] ?? '');
+      await prefs.setString('gps_floor_number', addr['floor_number'] ?? '');
     } catch (_) {}
   }
 
@@ -93,6 +96,9 @@ class LocationService {
       'latitude': prefs.getString('gps_latitude') ?? '',
       'longitude': prefs.getString('gps_longitude') ?? '',
       'pincode': prefs.getString('gps_pincode') ?? '',
+      'address_type': prefs.getString('gps_address_type') ?? '',
+      'house_number': prefs.getString('gps_house_number') ?? '',
+      'floor_number': prefs.getString('gps_floor_number') ?? '',
     };
   }
 }

@@ -23,7 +23,8 @@ from typing import Optional
 from database import get_db
 from models import (
     User, Category, Product, ProductImage, Address, CartItem,
-    Order, OrderItem, Payment, DeliveryZone, ComboPack, ComboPackItem,
+    Order, OrderItem, Payment, DeliveryZone, ComboPack, ComboPackItem, ProductSuggestion,
+    WishlistItem,
 )
 from schemas import (
     CategoryCreate, CategoryResponse,
@@ -34,6 +35,8 @@ from schemas import (
     PaymentProcessRequest, PaymentResponse, MessageResponse,
     ZoneCheckRequest, ZoneCheckResponse,
     ComboPackItemInput, ComboPackItemResponse, ComboPackResponse, PackAddRequest,
+    SuggestProductRequest,
+    WishlistAddRequest, WishlistItemResponse,
 )
 
 router = APIRouter(prefix="/api")
@@ -126,13 +129,20 @@ def _order_to_response(order: Order) -> OrderResponse:
     delivery_address = None
     if order.address_id and order.address:
         addr = order.address
+        maps = f"https://www.google.com/maps?q={addr.latitude},{addr.longitude}" if addr.latitude and addr.longitude else None
         delivery_address = DeliveryAddress(
             address_line1=addr.address_line1,
+            address_line2=addr.address_line2,
             city=addr.city,
             state=addr.state,
             pincode=addr.pincode,
+            address_type=addr.address_type,
+            house_number=addr.house_number,
+            floor_number=addr.floor_number,
+            landmark=addr.landmark,
             latitude=float(addr.latitude) if addr.latitude else None,
             longitude=float(addr.longitude) if addr.longitude else None,
+            maps_link=maps,
         )
     return OrderResponse(
         id=str(order.id),
@@ -424,9 +434,46 @@ def create_address_from_gps(body: GpsAddressCreate, request: Request, db: Sessio
 
 # ─── PLACES SEARCH ──────────────────────────────────────────────────
 
+@router.get("/places/reverse")
+def reverse_geocode(lat: float, lng: float, db: Session = Depends(get_db)):
+    try:
+        import httpx
+        with httpx.Client(timeout=10) as client:
+            resp = client.get(
+                "https://nominatim.openstreetmap.org/reverse",
+                params={"lat": lat, "lon": lng, "format": "json", "addressdetails": 1},
+                headers={"User-Agent": "DeliveryApp/1.0"},
+            )
+        if resp.status_code != 200:
+            return {"display_name": "", "address_line1": "", "address_line2": "", "city": "", "state": "", "pincode": ""}
+        data = resp.json()
+        addr_data = data.get("address", {})
+        road = addr_data.get("road") or ""
+        house = addr_data.get("house_number") or ""
+        area_raw = addr_data.get("suburb") or addr_data.get("city_district") or ""
+        area = area_raw.replace("Zone ", "").strip()
+        city_raw = addr_data.get("city") or addr_data.get("town") or addr_data.get("village") or addr_data.get("county") or ""
+        import re as _re
+        city = _re.sub(r'\s+(Corporation|Municipal|Municipality|Municipal\s+Corporation)\s*$', '', city_raw).strip()
+        parts = []
+        if road:
+            parts.append(road)
+        if house:
+            parts.append(house)
+        return {
+            "display_name": data.get("display_name", ""),
+            "address_line1": ", ".join(parts) if parts else data.get("display_name", ""),
+            "address_line2": f"{area}, {city}" if area and city else (area or ""),
+            "city": city,
+            "state": addr_data.get("state") or "",
+            "pincode": addr_data.get("postcode") or "",
+        }
+    except Exception:
+        return {"display_name": "", "address_line1": "", "address_line2": "", "city": "", "state": "", "pincode": ""}
+
+
 @router.get("/places/search")
 def search_places(q: str, request: Request, db: Session = Depends(get_db)):
-    _get_user_id(request)
     try:
         import httpx
         with httpx.Client(timeout=10) as client:
@@ -454,6 +501,101 @@ def search_places(q: str, request: Request, db: Session = Depends(get_db)):
         return results
     except Exception:
         return []
+
+
+# ─── WISHLIST ─────────────────────────────────────────────────────
+
+@router.get("/wishlist", response_model=list[WishlistItemResponse])
+def list_wishlist(request: Request, db: Session = Depends(get_db)):
+    user_id = _get_user_id(request)
+    items = db.query(WishlistItem).filter(
+        WishlistItem.user_id == user_id,
+        WishlistItem.is_deleted == False,
+    ).order_by(WishlistItem.created_at.desc()).all()
+    result = []
+    for item in items:
+        prod = item.product
+        result.append(WishlistItemResponse(
+            id=str(item.id),
+            product_id=str(item.product_id),
+            product_name=prod.name if prod else "",
+            product_price=float(prod.price) if prod else 0,
+            product_unit=prod.unit if prod else "",
+            product_image=prod.images[0].image_url if prod and prod.images else None,
+            created_at=item.created_at,
+        ))
+    return result
+
+
+@router.post("/wishlist", response_model=WishlistItemResponse, status_code=status.HTTP_201_CREATED)
+def add_to_wishlist(body: WishlistAddRequest, request: Request, db: Session = Depends(get_db)):
+    user_id = _get_user_id(request)
+    _get_user(user_id, db)
+    product = _get_product_or_404(body.product_id, db)
+
+    existing = db.query(WishlistItem).filter(
+        WishlistItem.user_id == user_id,
+        WishlistItem.product_id == body.product_id,
+        WishlistItem.is_deleted == False,
+    ).first()
+    if existing:
+        return WishlistItemResponse(
+            id=str(existing.id),
+            product_id=str(existing.product_id),
+            product_name=product.name,
+            product_price=float(product.price),
+            product_unit=product.unit,
+            product_image=product.images[0].image_url if product.images else None,
+            created_at=existing.created_at,
+        )
+
+    soft = db.query(WishlistItem).filter(
+        WishlistItem.user_id == user_id,
+        WishlistItem.product_id == body.product_id,
+        WishlistItem.is_deleted == True,
+    ).first()
+    if soft:
+        soft.is_deleted = False
+        db.commit()
+        db.refresh(soft)
+        return WishlistItemResponse(
+            id=str(soft.id),
+            product_id=str(soft.product_id),
+            product_name=product.name,
+            product_price=float(product.price),
+            product_unit=product.unit,
+            product_image=product.images[0].image_url if product.images else None,
+            created_at=soft.created_at,
+        )
+
+    item = WishlistItem(user_id=user_id, product_id=body.product_id)
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return WishlistItemResponse(
+        id=str(item.id),
+        product_id=str(item.product_id),
+        product_name=product.name,
+        product_price=float(product.price),
+        product_unit=product.unit,
+        product_image=product.images[0].image_url if product.images else None,
+        created_at=item.created_at,
+    )
+
+
+@router.delete("/wishlist/{product_id}", response_model=MessageResponse)
+def remove_from_wishlist(product_id: str, request: Request, db: Session = Depends(get_db)):
+    user_id = _get_user_id(request)
+    item = db.query(WishlistItem).filter(
+        WishlistItem.user_id == user_id,
+        WishlistItem.product_id == product_id,
+        WishlistItem.is_deleted == False,
+    ).first()
+    if not item:
+        return MessageResponse(message="Item not in wishlist")
+    item.is_deleted = True
+    db.commit()
+    return MessageResponse(message="Removed from wishlist")
 
 
 # ─── CART ─────────────────────────────────────────────────────────
@@ -929,3 +1071,19 @@ def add_pack_to_cart(body: PackAddRequest, request: Request, db: Session = Depen
         })
     db.commit()
     return {"message": "Pack added to cart", "items": added}
+
+
+# ─── PRODUCT SUGGESTIONS ──────────────────────────────────────────
+
+
+@router.post("/suggest-product", status_code=status.HTTP_201_CREATED)
+def suggest_product(body: SuggestProductRequest, request: Request, db: Session = Depends(get_db)):
+    user_id = getattr(request.state, "user_id", None)
+    suggestion = ProductSuggestion(
+        user_id=user_id,
+        product_name=body.product_name.strip(),
+        reason=body.reason.strip() if body.reason else None,
+    )
+    db.add(suggestion)
+    db.commit()
+    return {"message": "Thanks for your suggestion!"}

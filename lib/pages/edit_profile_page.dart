@@ -31,7 +31,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
       return;
     }
     setState(() => _saving = true);
-    await _api.saveUser(_nameCtl.text.trim(), _emailCtl.text.trim(), phone: _phoneCtl.text.trim());
+    try {
+      await _api.updateProfile(_nameCtl.text.trim(), _emailCtl.text.trim(), phone: _phoneCtl.text.trim());
+    } catch (_) {
+      // Fallback to local save if API fails
+      await _api.saveUser(_nameCtl.text.trim(), _emailCtl.text.trim(), phone: _phoneCtl.text.trim());
+    }
     if (!mounted) return;
     Navigator.pop(context, {
       'name': _nameCtl.text.trim(),

@@ -22,15 +22,12 @@ class _PackDetailSheetState extends State<PackDetailSheet> {
       final result = await _api.addPackToCart(widget.pack.id);
       if (!mounted) return;
       for (final item in result['items'] as List<dynamic>) {
-        cartNotifier.add(CartItem(
+        await cartNotifier.add(
+          item['product_id']?.toString() ?? '',
           name: item['product_name'] ?? '',
           qty: '${item['quantity'] ?? 1}',
           price: 0,
-          icon: Icons.shopping_bag,
-          color: AppColors.primaryLight,
-          productId: item['product_id']?.toString() ?? '',
-          count: item['quantity'] ?? 1,
-        ));
+        );
       }
       if (!mounted) return;
       Navigator.pop(context);

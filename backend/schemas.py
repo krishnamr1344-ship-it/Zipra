@@ -573,6 +573,29 @@ class PaymentResponse(BaseModel):
         from_attributes = True
 
 
+# ─── WISHLIST ────────────────────────────────────────────────────
+
+class WishlistAddRequest(BaseModel):
+    product_id: str
+
+
+class WishlistItemResponse(BaseModel):
+    id: str
+    product_id: str
+    product_name: str
+    product_price: float
+    product_unit: str
+    product_image: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class WishlistRemoveResponse(BaseModel):
+    message: str
+
+
 # ─── COMBO PACKS ──────────────────────────────────────────────────
 
 PACK_NAME_LENGTH = 200
@@ -699,6 +722,76 @@ class ZoneCheckResponse(BaseModel):
 
 class MessageResponse(BaseModel):
     message: str
+
+
+class UpdateProfileRequest(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+
+    @field_validator("name")
+    @classmethod
+    def valid_name(cls, v):
+        if v:
+            v = v.strip()
+            if not v:
+                raise ValueError("Name cannot be empty")
+            if len(v) > MAX_NAME_LENGTH:
+                raise ValueError(f"Name must not exceed {MAX_NAME_LENGTH} characters")
+        return v
+
+    @field_validator("email")
+    @classmethod
+    def valid_email(cls, v):
+        if v:
+            v = v.strip()
+            if not v:
+                raise ValueError("Email cannot be empty")
+            if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", v):
+                raise ValueError("Invalid email format")
+        return v.lower() if v else v
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+    @field_validator("email")
+    @classmethod
+    def valid_email(cls, v):
+        v = v.strip()
+        if not v:
+            raise ValueError("Email is required")
+        return v.lower()
+
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+    code: str
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def password_strength(cls, v):
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        if len(v) > MAX_PASSWORD_LENGTH:
+            raise ValueError(f"Password must not exceed {MAX_PASSWORD_LENGTH} characters")
+        return v
+
+
+class SuggestProductRequest(BaseModel):
+    product_name: str
+    reason: Optional[str] = None
+
+    @field_validator("product_name")
+    @classmethod
+    def valid_name(cls, v):
+        v = v.strip()
+        if not v:
+            raise ValueError("Product name is required")
+        if len(v) > 200:
+            raise ValueError("Product name must not exceed 200 characters")
+        return v
 
 
 class StatusUpdateRequest(BaseModel):

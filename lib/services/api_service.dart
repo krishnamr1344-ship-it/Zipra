@@ -1,22 +1,7 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-
-/// Allow self‑signed SSL certificates (development only).
-class _AllowSelfSignedCert extends HttpOverrides {
-  @override
-  HttpClient createHttpClient(SecurityContext? context) {
-    return super.createHttpClient(context)
-      ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
-  }
-}
-
-final _initSsl = () {
-  HttpOverrides.global = _AllowSelfSignedCert();
-  return true;
-}();
 
 class ApiService {
   static const _baseUrl = 'https://delivery-app-api-16t0.onrender.com';
@@ -128,6 +113,18 @@ class ApiService {
     await prefs.setString('user_role', role);
   }
 
+  Future<Map<String, dynamic>> updateProfile(String name, String email, {String phone = ''}) async {
+    final headers = await _authHeaders(required: true);
+    final res = await http.put(
+      Uri.parse('$_baseUrl/api/auth/profile'),
+      headers: headers,
+      body: jsonEncode({'name': name, 'email': email, 'phone': phone}),
+    );
+    final body = await _handleResponse(res);
+    await _saveUserLocally(body['user']['name'], body['user']['email'], phone, body['user']['role'] ?? 'user');
+    return body;
+  }
+
   Future<void> saveUser(String name, String email, {String phone = ''}) async {
     await _saveUserLocally(name, email, phone);
   }
@@ -147,13 +144,16 @@ class ApiService {
 
   // ─── Addresses ──────────────────────────────────────────────────
 
-  Future<Map<String, dynamic>> createGpsAddress(double latitude, double longitude, {String? landmark}) async {
+  Future<Map<String, dynamic>> createGpsAddress(double latitude, double longitude, {String? landmark, String? addressType, String? houseNumber, String? floorNumber}) async {
     final headers = await _authHeaders();
     if (headers['Authorization'] == null) {
       return {'id': '', 'address_line1': '', 'address_line2': '', 'city': '', 'latitude': latitude.toString(), 'longitude': longitude.toString()};
     }
     final bodyMap = <String, dynamic>{'latitude': latitude, 'longitude': longitude};
     if (landmark != null && landmark.isNotEmpty) bodyMap['landmark'] = landmark;
+    if (addressType != null && addressType.isNotEmpty) bodyMap['address_type'] = addressType;
+    if (houseNumber != null && houseNumber.isNotEmpty) bodyMap['house_number'] = houseNumber;
+    if (floorNumber != null && floorNumber.isNotEmpty) bodyMap['floor_number'] = floorNumber;
     final res = await http.post(Uri.parse('$_baseUrl/api/addresses/auto'), headers: headers, body: jsonEncode(bodyMap));
     return _handleResponse(res);
   }
@@ -191,11 +191,17 @@ class ApiService {
     return _handleResponse(res);
   }
 
+  Future<Map<String, dynamic>> reverseGeocode(double lat, double lng) async {
+    final res = await http.get(
+      Uri.parse('$_baseUrl/api/places/reverse?lat=$lat&lng=$lng'),
+    );
+    if (res.statusCode != 200) return {};
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
   Future<List<dynamic>> searchPlaces(String query) async {
-    final headers = await _authHeaders();
     final res = await http.get(
       Uri.parse('$_baseUrl/api/places/search?q=${Uri.encodeQueryComponent(query)}'),
-      headers: headers,
     );
     if (res.statusCode != 200) {
       debugPrint('API Error ${res.statusCode}: ${res.body}');
@@ -242,6 +248,106 @@ class ApiService {
     final res = await http.get(Uri.parse('$_baseUrl/api/combo-packs'));
     if (res.statusCode != 200) return [];
     return jsonDecode(res.body) as List<dynamic>;
+  }
+
+  // ─── Forgot Password ────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> forgotPassword(String email) async {
+    final res = await http.post(
+      Uri.parse('$_baseUrl/api/auth/forgot-password'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email}),
+    );
+    return _handleResponse(res);
+  }
+
+  Future<Map<String, dynamic>> resetPassword(String email, String code, String newPassword) async {
+    final res = await http.post(
+      Uri.parse('$_baseUrl/api/auth/reset-password'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email, 'code': code, 'new_password': newPassword}),
+    );
+    return _handleResponse(res);
+  }
+
+  // ─── Cart ────────────────────────────────────────────────────────
+
+  Future<List<dynamic>> getCart() async {
+    final headers = await _authHeaders();
+    if (headers['Authorization'] == null) return [];
+    final res = await http.get(Uri.parse('$_baseUrl/api/cart'), headers: headers);
+    return _handleListResponse(res);
+  }
+
+  Future<Map<String, dynamic>> addToCart(String productId, {int quantity = 1}) async {
+    final headers = await _authHeaders(required: true);
+    final res = await http.post(
+      Uri.parse('$_baseUrl/api/cart'),
+      headers: headers,
+      body: jsonEncode({'product_id': productId, 'quantity': quantity}),
+    );
+    return _handleResponse(res);
+  }
+
+  Future<void> updateCartItem(String itemId, int quantity) async {
+    final headers = await _authHeaders(required: true);
+    final res = await http.put(
+      Uri.parse('$_baseUrl/api/cart/$itemId'),
+      headers: headers,
+      body: jsonEncode({'quantity': quantity}),
+    );
+    if (res.statusCode >= 200 && res.statusCode < 300) return;
+    throw ApiException('Failed to update cart');
+  }
+
+  Future<void> removeCartItem(String itemId) async {
+    final headers = await _authHeaders(required: true);
+    final res = await http.delete(Uri.parse('$_baseUrl/api/cart/$itemId'), headers: headers);
+    if (res.statusCode >= 200 && res.statusCode < 300) return;
+    throw ApiException('Failed to remove cart item');
+  }
+
+  Future<void> clearCart() async {
+    final headers = await _authHeaders(required: true);
+    await http.delete(Uri.parse('$_baseUrl/api/cart'), headers: headers);
+  }
+
+  // ─── Wishlist ────────────────────────────────────────────────────
+
+  Future<List<dynamic>> getWishlist() async {
+    final headers = await _authHeaders();
+    if (headers['Authorization'] == null) return [];
+    final res = await http.get(Uri.parse('$_baseUrl/api/wishlist'), headers: headers);
+    return _handleListResponse(res);
+  }
+
+  Future<Map<String, dynamic>> addToWishlist(String productId) async {
+    final headers = await _authHeaders(required: true);
+    final res = await http.post(
+      Uri.parse('$_baseUrl/api/wishlist'),
+      headers: headers,
+      body: jsonEncode({'product_id': productId}),
+    );
+    return _handleResponse(res);
+  }
+
+  Future<void> removeFromWishlist(String productId) async {
+    final headers = await _authHeaders(required: true);
+    final res = await http.delete(Uri.parse('$_baseUrl/api/wishlist/$productId'), headers: headers);
+    if (res.statusCode >= 200 && res.statusCode < 300) return;
+    throw ApiException('Failed to remove from wishlist');
+  }
+
+  // ─── Suggest Product ─────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> suggestProduct(String productName, String reason) async {
+    final headers = await _authHeaders();
+    final res = await http.post(
+      Uri.parse('$_baseUrl/api/suggest-product'),
+      headers: headers,
+      body: jsonEncode({'product_name': productName, 'reason': reason}),
+    );
+    return _handleResponse(res);
   }
 
   Future<Map<String, dynamic>> addPackToCart(String packId) async {

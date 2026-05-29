@@ -18,6 +18,7 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
   final _points = <LatLng>[];
   List<Map<String, dynamic>> _savedZones = [];
   bool _saving = false;
+  String? _editingZoneId;
 
   static const _center = LatLng(13.0827, 80.2707);
 
@@ -75,7 +76,12 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
 
     setState(() => _saving = true);
     try {
-      await _api.createDeliveryZone(name, geojson);
+      if (_editingZoneId != null) {
+        await _api.updateDeliveryZone(_editingZoneId!, name, geojson);
+        _editingZoneId = null;
+      } else {
+        await _api.createDeliveryZone(name, geojson);
+      }
       if (!mounted) return;
       _showSnack('Zone "$name" saved');
       _nameCtl.clear();
@@ -85,6 +91,48 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
       if (mounted) _showSnack('$e');
     } finally {
       if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  void _editZone(Map<String, dynamic> zone) {
+    _nameCtl.text = zone['zone_name'] ?? '';
+    try {
+      final geo = jsonDecode(zone['geojson_data']);
+      final coords = geo['coordinates'][0] as List;
+      final pts = coords.map((c) => LatLng(c[1], c[0])).toList();
+      if (pts.length >= 3) {
+        pts.removeLast(); // remove closing point
+      }
+      setState(() {
+        _points.clear();
+        _points.addAll(pts);
+        _editingZoneId = zone['id'];
+      });
+    } catch (_) {
+      _showSnack('Could not load zone geometry');
+    }
+  }
+
+  Future<void> _deleteZone(String id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Zone'),
+        content: const Text('Are you sure you want to delete this delivery zone?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), style: TextButton.styleFrom(foregroundColor: Colors.red), child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      try {
+        await _api.deleteDeliveryZone(id);
+        _loadZones();
+        if (mounted) _showSnack('Zone deleted');
+      } catch (e) {
+        if (mounted) _showSnack('$e');
+      }
     }
   }
 
@@ -180,6 +228,7 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
@@ -187,7 +236,7 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
                       child: TextField(
                         controller: _nameCtl,
                         decoration: InputDecoration(
-                          hintText: 'Zone name',
+                          hintText: _editingZoneId != null ? 'Edit zone name' : 'Zone name',
                           isDense: true,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -205,14 +254,25 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
                   children: [
                     Text('${_points.length} points drawn', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
                     const Spacer(),
+                    if (_editingZoneId != null)
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            _editingZoneId = null;
+                            _nameCtl.clear();
+                            _points.clear();
+                          });
+                        },
+                        child: const Text('Cancel', style: TextStyle(color: Colors.red)),
+                      ),
                     SizedBox(
                       height: 40,
                       child: ElevatedButton.icon(
                         onPressed: _saving ? null : _saveZone,
                         icon: _saving
                             ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                            : const Icon(Icons.save, size: 18),
-                        label: Text(_saving ? 'Saving...' : 'Save Zone'),
+                            : Icon(_editingZoneId != null ? Icons.save : Icons.save, size: 18),
+                        label: Text(_saving ? 'Saving...' : (_editingZoneId != null ? 'Update Zone' : 'Save Zone')),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
@@ -222,6 +282,43 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
                     ),
                   ],
                 ),
+                if (_savedZones.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  const Divider(),
+                  const SizedBox(height: 4),
+                  const Text('Saved Zones', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                  const SizedBox(height: 4),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 100),
+                    child: ListView(
+                      shrinkWrap: true,
+                      children: _savedZones.map((z) => ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.map, size: 18, color: Colors.green),
+                        title: Text(z['zone_name'] ?? '', style: const TextStyle(fontSize: 13)),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit, size: 16),
+                              onPressed: () => _editZone(z),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                            const SizedBox(width: 4),
+                            IconButton(
+                              icon: const Icon(Icons.delete, size: 16, color: Colors.red),
+                              onPressed: () => _deleteZone(z['id']),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
+                        ),
+                      )).toList(),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

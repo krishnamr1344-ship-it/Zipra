@@ -1,13 +1,10 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
 import '../constants/theme.dart';
 import '../services/location_service.dart';
 import '../services/api_service.dart';
-import 'address_form_page.dart';
 
 class MapPickerPage extends StatefulWidget {
   const MapPickerPage({super.key});
@@ -54,30 +51,13 @@ class _MapPickerPageState extends State<MapPickerPage> {
   Future<void> _reverseGeocode() async {
     setState(() => _geocoding = true);
     try {
-      final resp = await http.get(
-        Uri.parse('https://nominatim.openstreetmap.org/reverse?lat=${_selected.latitude}&lon=${_selected.longitude}&format=json&addressdetails=1'),
-        headers: {'User-Agent': 'DeliveryApp/1.0'},
-      );
-      if (resp.statusCode == 200 && mounted) {
-        final data = jsonDecode(resp.body);
-        final addr = data['address'] as Map<String, dynamic>?;
-        if (addr != null) {
-          final road = addr['road'] ?? '';
-          final house = addr['house_number'] ?? '';
-          final area_raw = addr['suburb'] ?? addr['city_district'] ?? '';
-          final area = area_raw.replaceAll(RegExp(r'^Zone\s+\d+\s*', caseSensitive: false), '').trim();
-          final city_raw = addr['city'] ?? addr['town'] ?? addr['village'] ?? addr['county'] ?? '';
-          final city = city_raw.replaceAll(RegExp(r'\s+(Corporation|Municipal|Municipality|Municipal\s+Corporation)\s*$', caseSensitive: false), '').trim();
-          final parts = <String>[];
-          if (road.isNotEmpty) parts.add(road);
-          if (house.isNotEmpty) parts.add(house);
-          setState(() {
-            _addressLine1 = parts.isNotEmpty ? parts.join(', ') : (data['display_name'] ?? '');
-            _addressLine2 = area.isNotEmpty && city.isNotEmpty ? '$area, $city' : (area.isNotEmpty ? area : '');
-            _city = city;
-          });
-        }
-      }
+      final data = await _api.reverseGeocode(_selected.latitude, _selected.longitude);
+      if (!mounted) return;
+      setState(() {
+        _addressLine1 = data['address_line1'] ?? '';
+        _addressLine2 = data['address_line2'] ?? '';
+        _city = data['city'] ?? '';
+      });
     } catch (_) {}
     if (mounted) setState(() => _geocoding = false);
   }
@@ -120,6 +100,8 @@ class _MapPickerPageState extends State<MapPickerPage> {
         await prefs.setString('gps_address_id', addr['id'] ?? '');
         await prefs.setString('gps_pincode', addr['pincode'] ?? '');
         await prefs.setString('gps_address_type', addr['address_type'] ?? '');
+        await prefs.setString('gps_house_number', addr['house_number'] ?? '');
+        await prefs.setString('gps_floor_number', addr['floor_number'] ?? '');
       } catch (_) {}
     }
 

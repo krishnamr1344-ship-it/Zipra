@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/theme.dart';
 import '../models/cart_model.dart';
 import '../services/api_service.dart';
@@ -31,16 +30,24 @@ class _PaymentPageState extends State<PaymentPage> {
   }
 
   Future<void> _loadAddress() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _addressId = prefs.getString('gps_address_id') ?? '';
-      final line1 = prefs.getString('gps_address_line') ?? '';
-      final line2 = prefs.getString('gps_address_line2') ?? '';
-      final city = prefs.getString('gps_city') ?? '';
-      _deliveryLandmark = prefs.getString('gps_landmark') ?? '';
-      _deliveryArea = line2.isNotEmpty ? line2 : city.isNotEmpty ? city : '';
-      _deliveryDetail = line1;
-    });
+    try {
+      final addresses = await _api.getAddresses();
+      if (!mounted) return;
+      if (addresses.isNotEmpty) {
+        final addr = addresses.firstWhere(
+          (a) => (a['latitude'] != null && a['longitude'] != null),
+          orElse: () => addresses.first,
+        );
+        setState(() {
+          _addressId = addr['id'] ?? '';
+          _deliveryArea = (addr['address_line2'] ?? '').isNotEmpty
+              ? '${addr['address_line2']}, ${addr['city'] ?? ''}'
+              : addr['city'] ?? '';
+          _deliveryDetail = addr['address_line1'] ?? '';
+          _deliveryLandmark = addr['landmark'] ?? '';
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _setDelivery() async {
@@ -49,15 +56,6 @@ class _PaymentPageState extends State<PaymentPage> {
       MaterialPageRoute(builder: (_) => const DeliveryLocationPage()),
     );
     if (result != null) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('gps_address_id', result['id'] ?? '');
-      await prefs.setString('gps_address_line', result['address_line1'] ?? '');
-      await prefs.setString('gps_address_line2', result['address_line2'] ?? '');
-      await prefs.setString('gps_city', result['city'] ?? '');
-      await prefs.setString('gps_landmark', result['landmark'] ?? '');
-      await prefs.setString('gps_latitude', '${result['latitude'] ?? ''}');
-      await prefs.setString('gps_longitude', '${result['longitude'] ?? ''}');
-      await prefs.setString('gps_pincode', result['pincode'] ?? '');
       await _loadAddress();
     }
   }
@@ -100,7 +98,6 @@ class _PaymentPageState extends State<PaymentPage> {
       );
       return;
     }
-    await orderNotifier.add(cartNotifier.items, widget.total);
     cartNotifier.clear();
     if (!mounted) return;
     Navigator.pushReplacement(

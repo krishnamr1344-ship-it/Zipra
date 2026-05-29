@@ -58,12 +58,12 @@ class CartPage extends StatelessWidget {
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                _qtyBtn(Icons.remove, () => cartNotifier.updateCount(item.name, -1)),
+                                _qtyBtn(Icons.remove, () => cartNotifier.updateCount(item.productId, -1)),
                                 Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 12),
                                   child: Text('${item.count}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                                 ),
-                                _qtyBtn(Icons.add, () => cartNotifier.updateCount(item.name, 1)),
+                                _qtyBtn(Icons.add, () => cartNotifier.updateCount(item.productId, 1)),
                               ],
                             ),
                           ],

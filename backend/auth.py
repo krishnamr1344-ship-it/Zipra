@@ -13,21 +13,15 @@ from datetime import datetime, timedelta, timezone
 
 import bcrypt
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from database import get_db
 from models import User, TokenBlacklist
-from schemas import RegisterRequest, LoginRequest, LogoutRequest
+from schemas import RegisterRequest, LoginRequest, LogoutRequest, UpdateProfileRequest, ForgotPasswordRequest, ResetPasswordRequest
 
-
-
-JWT_SECRET = os.getenv("JWT_SECRET")
-JWT_EXPIRY_MINUTES = int(os.getenv("JWT_EXPIRY_MINUTES", "30"))
-BCRYPT_ROUNDS = int(os.getenv("BCRYPT_ROUNDS", "12"))
-
-if not JWT_SECRET:
-    raise RuntimeError("JWT_SECRET not set in .env file")
+# In-memory password reset code store (ephemeral — for dev/demo)
+_reset_codes: dict[str, dict] = {}
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -179,3 +173,72 @@ def logout(body: LogoutRequest, db: Session = Depends(get_db)):
     db.commit()
 
     return {"message": "Logged out successfully"}
+
+
+@router.put("/profile")
+def update_profile(body: UpdateProfileRequest, request: Request, db: Session = Depends(get_db)):
+    user_id = getattr(request.state, "user_id", None)
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if body.name is not None:
+        user.name = body.name.strip()
+    if body.email is not None:
+        user.email = body.email.strip()
+    if body.phone is not None:
+        user.phone = body.phone.strip()
+    db.commit()
+    db.refresh(user)
+    return {
+        "message": "Profile updated",
+        "user": {"id": str(user.id), "name": user.name, "email": user.email, "phone": user.phone, "role": user.role},
+    }
+
+
+@router.post("/forgot-password")
+def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(
+        User.email == body.email,
+        User.is_deleted == False,
+    ).first()
+    if not user:
+        # Don't reveal whether email exists — always return same message
+        return {"message": "If this email is registered, a reset code has been generated", "code": None}
+
+    code = ''.join(random.choices(string.digits, k=6))
+    _reset_codes[body.email] = {
+        "code": code,
+        "expires_at": datetime.now(timezone.utc) + timedelta(minutes=15),
+    }
+    return {
+        "message": "If this email is registered, a reset code has been generated",
+        "code": code,  # Returned directly in dev since no email service
+    }
+
+
+@router.post("/reset-password")
+def reset_password(body: ResetPasswordRequest, db: Session = Depends(get_db)):
+    record = _reset_codes.get(body.email)
+    if not record:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No reset code requested for this email")
+
+    if datetime.now(timezone.utc) > record["expires_at"]:
+        _reset_codes.pop(body.email, None)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Reset code expired")
+
+    if record["code"] != body.code:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reset code")
+
+    user = db.query(User).filter(
+        User.email == body.email,
+        User.is_deleted == False,
+    ).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    user.password_hash = _hash_password(body.new_password)
+    _reset_codes.pop(body.email, None)
+    db.commit()
+    return {"message": "Password reset successful"}

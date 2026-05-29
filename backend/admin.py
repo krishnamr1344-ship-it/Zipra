@@ -482,3 +482,26 @@ def list_delivery_zones(request: Request, db: Session = Depends(get_db)):
         }
         for z in zones
     ]
+
+
+@router.put("/delivery-zones/{zone_id}", response_model=MessageResponse)
+def update_delivery_zone(zone_id: str, body: DeliveryZoneCreate, request: Request, db: Session = Depends(get_db)):
+    _require_admin(request)
+    zone = db.query(DeliveryZone).filter(DeliveryZone.id == zone_id, DeliveryZone.is_deleted == False).first()
+    if not zone:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Delivery zone not found")
+    zone.zone_name = body.zone_name
+    zone.geojson_data = body.geojson_data
+    db.commit()
+    return MessageResponse(message=f"Delivery zone '{body.zone_name}' updated")
+
+
+@router.delete("/delivery-zones/{zone_id}", response_model=MessageResponse)
+def delete_delivery_zone(zone_id: str, request: Request, db: Session = Depends(get_db)):
+    _require_admin(request)
+    zone = db.query(DeliveryZone).filter(DeliveryZone.id == zone_id, DeliveryZone.is_deleted == False).first()
+    if not zone:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Delivery zone not found")
+    zone.is_deleted = True
+    db.commit()
+    return MessageResponse(message="Delivery zone deleted")

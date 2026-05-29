@@ -226,6 +226,32 @@ class ComboPackItem(Base):
     product = relationship("Product")
 
 
+class ProductSuggestion(Base):
+    __tablename__ = "product_suggestions"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    product_name = Column(String(200), nullable=False)
+    reason = Column(String(2000), nullable=True)
+    status = Column(String(20), default="pending", nullable=False)
+    is_deleted = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+
+
+class WishlistItem(Base):
+    __tablename__ = "wishlist_items"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    product_id = Column(UUID(as_uuid=True), ForeignKey("products.id"), nullable=False)
+    is_deleted = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    user = relationship("User", backref="wishlist_items")
+    product = relationship("Product", backref="wishlist_items")
+
+    __table_args__ = (UniqueConstraint("user_id", "product_id", name="uq_user_product_wishlist"),)
+
+
 class DeliveryZone(Base):
     __tablename__ = "delivery_zones"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

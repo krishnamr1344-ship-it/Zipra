@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/theme.dart';
 import '../services/api_service.dart';
@@ -64,7 +62,8 @@ class _HomePageState extends State<HomePage> {
     _loadProfile();
     _loadData();
     _loadGpsAddress();
-    orderNotifier.init();
+    cartNotifier.load();
+    wishlistNotifier.load();
   }
 
   Future<void> _loadGpsAddress() async {
@@ -98,36 +97,21 @@ class _HomePageState extends State<HomePage> {
       return;
     }
     try {
-      final resp = await http.get(
-        Uri.parse('https://nominatim.openstreetmap.org/reverse?lat=${loc.latitude}&lon=${loc.longitude}&format=json&addressdetails=1'),
-        headers: {'User-Agent': 'DeliveryApp/1.0'},
-      );
+      final data = await _api.reverseGeocode(loc.latitude, loc.longitude);
       if (!mounted) return;
-      if (resp.statusCode == 200) {
-        final data = jsonDecode(resp.body);
-        final a = data['address'] as Map<String, dynamic>?;
-        if (a != null) {
-          final road = a['road'] ?? '';
-          final house = a['house_number'] ?? '';
-          final area_raw = a['suburb'] ?? a['city_district'] ?? '';
-          final area = area_raw.replaceAll(RegExp(r'^Zone\s+\d+\s*', caseSensitive: false), '').trim();
-          final city_raw = a['city'] ?? a['town'] ?? a['village'] ?? a['county'] ?? '';
-          final city = city_raw.replaceAll(RegExp(r'\s+(Corporation|Municipal|Municipality|Municipal\s+Corporation)\s*$', caseSensitive: false), '').trim();
-          final parts = <String>[];
-          if (road.isNotEmpty) parts.add(road);
-          if (house.isNotEmpty) parts.add(house);
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('gps_address_line', parts.isNotEmpty ? parts.join(', ') : (data['display_name'] ?? ''));
-          await prefs.setString('gps_address_line2', area.isNotEmpty && city.isNotEmpty ? '$area, $city' : area);
-          await prefs.setString('gps_city', city);
-          await prefs.setString('gps_latitude', '${loc.latitude}');
-          await prefs.setString('gps_longitude', '${loc.longitude}');
-          if (mounted) setState(() {
-            _locationArea = area.isNotEmpty && city.isNotEmpty ? '$area, $city' : city.isNotEmpty ? city : 'Your Area';
-            _locationDetail = parts.isNotEmpty ? parts.join(', ') : (data['display_name'] ?? '');
-          });
-        }
-      }
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('gps_address_line', data['address_line1'] ?? '');
+      await prefs.setString('gps_address_line2', data['address_line2'] ?? '');
+      await prefs.setString('gps_city', data['city'] ?? '');
+      await prefs.setString('gps_latitude', '${loc.latitude}');
+      await prefs.setString('gps_longitude', '${loc.longitude}');
+      final area = data['address_line2'] ?? '';
+      final city = data['city'] ?? '';
+      final line1 = data['address_line1'] ?? '';
+      if (mounted) setState(() {
+        _locationArea = area.isNotEmpty && city.isNotEmpty ? '$area, $city' : city.isNotEmpty ? city : 'Your Area';
+        _locationDetail = line1;
+      });
     } catch (_) {
       if (mounted) setState(() { _locationArea = 'Your Area'; _locationDetail = ''; });
     }
@@ -583,8 +567,8 @@ class _HomePageState extends State<HomePage> {
             else
               ProductGrid(
                 products: products.map((p) => _toGroceryProduct(p)).toList(),
-                cartMap: {for (final p in products) p.id.hashCode: cartNotifier.items.any((e) => e.name == p.name)},
-                favMap: {for (final p in products) p.name: wishlistNotifier.contains(p.name)},
+                cartMap: {for (final p in products) p.id.hashCode: cartNotifier.isInCart(p.id)},
+                favMap: {for (final p in products) p.name: wishlistNotifier.contains(p.id)},
                 getImages: (gp) {
                   final p = products.firstWhere((e) => e.name == gp.name);
                   return p.images;
@@ -593,17 +577,20 @@ class _HomePageState extends State<HomePage> {
                   final p = products.firstWhere((e) => e.name == gp.name);
                   if (!await _requireLogin()) return;
                   if (!mounted) return;
-                  cartNotifier.add(CartItem(name: p.name, qty: p.qty, price: p.price, icon: p.icon, color: AppColors.success, productId: p.id));
+                  await cartNotifier.add(p.id, name: p.name, qty: p.qty, price: p.price);
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                     content: Text('${p.name} added'),
                     duration: const Duration(seconds: 1),
                     backgroundColor: AppColors.success,
                   ));
                 },
-                onFav: (gp) => wishlistNotifier.toggle(gp.name),
+                onFav: (gp) {
+                  final p = products.firstWhere((e) => e.name == gp.name);
+                  wishlistNotifier.toggle(p.id);
+                },
                 onTap: (gp) {
                   final p = products.firstWhere((e) => e.name == gp.name);
-                  final count = cartNotifier.items.where((e) => e.name == p.name).firstOrNull?.count ?? 0;
+                  final count = cartNotifier.itemCountFor(p.id);
                   Navigator.push(context, MaterialPageRoute(
                     builder: (_) => ProductDetailPage(
                       icon: p.icon, color: AppColors.success, name: p.name, price: p.price, qty: p.qty, images: p.images,
@@ -611,7 +598,7 @@ class _HomePageState extends State<HomePage> {
                       onAdd: () async {
                         if (!await _requireLogin()) return;
                         if (!mounted) return;
-                        cartNotifier.add(CartItem(name: p.name, qty: p.qty, price: p.price, icon: p.icon, color: AppColors.success, productId: p.id));
+                        await cartNotifier.add(p.id, name: p.name, qty: p.qty, price: p.price);
                       },
                     ),
                   ));
