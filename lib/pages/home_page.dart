@@ -75,7 +75,7 @@ class _HomePageState extends State<HomePage> {
       final line2 = addr['address_line2'] ?? '';
       final city = addr['city'] ?? '';
       setState(() {
-        _locationArea = line2.isNotEmpty ? '$line2, $city' : city.isNotEmpty ? city : 'Your Area';
+        _locationArea = line2.isNotEmpty ? line2 : city.isNotEmpty ? city : 'Set Location';
         _locationDetail = line1;
       });
       final lat = double.tryParse(addr['latitude'] ?? '');
@@ -100,7 +100,7 @@ class _HomePageState extends State<HomePage> {
     final loc = await LocationService().getCurrentLocation();
     if (!mounted) return;
     if (loc.error != null) {
-      setState(() { _locationArea = 'Your Area'; _locationDetail = ''; _zoneChecked = true; });
+      setState(() { _locationArea = 'Set Location'; _locationDetail = 'Tap to set your area'; _zoneChecked = true; });
       return;
     }
     try {
@@ -116,11 +116,11 @@ class _HomePageState extends State<HomePage> {
       final city = data['city'] ?? '';
       final line1 = data['address_line1'] ?? '';
       if (mounted) setState(() {
-        _locationArea = area.isNotEmpty && city.isNotEmpty ? '$area, $city' : city.isNotEmpty ? city : 'Your Area';
+        _locationArea = area.isNotEmpty ? area : city.isNotEmpty ? city : 'Set Location';
         _locationDetail = line1;
       });
     } catch (_) {
-      if (mounted) setState(() { _locationArea = 'Your Area'; _locationDetail = ''; });
+      if (mounted) setState(() { _locationArea = 'Set Location'; _locationDetail = 'Tap to set your area'; });
     }
     if (mounted) setState(() => _zoneChecked = true);
   }
