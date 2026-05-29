@@ -92,7 +92,14 @@ class _PaymentPageState extends State<PaymentPage> {
         'quantity': i.count,
       })).toList();
       await _api.createOrder(items, 'cod', addressId: _addressId.isNotEmpty ? _addressId : null);
-    } catch (_) {}
+    } catch (e) {
+      setState(() => _processing = false);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$e'), backgroundColor: AppColors.error, behavior: SnackBarBehavior.floating),
+      );
+      return;
+    }
     await orderNotifier.add(cartNotifier.items, widget.total);
     cartNotifier.clear();
     if (!mounted) return;
@@ -133,7 +140,7 @@ class _PaymentPageState extends State<PaymentPage> {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: _addressId.isNotEmpty ? const Color(0xFFF0FFF0) : AppColors.warningLight,
+                      color: _addressId.isNotEmpty ? AppColors.successLight : AppColors.warningLight,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: _addressId.isNotEmpty ? AppColors.success.withAlpha(80) : Colors.orange.withAlpha(80)),
                     ),
@@ -218,7 +225,7 @@ class _PaymentPageState extends State<PaymentPage> {
                 child: ElevatedButton(
                   onPressed: _processing ? null : _pay,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6C63FF),
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
