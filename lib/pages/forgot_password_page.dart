@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/theme.dart';
+import '../services/api_service.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -10,12 +11,37 @@ class ForgotPasswordPage extends StatefulWidget {
 
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   final _emailCtl = TextEditingController();
+  final _api = ApiService();
   bool _sent = false;
+  bool _loading = false;
 
   @override
   void dispose() {
     _emailCtl.dispose();
     super.dispose();
+  }
+
+  Future<void> _sendResetLink() async {
+    final email = _emailCtl.text.trim();
+    if (email.isEmpty) return;
+
+    setState(() => _loading = true);
+    try {
+      await _api.forgotPassword(email);
+      if (!mounted) return;
+      setState(() => _sent = true);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$e'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override
@@ -40,17 +66,15 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               width: double.infinity,
               height: 52,
               child: ElevatedButton(
-                onPressed: _sent
-                    ? null
-                    : () {
-                        setState(() => _sent = true);
-                      },
+                onPressed: (_sent || _loading) ? null : _sendResetLink,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
-                child: Text(_sent ? 'Email Sent!' : 'Send Reset Link', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                child: _loading
+                    ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : Text(_sent ? 'Email Sent!' : 'Send Reset Link', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               ),
             ),
           ],

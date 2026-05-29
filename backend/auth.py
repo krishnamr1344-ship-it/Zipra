@@ -9,16 +9,27 @@ Security:
 """
 import os
 import uuid
+import secrets
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, TokenBlacklist
+from models import User, TokenBlacklist, PasswordResetToken
 from schemas import RegisterRequest, LoginRequest, LogoutRequest
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    password: str
 
 
 
@@ -80,6 +91,76 @@ def decode_jwt(token: str) -> dict:
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
     return payload
+
+
+# ─── PASSWORD RESET ──────────────────────────────────────────────
+
+@router.post("/forgot-password")
+def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(
+        User.email == body.email,
+        User.is_deleted == False,
+    ).first()
+
+    if not user:
+        return {"message": "If the email exists, a reset link has been sent"}
+
+    old_tokens = db.query(PasswordResetToken).filter(
+        PasswordResetToken.user_id == user.id,
+        PasswordResetToken.used == False,
+    ).all()
+    for t in old_tokens:
+        t.used = True
+
+    reset_token = secrets.token_urlsafe(48)
+    expires = datetime.now(timezone.utc) + timedelta(hours=1)
+    prt = PasswordResetToken(
+        user_id=user.id,
+        token=reset_token,
+        expires_at=expires,
+    )
+    db.add(prt)
+    db.commit()
+
+    debug_print = os.getenv("DEBUG", "false").lower() == "true"
+    if debug_print:
+        print(f"Password reset token for {body.email}: {reset_token}")
+
+    return {"message": "If the email exists, a reset link has been sent"}
+
+
+@router.post("/reset-password")
+def reset_password(body: ResetPasswordRequest, db: Session = Depends(get_db)):
+    prt = db.query(PasswordResetToken).filter(
+        PasswordResetToken.token == body.token,
+        PasswordResetToken.used == False,
+        PasswordResetToken.expires_at > datetime.now(timezone.utc),
+    ).first()
+
+    if not prt:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token",
+        )
+
+    user = db.query(User).filter(User.id == prt.user_id, User.is_deleted == False).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    if len(body.password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 8 characters",
+        )
+
+    user.password_hash = _hash_password(body.password)
+    prt.used = True
+    db.commit()
+
+    return {"message": "Password reset successful"}
 
 
 # ─── ENDPOINTS ───────────────────────────────────────────────────

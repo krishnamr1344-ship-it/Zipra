@@ -4,6 +4,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../constants/theme.dart';
 import '../services/admin_api_service.dart';
+import '../widgets/state_widgets.dart';
 
 class AdminDeliveryZonePage extends StatefulWidget {
   const AdminDeliveryZonePage({super.key});
@@ -17,6 +18,8 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
   final _nameCtl = TextEditingController();
   final _points = <LatLng>[];
   List<Map<String, dynamic>> _savedZones = [];
+  bool _loading = true;
+  bool _error = false;
   bool _saving = false;
 
   static const _center = LatLng(13.0827, 80.2707);
@@ -34,11 +37,14 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
   }
 
   Future<void> _loadZones() async {
+    setState(() { _loading = true; _error = false; });
     try {
       final zones = await _api.getDeliveryZones();
       if (!mounted) return;
-      setState(() => _savedZones = zones.cast<Map<String, dynamic>>());
-    } catch (_) {}
+      setState(() { _savedZones = zones.cast<Map<String, dynamic>>(); _loading = false; });
+    } catch (_) {
+      if (mounted) setState(() { _loading = false; _error = true; });
+    }
   }
 
   void _onMapTap(TapPosition tap, LatLng point) {
@@ -105,7 +111,11 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
         ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: Column(
+      body: _loading
+          ? const LoadingWidget(message: 'Loading zones\u2026')
+          : _error
+              ? ErrorStateWidget(onRetry: _loadZones)
+              : Column(
         children: [
           Expanded(
             child: FlutterMap(

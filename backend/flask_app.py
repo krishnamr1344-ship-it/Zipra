@@ -1,7 +1,12 @@
 """
+DEPRECATED — Use FastAPI backend (main.py) instead.
+
 Flask Backend — Security Rules
 Architecture: React → Flask API → Supabase (service_role)
 Never trust frontend data. Validate everything server-side.
+
+This file is kept for reference only. All active development
+should use the FastAPI backend at main.py.
 """
 import os
 import hashlib

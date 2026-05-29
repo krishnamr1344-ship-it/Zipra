@@ -1,25 +1,14 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-
-/// Allow self‑signed SSL certificates (development only).
-class _AllowSelfSignedCert extends HttpOverrides {
-  @override
-  HttpClient createHttpClient(SecurityContext? context) {
-    return super.createHttpClient(context)
-      ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
-  }
-}
-
-final _initSsl = () {
-  HttpOverrides.global = _AllowSelfSignedCert();
-  return true;
-}();
+import '../models/cart_model.dart';
 
 class ApiService {
-  static const _baseUrl = 'https://delivery-app-api-16t0.onrender.com';
+  static const _baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'https://delivery-app-api-16t0.onrender.com',
+  );
   static const _tokenKey = 'auth_token';
 
   // ─── Token Management ──────────────────────────────────────────
@@ -105,6 +94,8 @@ class ApiService {
         );
       } catch (_) {}
     }
+    cartNotifier.clear();
+    wishlistNotifier.clear();
     await _clearToken();
   }
 
@@ -218,6 +209,17 @@ class ApiService {
     return _handleListResponse(res);
   }
 
+  Future<void> syncCart(List<Map<String, dynamic>> items) async {
+    final headers = await _authHeaders(required: true);
+    for (final item in items) {
+      await http.post(
+        Uri.parse('$_baseUrl/api/cart'),
+        headers: headers,
+        body: jsonEncode({'product_id': item['product_id'], 'quantity': item['quantity']}),
+      );
+    }
+  }
+
   Future<Map<String, dynamic>> createOrder(List<Map<String, dynamic>> items, String paymentMethod, {String? addressId}) async {
     final headers = await _authHeaders(required: true);
     final bodyMap = <String, dynamic>{
@@ -238,10 +240,37 @@ class ApiService {
 
   // ─── Combo Packs ──────────────────────────────────────────────────
 
+  Future<void> forgotPassword(String email) async {
+    final res = await http.post(
+      Uri.parse('$_baseUrl/api/auth/forgot-password'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email}),
+    );
+    if (res.statusCode != 200) {
+      final msg = _tryDecodeDetail(res.body) ?? 'Failed to send reset email';
+      throw ApiException(msg);
+    }
+  }
+
   Future<List<dynamic>> getComboPacks() async {
     final res = await http.get(Uri.parse('$_baseUrl/api/combo-packs'));
     if (res.statusCode != 200) return [];
     return jsonDecode(res.body) as List<dynamic>;
+  }
+
+  // ─── Product Suggestions ─────────────────────────────────────────
+
+  Future<void> suggestProduct(String productName, String reason) async {
+    final headers = await _authHeaders();
+    final res = await http.post(
+      Uri.parse('$_baseUrl/api/suggest-product'),
+      headers: headers,
+      body: jsonEncode({'product_name': productName, 'reason': reason}),
+    );
+    if (res.statusCode != 201) {
+      final msg = _tryDecodeDetail(res.body) ?? 'Failed to submit suggestion';
+      throw ApiException(msg);
+    }
   }
 
   Future<Map<String, dynamic>> addPackToCart(String packId) async {

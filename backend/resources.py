@@ -15,6 +15,7 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 import httpx
 
@@ -24,6 +25,7 @@ from database import get_db
 from models import (
     User, Category, Product, ProductImage, Address, CartItem,
     Order, OrderItem, Payment, DeliveryZone, ComboPack, ComboPackItem,
+    ProductSuggestion,
 )
 from schemas import (
     CategoryCreate, CategoryResponse,
@@ -34,6 +36,7 @@ from schemas import (
     PaymentProcessRequest, PaymentResponse, MessageResponse,
     ZoneCheckRequest, ZoneCheckResponse,
     ComboPackItemInput, ComboPackItemResponse, ComboPackResponse, PackAddRequest,
+    ProductSuggestionCreate,
 )
 
 router = APIRouter(prefix="/api")
@@ -615,8 +618,16 @@ def create_order(body: OrderCreateRequest, request: Request, db: Session = Depen
     for oi_data in order_items_data:
         oi = OrderItem(order_id=order.id, **oi_data)
         db.add(oi)
-        product = _get_product_or_404(str(oi_data["product_id"]), db)
-        product.stock -= oi_data["quantity"]
+        result = db.execute(
+            text("UPDATE products SET stock = stock - :qty WHERE id = :pid AND stock >= :qty"),
+            {"qty": oi_data["quantity"], "pid": oi_data["product_id"]},
+        )
+        if result.rowcount == 0:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Insufficient stock for {oi_data['product_name']}",
+            )
 
     for ci in cart_items:
         ci.is_deleted = True
@@ -699,8 +710,16 @@ def create_order_direct(body: OrderDirectCreateRequest, request: Request, db: Se
     for oi_data in order_items_data:
         oi = OrderItem(order_id=order.id, **oi_data)
         db.add(oi)
-        product = _get_product_or_404(str(oi_data["product_id"]), db)
-        product.stock -= oi_data["quantity"]
+        result = db.execute(
+            text("UPDATE products SET stock = stock - :qty WHERE id = :pid AND stock >= :qty"),
+            {"qty": oi_data["quantity"], "pid": oi_data["product_id"]},
+        )
+        if result.rowcount == 0:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Insufficient stock for {oi_data['product_name']}",
+            )
 
     payment = Payment(
         order_id=order.id,
@@ -929,3 +948,25 @@ def add_pack_to_cart(body: PackAddRequest, request: Request, db: Session = Depen
         })
     db.commit()
     return {"message": "Pack added to cart", "items": added}
+
+
+# ─── PRODUCT SUGGESTIONS ────────────────────────────────────────────
+
+
+@router.post("/suggest-product", status_code=status.HTTP_201_CREATED)
+def suggest_product(body: ProductSuggestionCreate, request: Request, db: Session = Depends(get_db)):
+    user_id = None
+    try:
+        user_id = getattr(request.state, "user_id", None)
+    except Exception:
+        pass
+
+    suggestion = ProductSuggestion(
+        user_id=user_id,
+        product_name=body.product_name.strip(),
+        reason=body.reason.strip() if body.reason else None,
+    )
+    db.add(suggestion)
+    db.commit()
+
+    return {"message": "Thanks for your suggestion!"}

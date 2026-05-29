@@ -3,7 +3,10 @@ import 'package:http/http.dart' as http;
 import 'api_service.dart';
 
 class AdminApiService {
-  static const _baseUrl = 'https://delivery-app-api-16t0.onrender.com';
+  static const _baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'https://delivery-app-api-16t0.onrender.com',
+  );
 
   Future<Map<String, String>> _authHeader() async {
     final token = await ApiService().getToken();

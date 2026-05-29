@@ -100,6 +100,11 @@ class WishlistNotifier extends ChangeNotifier {
   }
 
   bool remove(String name) => _items.remove(name);
+
+  void clear() {
+    _items.clear();
+    notifyListeners();
+  }
 }
 
 final wishlistNotifier = WishlistNotifier();

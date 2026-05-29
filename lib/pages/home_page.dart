@@ -9,6 +9,7 @@ import '../services/delivery_zone_service.dart';
 import '../models/cart_model.dart';
 import '../models/grocery_product.dart';
 import '../widgets/product_grid.dart';
+import '../widgets/state_widgets.dart';
 import 'login_page.dart';
 import 'cart_page.dart';
 import 'wishlist_page.dart';
@@ -42,6 +43,7 @@ class _HomePageState extends State<HomePage> {
   List<String> _categories = ['All'];
   List<Map<String, dynamic>> _allProducts = [];
   bool _loadingProducts = true;
+  bool _error = false;
   bool _serviceable = true;
   bool _zoneChecked = false;
 
@@ -80,9 +82,14 @@ class _HomePageState extends State<HomePage> {
       final lat = double.tryParse(addr['latitude'] ?? '');
       final lng = double.tryParse(addr['longitude'] ?? '');
       if (lat != null && lng != null) {
-        final result = await DeliveryZoneService().checkLocation(lat, lng);
-        if (!mounted) return;
-        setState(() { _serviceable = result.serviceable; _zoneChecked = true; });
+        try {
+          final result = await DeliveryZoneService().checkLocation(lat, lng);
+          if (!mounted) return;
+          setState(() { _serviceable = result.serviceable; _zoneChecked = true; });
+        } catch (_) {
+          if (!mounted) return;
+          setState(() { _serviceable = true; _zoneChecked = true; });
+        }
       }
     } else {
       _detectCurrentLocation();
@@ -156,7 +163,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadData() async {
-    setState(() => _loadingProducts = true);
+    setState(() { _loadingProducts = true; _error = false; });
     try {
       final cats = await _api.getCategories();
       final prods = await _api.getProducts();
@@ -168,14 +175,23 @@ class _HomePageState extends State<HomePage> {
       });
     } catch (_) {
       if (!mounted) return;
-      setState(() => _loadingProducts = false);
+      setState(() { _loadingProducts = false; _error = true; });
     }
   }
 
+  Future<void> _retryLoad() async {
+    await _loadGpsAddress();
+    await _loadData();
+  }
+
   Future<void> _loadProfile() async {
-    final userData = await _api.getSavedUser();
-    if (!mounted) return;
-    setState(() => _user = userData);
+    try {
+      final userData = await _api.getSavedUser();
+      if (!mounted) return;
+      setState(() => _user = userData);
+    } catch (_) {
+      // profile silently fails — guest mode fallback
+    }
   }
 
   Future<bool> _requireLogin() async {
@@ -478,11 +494,12 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(height: 20),
           const Text('Shop by Category', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
           const SizedBox(height: 20),
-          if (cats.isEmpty)
-            const Center(child: Padding(
-              padding: EdgeInsets.only(top: 60),
-              child: Text('No categories available', style: TextStyle(color: AppColors.textSecondary)),
-            ))
+          if (_loadingProducts)
+            const Padding(padding: EdgeInsets.only(top: 40), child: LoadingWidget(message: 'Loading categories\u2026'))
+          else if (_error)
+            ErrorStateWidget(onRetry: _retryLoad)
+          else if (cats.isEmpty)
+            const EmptyStateWidget(icon: Icons.category_outlined, title: 'No categories available', subtitle: 'Check back later')
           else
             Wrap(
               spacing: 12,
@@ -573,12 +590,17 @@ class _HomePageState extends State<HomePage> {
             else if (_loadingProducts)
               const Padding(
                 padding: EdgeInsets.only(top: 40),
-                child: Center(child: CircularProgressIndicator()),
+                child: LoadingWidget(message: 'Loading products\u2026'),
+              )
+            else if (_error)
+              Padding(
+                padding: const EdgeInsets.only(top: 40),
+                child: ErrorStateWidget(message: 'Failed to load products', onRetry: _retryLoad),
               )
             else if (products.isEmpty)
               const Padding(
-                padding: EdgeInsets.only(top: 40),
-                child: Center(child: Text('No products in this category', style: TextStyle(color: AppColors.textSecondary))),
+                padding: EdgeInsets.only(top: 60),
+                child: EmptyStateWidget(icon: Icons.inventory_2_outlined, title: 'No products in this category', subtitle: 'Check back later for new items'),
               )
             else
               ProductGrid(

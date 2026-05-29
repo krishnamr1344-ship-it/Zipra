@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/theme.dart';
 import '../services/admin_api_service.dart';
+import '../widgets/state_widgets.dart';
 
 class AdminCategoriesPage extends StatefulWidget {
   const AdminCategoriesPage({super.key});
@@ -14,6 +15,7 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
   List<dynamic> _categories = [];
   List<dynamic> _filtered = [];
   bool _loading = true;
+  bool _error = false;
   String _search = '';
 
   @override
@@ -23,7 +25,7 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
   }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    setState(() { _loading = true; _error = false; });
     try {
       final data = await _api.getCategories();
       if (!mounted) return;
@@ -31,7 +33,7 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
       _applyFilter();
     } catch (_) {
       if (!mounted) return;
-      setState(() => _loading = false);
+      setState(() { _loading = false; _error = true; });
     }
   }
 
@@ -52,6 +54,7 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
     final nameCtl = TextEditingController(text: cat?['name'] ?? '');
     final descCtl = TextEditingController(text: cat?['description'] ?? '');
     bool saving = false;
+    String? nameError;
 
     showModalBottomSheet(
       context: context,
@@ -83,9 +86,11 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
                 controller: nameCtl,
                 decoration: InputDecoration(
                   labelText: 'Name',
+                  errorText: nameError,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 ),
+                onChanged: (_) { if (nameError != null) setSheetState(() => nameError = null); },
               ),
               const SizedBox(height: 14),
               TextField(
@@ -109,6 +114,8 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
                     elevation: 0,
                   ),
                   onPressed: saving ? null : () async {
+                    setSheetState(() => nameError = nameCtl.text.trim().isEmpty ? 'Category name is required' : null);
+                    if (nameError != null) return;
                     setSheetState(() => saving = true);
                     try {
                       final data = {'name': nameCtl.text, 'description': descCtl.text};
@@ -210,21 +217,14 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
             ),
           ),
           if (_loading)
-            const SliverFillRemaining(child: Center(child: CircularProgressIndicator()))
+            const SliverFillRemaining(child: LoadingWidget(message: 'Loading categories\u2026'))
+          else if (_error)
+            SliverFillRemaining(child: ErrorStateWidget(onRetry: _load))
           else if (_filtered.isEmpty)
             SliverFillRemaining(
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.category_outlined, size: 80, color: Colors.grey.shade200),
-                    const SizedBox(height: 12),
-                    Text('No categories yet', style: TextStyle(fontSize: 16, color: Colors.grey.shade500)),
-                    const SizedBox(height: 4),
-                    Text('Tap + to add your first category', style: TextStyle(fontSize: 13, color: Colors.grey.shade400)),
-                  ],
-                ),
-              ),
+              child: _search.isNotEmpty
+                  ? const EmptyStateWidget(icon: Icons.search_off, title: 'No categories found', subtitle: 'Try a different search')
+                  : const EmptyStateWidget(icon: Icons.category_outlined, title: 'No categories yet', subtitle: 'Tap + to add your first category'),
             )
           else
             SliverPadding(

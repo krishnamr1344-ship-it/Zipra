@@ -695,6 +695,24 @@ class ZoneCheckResponse(BaseModel):
     message: Optional[str] = None
 
 
+# ─── PRODUCT SUGGESTIONS ───────────────────────────────────────────
+
+SUGGEST_PRODUCT_NAME_LENGTH = 300
+SUGGEST_REASON_LENGTH = 2000
+
+
+class ProductSuggestionCreate(BaseModel):
+    product_name: str = Field(..., min_length=1, max_length=SUGGEST_PRODUCT_NAME_LENGTH)
+    reason: Optional[str] = None
+
+    @field_validator("reason")
+    @classmethod
+    def valid_reason(cls, v):
+        if v and len(v) > SUGGEST_REASON_LENGTH:
+            raise ValueError(f"Reason must not exceed {SUGGEST_REASON_LENGTH} characters")
+        return v
+
+
 # ─── GENERIC ──────────────────────────────────────────────────────
 
 class MessageResponse(BaseModel):

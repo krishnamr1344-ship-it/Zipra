@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../constants/theme.dart';
 import '../services/api_service.dart';
 import '../services/admin_api_service.dart';
+import '../widgets/state_widgets.dart';
 import 'login_page.dart';
 import 'admin_products_page.dart';
 import 'admin_categories_page.dart';
@@ -22,6 +23,8 @@ class _AdminHomePageState extends State<AdminHomePage> {
   final _adminApi = AdminApiService();
   Map<String, dynamic> _user = {};
   Map<String, dynamic> _stats = {};
+  bool _loading = true;
+  bool _error = false;
 
   @override
   void initState() {
@@ -30,14 +33,15 @@ class _AdminHomePageState extends State<AdminHomePage> {
   }
 
   Future<void> _load() async {
+    setState(() { _loading = true; _error = false; });
     try {
       final user = await _api.getSavedUser();
       final stats = await _adminApi.getStats();
       if (!mounted) return;
-      setState(() { _user = user; _stats = stats; });
+      setState(() { _user = user; _stats = stats; _loading = false; });
     } catch (_) {
       if (!mounted) return;
-      setState(() { /* stats failed, keep existing */ });
+      setState(() { _loading = false; _error = true; });
     }
   }
 
@@ -68,6 +72,9 @@ class _AdminHomePageState extends State<AdminHomePage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final primary = theme.colorScheme.primary;
+
+    if (_loading) return const Scaffold(body: LoadingWidget(message: 'Loading dashboard\u2026'));
+    if (_error) return Scaffold(body: ErrorStateWidget(onRetry: _load));
 
     return Scaffold(
       body: RefreshIndicator(

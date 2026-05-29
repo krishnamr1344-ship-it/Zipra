@@ -16,10 +16,20 @@ class SupabaseService {
   SupabaseClient get client => _client;
 
   static Future<void> initialize() async {
-    await dotenv.load(fileName: '.env');
+    try {
+      await dotenv.load(fileName: '.env');
+    } catch (e) {
+      debugPrint('Supabase: .env file not found, skipping initialization ($e)');
+      return;
+    }
 
-    final url = dotenv.env['SUPABASE_URL']!;
-    final anonKey = dotenv.env['SUPABASE_ANON_KEY']!;
+    final url = dotenv.env['SUPABASE_URL'];
+    final anonKey = dotenv.env['SUPABASE_ANON_KEY'];
+
+    if (url == null || anonKey == null) {
+      debugPrint('Supabase: SUPABASE_URL or SUPABASE_ANON_KEY not set, skipping');
+      return;
+    }
 
     await Supabase.initialize(url: url, anonKey: anonKey);
 

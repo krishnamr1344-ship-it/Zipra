@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/cart_model.dart';
+import '../widgets/state_widgets.dart';
 
 class WishlistPage extends StatelessWidget {
   const WishlistPage({super.key});
@@ -12,15 +13,10 @@ class WishlistPage extends StatelessWidget {
         if (wishlistNotifier.items.isEmpty) {
           return Scaffold(
             appBar: AppBar(title: const Text('Wishlist')),
-            body: const Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.favorite_outline, size: 80, color: Color(0xFFBDBDBD)),
-                  SizedBox(height: 16),
-                  Text('Your wishlist is empty', style: TextStyle(fontSize: 16, color: Color(0xFF9E9E9E))),
-                ],
-              ),
+            body: const EmptyStateWidget(
+              icon: Icons.favorite_outline,
+              title: 'Your wishlist is empty',
+              subtitle: 'Save items you love',
             ),
           );
         }

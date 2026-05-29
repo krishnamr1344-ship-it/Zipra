@@ -12,12 +12,16 @@ Database:
   - Both run in parallel during migration
 """
 import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parent / '.env')
 import uuid
 from decimal import Decimal
 from datetime import datetime, timezone
 
 import bcrypt
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -31,6 +35,8 @@ from models import Category, Product, ProductImage, User, ComboPack, ComboPackIt
 import supabase_db
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+API_KEY = os.getenv("API_KEY")
+PUBLIC_PATHS_C4 = {"/", "/docs", "/openapi.json", "/redoc", "/api/auth/register", "/api/auth/login"}
 
 # Create all tables on startup.
 Base.metadata.create_all(bind=engine)
@@ -43,13 +49,61 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+# ─── API Key Validation ──────────────────────────────────────────
+@app.middleware("http")
+async def validate_api_key(request: Request, call_next):
+    if API_KEY and request.url.path not in PUBLIC_PATHS_C4:
+        header_key = request.headers.get("X-API-Key")
+        if not header_key or header_key != API_KEY:
+            from fastapi.responses import JSONResponse
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "Invalid or missing API key"},
+            )
+    return await call_next(request)
+
+
+# ─── CSRF Protection (Origin / Referer check) ──────────────────────
+# This API uses JWT Bearer tokens (not cookies) so CSRF via cookie-
+# stealing is not a vector.  We still validate Origin/Referer on
+# mutating requests as defense-in-depth.
+import re
+from urllib.parse import urlparse
+
+MUTATING_METHODS = {"POST", "PUT", "DELETE", "PATCH"}
+
+
+@app.middleware("http")
+async def csrf_origin_check(request: Request, call_next):
+    if request.method in MUTATING_METHODS and request.url.path not in PUBLIC_PATHS_C4:
+        origin = request.headers.get("Origin") or request.headers.get("Referer") or ""
+        if origin:
+            try:
+                parsed = urlparse(origin)
+                allowed = {urlparse(FRONTEND_URL).netloc}
+                # Also allow the API's own hostname for server-to-server calls
+                if request.url.hostname:
+                    allowed.add(request.url.hostname)
+                    if request.url.port:
+                        allowed.add(f"{request.url.hostname}:{request.url.port}")
+                if parsed.netloc and parsed.netloc not in allowed:
+                    from fastapi.responses import JSONResponse
+                    return JSONResponse(
+                        status_code=403,
+                        content={"detail": "Cross-site request forbidden"},
+                    )
+            except Exception:
+                pass
+    return await call_next(request)
+
+
 # ─── CORS ───────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[FRONTEND_URL],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_headers=["Authorization", "Content-Type", "X-API-Key"],
 )
 
 # ─── Rate Limiting + JWT Middleware ──────────────────────────────

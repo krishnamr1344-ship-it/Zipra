@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/theme.dart';
 import '../services/api_service.dart';
+import '../widgets/state_widgets.dart';
 import 'address_form_page.dart';
 import 'map_picker_page.dart';
 
@@ -16,6 +17,7 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
   final _api = ApiService();
   List<Map<String, dynamic>> _savedAddresses = [];
   bool _loadingSaved = true;
+  bool _error = false;
 
   @override
   void initState() {
@@ -24,7 +26,7 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
   }
 
   Future<void> _loadSaved() async {
-    setState(() => _loadingSaved = true);
+    setState(() { _loadingSaved = true; _error = false; });
     try {
       final data = await _api.getAddresses();
       if (!mounted) return;
@@ -33,7 +35,7 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
         _loadingSaved = false;
       });
     } catch (_) {
-      if (mounted) setState(() => _loadingSaved = false);
+      if (mounted) setState(() { _loadingSaved = false; _error = true; });
     }
   }
 
@@ -126,21 +128,16 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
           ),
           const SizedBox(height: 8),
           _loadingSaved
-              ? const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator(strokeWidth: 2)))
-              : _savedAddresses.isEmpty
-                  ? Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(color: Colors.grey.withAlpha(8), borderRadius: BorderRadius.circular(14)),
-                      child: Column(
-                        children: [
-                          Icon(Icons.location_off, size: 40, color: AppColors.textHint),
-                          const SizedBox(height: 8),
-                          Text('No saved addresses', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                          Text('Use GPS or search to add one', style: TextStyle(fontSize: 11, color: AppColors.textHint)),
-                        ],
-                      ),
-                    )
-                  : ConstrainedBox(
+              ? const Padding(padding: EdgeInsets.all(16), child: LoadingWidget(message: 'Loading\u2026'))
+              : _error
+                  ? ErrorStateWidget(onRetry: _loadSaved)
+                  : _savedAddresses.isEmpty
+                      ? const EmptyStateWidget(
+                          icon: Icons.location_off,
+                          title: 'No saved addresses',
+                          subtitle: 'Use GPS or search to add one',
+                        )
+                      : ConstrainedBox(
                       constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.25),
                       child: ListView.separated(
                         shrinkWrap: true,

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'pages/home_page.dart';
 import 'pages/admin_home_page.dart';
@@ -10,7 +11,9 @@ import 'services/app_info.dart';
 import 'constants/theme.dart';
 
 void main() async {
-  HttpOverrides.global = _AllowSelfSignedCert();
+  if (kDebugMode) {
+    HttpOverrides.global = _AllowSelfSignedCert();
+  }
   WidgetsFlutterBinding.ensureInitialized();
 
   FlutterError.onError = (details) {

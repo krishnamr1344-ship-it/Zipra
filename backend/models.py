@@ -226,6 +226,32 @@ class ComboPackItem(Base):
     product = relationship("Product")
 
 
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    token = Column(String(255), unique=True, nullable=False, index=True)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    used = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    user = relationship("User")
+
+
+class ProductSuggestion(Base):
+    __tablename__ = "product_suggestions"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True)
+    product_name = Column(String(300), nullable=False)
+    reason = Column(Text, nullable=True)
+    status = Column(String(20), default="pending", nullable=False)
+    is_deleted = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+
+    user = relationship("User")
+
+
 class DeliveryZone(Base):
     __tablename__ = "delivery_zones"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/combo_pack.dart';
 import '../services/api_service.dart';
+import '../widgets/state_widgets.dart';
 import 'pack_detail_sheet.dart';
 
 class OffersPage extends StatefulWidget {
@@ -14,6 +15,7 @@ class _OffersPageState extends State<OffersPage> {
   final _api = ApiService();
   List<ComboPack> _packs = [];
   bool _loading = true;
+  bool _error = false;
 
   @override
   void initState() {
@@ -22,7 +24,7 @@ class _OffersPageState extends State<OffersPage> {
   }
 
   Future<void> _loadPacks() async {
-    setState(() => _loading = true);
+    setState(() { _loading = true; _error = false; });
     try {
       final data = await _api.getComboPacks();
       if (!mounted) return;
@@ -31,14 +33,18 @@ class _OffersPageState extends State<OffersPage> {
         _loading = false;
       });
     } catch (_) {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) setState(() { _loading = false; _error = true; });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const LoadingWidget(message: 'Loading packs\u2026');
+    }
+
+    if (_error) {
+      return ErrorStateWidget(onRetry: _loadPacks);
     }
 
     return SingleChildScrollView(
@@ -61,15 +67,10 @@ class _OffersPageState extends State<OffersPage> {
           Text('Stock up & save big on bulk essentials', style: TextStyle(fontSize: 14, color: Colors.grey.shade500)),
           const SizedBox(height: 20),
           if (_packs.isEmpty) ...[
-            const SizedBox(height: 60),
-            Center(
-              child: Column(
-                children: [
-                  Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey.shade300),
-                  const SizedBox(height: 12),
-                  const Text('No packs available', style: TextStyle(fontSize: 16, color: Colors.grey)),
-                ],
-              ),
+            const EmptyStateWidget(
+              icon: Icons.inventory_2_outlined,
+              title: 'No packs available',
+              subtitle: 'Check back later for new deals',
             ),
           ] else ...[
             ..._packs.map((pack) => Padding(
