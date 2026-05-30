@@ -192,16 +192,20 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> reverseGeocode(double lat, double lng) async {
+    final headers = await _authHeaders();
     final res = await http.get(
       Uri.parse('$_baseUrl/api/places/reverse?lat=$lat&lng=$lng'),
+      headers: headers,
     );
     if (res.statusCode != 200) return {};
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
   Future<List<dynamic>> searchPlaces(String query) async {
+    final headers = await _authHeaders();
     final res = await http.get(
       Uri.parse('$_baseUrl/api/places/search?q=${Uri.encodeQueryComponent(query)}'),
+      headers: headers,
     );
     if (res.statusCode != 200) {
       debugPrint('API Error ${res.statusCode}: ${res.body}');
