@@ -307,16 +307,17 @@ def hard_delete_user(user_id: str, request: Request, db: Session = Depends(get_d
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    db.query(Address).filter(Address.user_id == user_id).delete()
-    db.query(CartItem).filter(CartItem.user_id == user_id).delete()
-    orders = db.query(Order).filter(Order.user_id == user_id).all()
-    for order in orders:
-        db.query(Payment).filter(Payment.order_id == order.id).delete()
-        db.query(OrderItem).filter(OrderItem.order_id == order.id).delete()
-        db.delete(order)
-    db.query(WishlistItem).filter(WishlistItem.user_id == user_id).delete()
-    db.query(ProductSuggestion).filter(ProductSuggestion.user_id == user_id).delete()
-    db.delete(user)
+    from sqlalchemy import text
+    db.execute(text("DELETE FROM addresses WHERE user_id = :uid"), {"uid": user_id})
+    db.execute(text("DELETE FROM cart_items WHERE user_id = :uid"), {"uid": user_id})
+    order_ids = [r[0] for r in db.execute(text("SELECT id FROM orders WHERE user_id = :uid"), {"uid": user_id}).fetchall()]
+    for oid in order_ids:
+        db.execute(text("DELETE FROM payments WHERE order_id = :oid"), {"oid": oid})
+        db.execute(text("DELETE FROM order_items WHERE order_id = :oid"), {"oid": oid})
+        db.execute(text("DELETE FROM orders WHERE id = :oid"), {"oid": oid})
+    db.execute(text("DELETE FROM wishlist_items WHERE user_id = :uid"), {"uid": user_id})
+    db.execute(text("UPDATE product_suggestions SET user_id = NULL WHERE user_id = :uid"), {"uid": user_id})
+    db.execute(text("DELETE FROM users WHERE id = :uid"), {"uid": user_id})
     db.commit()
     return MessageResponse(message="User permanently deleted")
 
