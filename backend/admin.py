@@ -301,6 +301,17 @@ def delete_user(user_id: str, request: Request, db: Session = Depends(get_db)):
     return MessageResponse(message="User deleted")
 
 
+@router.delete("/users/{user_id}/hard", response_model=MessageResponse)
+def hard_delete_user(user_id: str, request: Request, db: Session = Depends(get_db)):
+    _require_admin(request)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    db.delete(user)
+    db.commit()
+    return MessageResponse(message="User permanently deleted")
+
+
 @router.get("/users")
 def list_users(request: Request, db: Session = Depends(get_db)):
     _require_admin(request)
