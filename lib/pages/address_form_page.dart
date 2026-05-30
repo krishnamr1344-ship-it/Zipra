@@ -60,12 +60,12 @@ class _AddressFormPageState extends State<AddressFormPage> {
         'city': _cityCtl.text.trim(),
         'pincode': _pincodeCtl.text.trim(),
         'address_type': _addressType,
+        'label': _addressType,
         'house_number': _houseCtl.text.trim(),
         'floor_number': _floorCtl.text.trim(),
         'landmark': _landmarkCtl.text.trim(),
         'latitude': _latitude,
         'longitude': _longitude,
-        'state': 'Tamil Nadu',
       };
 
       Map<String, dynamic> result;

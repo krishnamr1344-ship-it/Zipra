@@ -41,12 +41,13 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
 
   Future<void> _openForm([Map<String, dynamic>? addr]) async {
     if (!mounted) return;
-    final nav = Navigator.of(context);
-    nav.pop();
-    final result = await nav.push<Map<String, dynamic>>(MaterialPageRoute(builder: (_) => AddressFormPage(initialData: addr)));
+    final result = await Navigator.of(context).push<Map<String, dynamic>>(
+      MaterialPageRoute(builder: (_) => AddressFormPage(initialData: addr)),
+    );
     if (result != null) {
       await _saveToPrefs(result);
     }
+    if (mounted) Navigator.of(context).pop(result);
   }
 
   Future<void> _saveToPrefs(Map<String, dynamic> addr) async {

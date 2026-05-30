@@ -361,11 +361,10 @@ def create_address_from_gps(body: GpsAddressCreate, request: Request, db: Sessio
     except Exception:
         pass
 
-    # If user already has a GPS address, update it (check by lat/lng being set)
+    # If user already has a GPS auto-created address, update it
     existing_gps = db.query(Address).filter(
         Address.user_id == user_id,
-        Address.latitude != None,
-        Address.longitude != None,
+        Address.label == "GPS Location",
         Address.is_deleted == False,
     ).first()
 

@@ -122,7 +122,14 @@ class _HomePageState extends State<HomePage> {
     } catch (_) {
       if (mounted) setState(() { _locationArea = 'Set Location'; _locationDetail = 'Tap to set your area'; });
     }
-    if (mounted) setState(() => _zoneChecked = true);
+    try {
+      final zoneResult = await DeliveryZoneService().checkLocation(loc.latitude, loc.longitude);
+      if (!mounted) return;
+      setState(() { _serviceable = zoneResult.serviceable; _zoneChecked = true; });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() { _serviceable = true; _zoneChecked = true; });
+    }
   }
 
   List<_ProductData> get _filteredProducts {
