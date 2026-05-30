@@ -20,6 +20,13 @@ from database import get_db
 from models import User, TokenBlacklist
 from schemas import RegisterRequest, LoginRequest, LogoutRequest, UpdateProfileRequest, ForgotPasswordRequest, ResetPasswordRequest
 
+JWT_SECRET = os.getenv("JWT_SECRET")
+JWT_EXPIRY_MINUTES = int(os.getenv("JWT_EXPIRY_MINUTES", "30"))
+BCRYPT_ROUNDS = int(os.getenv("BCRYPT_ROUNDS", "12"))
+
+if not JWT_SECRET:
+    raise RuntimeError("JWT_SECRET not set in environment variables")
+
 # In-memory password reset code store (ephemeral — for dev/demo)
 _reset_codes: dict[str, dict] = {}
 
