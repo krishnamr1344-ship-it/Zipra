@@ -307,20 +307,6 @@ def delete_user(user_id: str, request: Request, db: Session = Depends(get_db)):
     return MessageResponse(message="User deleted")
 
 
-@router.post("/users/restore-admin", response_model=MessageResponse)
-def restore_admin(request: Request, db: Session = Depends(get_db)):
-    role = getattr(request.state, "user_role", None)
-    user_id = getattr(request.state, "user_id", None)
-    if role != "admin" or not user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
-    admin = db.query(User).filter(User.role == "admin", User.is_deleted == True).first()
-    if not admin:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No deleted admin found")
-    admin.is_deleted = False
-    db.commit()
-    return MessageResponse(message="Admin restored")
-
-
 @router.delete("/users/{user_id}/hard", response_model=MessageResponse)
 def hard_delete_user(user_id: str, request: Request, db: Session = Depends(get_db)):
     admin_id = _require_admin(request, db)

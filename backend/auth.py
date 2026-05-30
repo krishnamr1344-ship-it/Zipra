@@ -8,6 +8,8 @@ Security:
   - Generic error messages only — never leak DB or stack details.
 """
 import os
+import random
+import string
 import uuid
 from datetime import datetime, timedelta, timezone
 
