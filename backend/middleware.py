@@ -28,7 +28,7 @@ _rate_store: dict[str, list[float]] = defaultdict(list)
 _blocked_ips: dict[str, float] = {}
 
 
-PUBLIC_PATHS = {"/", "/api/auth/register", "/api/auth/login", "/api/check-zone", "/api/categories", "/api/products", "/api/places/search", "/api/places/reverse", "/api/combo-packs", "/api/suggest-product", "/docs", "/openapi.json", "/redoc"}
+PUBLIC_PATHS = {"/", "/api/auth/register", "/api/auth/login", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/check-zone", "/api/categories", "/api/products", "/api/places/search", "/api/places/reverse", "/api/combo-packs", "/api/suggest-product", "/docs", "/openapi.json", "/redoc"}
 
 FAILURE_CODES = {401, 400, 422}
 

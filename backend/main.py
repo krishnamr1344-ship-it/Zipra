@@ -34,7 +34,7 @@ from models import Category, Product, ProductImage, User, ComboPack, ComboPackIt
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 API_KEY = os.getenv("API_KEY")
-PUBLIC_PATHS_C4 = {"/", "/docs", "/openapi.json", "/redoc", "/api/auth/register", "/api/auth/login"}
+PUBLIC_PATHS_C4 = {"/", "/docs", "/openapi.json", "/redoc", "/api/auth/register", "/api/auth/login", "/api/auth/forgot-password", "/api/auth/reset-password"}
 
 # Create all tables on startup.
 Base.metadata.create_all(bind=engine)
