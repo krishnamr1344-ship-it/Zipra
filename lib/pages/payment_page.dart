@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../constants/theme.dart';
 import '../models/cart_model.dart';
@@ -92,7 +93,7 @@ class _PaymentPageState extends State<PaymentPage> {
 
       await _api.createOrder(items, 'cod', addressId: _addressId.isNotEmpty ? _addressId : null);
     } catch (e) {
-      setState(() => _processing = false);
+      if (mounted) setState(() => _processing = false);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('$e'), backgroundColor: AppColors.error, behavior: SnackBarBehavior.floating),
@@ -250,6 +251,7 @@ class OrderStatusPage extends StatefulWidget {
 
 class _OrderStatusPageState extends State<OrderStatusPage> {
   int _seconds = 20;
+  Timer? _timer;
 
   @override
   void initState() {
@@ -258,18 +260,24 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
   }
 
   void _startTimer() {
-    Future.delayed(const Duration(seconds: 1), () {
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       if (_seconds > 1) {
         setState(() => _seconds--);
-        _startTimer();
       } else {
+        _timer?.cancel();
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const HomePage()),
           (route) => false,
         );
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   @override

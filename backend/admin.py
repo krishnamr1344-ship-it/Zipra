@@ -8,9 +8,11 @@ Security:
   - Soft-delete used everywhere.
   - No sensitive user data exposed (no password hashes).
 """
+import uuid
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -38,6 +40,14 @@ def _require_admin(request: Request, db: Session = None) -> str:
     return user_id
 
 
+def _validate_uuid(uuid_str: str) -> str:
+    try:
+        uuid.UUID(uuid_str)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid ID format")
+    return uuid_str
+
+
 # ─── STATS ────────────────────────────────────────────────────────
 
 @router.get("/stats")
@@ -48,7 +58,7 @@ def dashboard_stats(request: Request, db: Session = Depends(get_db)):
     orders = db.query(Order).filter(Order.is_deleted == False).count()
     users = db.query(User).filter(User.is_deleted == False).count()
     delivered = db.query(Order).filter(Order.is_deleted == False, Order.status == "Delivered").with_entities(Order.total_amount).all()
-    total = sum(float(r[0]) for r in delivered) if delivered else 0.0
+    total = sum(round(float(r[0]), 2) for r in delivered) if delivered else 0.0
     return {
         "products": products,
         "categories": categories,
@@ -67,7 +77,7 @@ def list_products(request: Request, db: Session = Depends(get_db)):
             id=str(p.id), category_id=str(p.category_id),
             category_name=p.category.name if p.category else None,
             name=p.name, description=p.description,
-            price=float(p.price), unit=p.unit,
+            price=round(float(p.price), 2), unit=p.unit,
             images=[img.image_url for img in p.images if not img.is_deleted],
             stock=p.stock,
         ) for p in products
@@ -96,7 +106,7 @@ def create_product(body: ProductCreate, request: Request, db: Session = Depends(
         id=str(product.id), category_id=str(product.category_id),
         category_name=cat.name,
         name=product.name, description=product.description,
-        price=float(product.price), unit=product.unit,
+        price=round(float(product.price), 2), unit=product.unit,
         images=[img.image_url for img in product.images if not img.is_deleted],
         stock=product.stock,
     )
@@ -105,6 +115,7 @@ def create_product(body: ProductCreate, request: Request, db: Session = Depends(
 @router.put("/products/{product_id}", response_model=ProductResponse)
 def update_product(product_id: str, body: ProductCreate, request: Request, db: Session = Depends(get_db)):
     _require_admin(request, db)
+    _validate_uuid(product_id)
     product = db.query(Product).filter(Product.id == product_id, Product.is_deleted == False).first()
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
@@ -128,7 +139,7 @@ def update_product(product_id: str, body: ProductCreate, request: Request, db: S
         id=str(product.id), category_id=str(product.category_id),
         category_name=cat.name,
         name=product.name, description=product.description,
-        price=float(product.price), unit=product.unit,
+        price=round(float(product.price), 2), unit=product.unit,
         images=[img.image_url for img in product.images if not img.is_deleted],
         stock=product.stock,
     )
@@ -137,6 +148,7 @@ def update_product(product_id: str, body: ProductCreate, request: Request, db: S
 @router.delete("/products/{product_id}", response_model=MessageResponse)
 def delete_product(product_id: str, request: Request, db: Session = Depends(get_db)):
     _require_admin(request, db)
+    _validate_uuid(product_id)
     product = db.query(Product).filter(Product.id == product_id, Product.is_deleted == False).first()
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
@@ -172,6 +184,7 @@ def create_category(body: CategoryCreate, request: Request, db: Session = Depend
 @router.put("/categories/{category_id}", response_model=CategoryResponse)
 def update_category(category_id: str, body: CategoryCreate, request: Request, db: Session = Depends(get_db)):
     _require_admin(request, db)
+    _validate_uuid(category_id)
     cat = db.query(Category).filter(Category.id == category_id, Category.is_deleted == False).first()
     if not cat:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
@@ -189,6 +202,7 @@ def update_category(category_id: str, body: CategoryCreate, request: Request, db
 @router.delete("/categories/{category_id}", response_model=MessageResponse)
 def delete_category(category_id: str, request: Request, db: Session = Depends(get_db)):
     _require_admin(request, db)
+    _validate_uuid(category_id)
     cat = db.query(Category).filter(Category.id == category_id, Category.is_deleted == False).first()
     if not cat:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
@@ -211,8 +225,8 @@ def list_orders(request: Request, db: Session = Depends(get_db)):
             if not oi.is_deleted:
                 items.append({
                     "id": str(oi.id), "product_id": str(oi.product_id),
-                    "product_name": oi.product_name, "product_price": float(oi.product_price),
-                    "quantity": oi.quantity, "subtotal": float(oi.subtotal),
+                    "product_name": oi.product_name,                     "product_price": round(float(oi.product_price), 2),
+                    "quantity": oi.quantity, "subtotal": round(float(oi.subtotal), 2),
                 })
         delivery_address = None
         if o.address_id and o.address:
@@ -260,7 +274,7 @@ def list_orders(request: Request, db: Session = Depends(get_db)):
                 }
         result.append({
             "id": str(o.id), "status": o.status,
-            "total_amount": float(o.total_amount), "payment_method": o.payment_method,
+            "total_amount": round(float(o.total_amount), 2), "payment_method": o.payment_method,
             "items": items, "created_at": o.created_at,
             "user_id": user_id,
             "user_name": user_name,
@@ -275,6 +289,7 @@ def list_orders(request: Request, db: Session = Depends(get_db)):
 @router.put("/orders/{order_id}/status", response_model=MessageResponse)
 def update_order_status(order_id: str, body: StatusUpdateRequest, request: Request, db: Session = Depends(get_db)):
     _require_admin(request, db)
+    _validate_uuid(order_id)
     order = db.query(Order).filter(Order.id == order_id, Order.is_deleted == False).first()
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
@@ -286,6 +301,7 @@ def update_order_status(order_id: str, body: StatusUpdateRequest, request: Reque
 @router.delete("/orders/{order_id}", response_model=MessageResponse)
 def delete_order(order_id: str, request: Request, db: Session = Depends(get_db)):
     _require_admin(request, db)
+    _validate_uuid(order_id)
     order = db.query(Order).filter(Order.id == order_id, Order.is_deleted == False).first()
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
@@ -297,6 +313,7 @@ def delete_order(order_id: str, request: Request, db: Session = Depends(get_db))
 @router.delete("/users/{user_id}", response_model=MessageResponse)
 def delete_user(user_id: str, request: Request, db: Session = Depends(get_db)):
     admin_id = _require_admin(request, db)
+    _validate_uuid(user_id)
     if user_id == admin_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot delete yourself")
     user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
@@ -310,14 +327,13 @@ def delete_user(user_id: str, request: Request, db: Session = Depends(get_db)):
 @router.delete("/users/{user_id}/hard", response_model=MessageResponse)
 def hard_delete_user(user_id: str, request: Request, db: Session = Depends(get_db)):
     admin_id = _require_admin(request, db)
+    _validate_uuid(user_id)
     if user_id == admin_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot delete yourself")
-    import uuid
     uid = uuid.UUID(user_id)
     user = db.query(User).filter(User.id == uid).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    from sqlalchemy import text
     db.execute(text("DELETE FROM addresses WHERE user_id = :uid"), {"uid": uid})
     db.execute(text("DELETE FROM cart_items WHERE user_id = :uid"), {"uid": uid})
     for order in db.query(Order).filter(Order.user_id == uid).all():
@@ -395,7 +411,7 @@ def _pack_to_admin_response(pack: ComboPack) -> dict:
                 "id": str(pi.id),
                 "product_id": str(pi.product_id),
                 "product_name": prod.name if prod else "",
-                "product_price": float(prod.price) if prod else 0,
+                "product_price": round(float(prod.price), 2) if prod else 0,
                 "product_unit": prod.unit if prod else "",
                 "product_image": prod.images[0].image_url if prod and prod.images else None,
                 "quantity": pi.quantity,
@@ -405,7 +421,7 @@ def _pack_to_admin_response(pack: ComboPack) -> dict:
         "name": pack.name,
         "description": pack.description,
         "image_url": pack.image_url,
-        "total_price": float(pack.total_price),
+        "total_price": round(float(pack.total_price), 2),
         "discount_label": pack.discount_label,
         "savings_text": pack.savings_text,
         "is_enabled": pack.is_enabled,
@@ -447,6 +463,7 @@ def create_combo_pack(body: ComboPackCreate, request: Request, db: Session = Dep
 @router.put("/combo-packs/{pack_id}")
 def update_combo_pack(pack_id: str, body: ComboPackUpdate, request: Request, db: Session = Depends(get_db)):
     _require_admin(request, db)
+    _validate_uuid(pack_id)
     pack = db.query(ComboPack).filter(ComboPack.id == pack_id, ComboPack.is_deleted == False).first()
     if not pack:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pack not found")
@@ -480,6 +497,7 @@ def update_combo_pack(pack_id: str, body: ComboPackUpdate, request: Request, db:
 @router.delete("/combo-packs/{pack_id}")
 def delete_combo_pack(pack_id: str, request: Request, db: Session = Depends(get_db)):
     _require_admin(request, db)
+    _validate_uuid(pack_id)
     pack = db.query(ComboPack).filter(ComboPack.id == pack_id, ComboPack.is_deleted == False).first()
     if not pack:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pack not found")
@@ -491,6 +509,7 @@ def delete_combo_pack(pack_id: str, request: Request, db: Session = Depends(get_
 @router.put("/combo-packs/{pack_id}/toggle")
 def toggle_combo_pack(pack_id: str, request: Request, db: Session = Depends(get_db)):
     _require_admin(request, db)
+    _validate_uuid(pack_id)
     pack = db.query(ComboPack).filter(ComboPack.id == pack_id, ComboPack.is_deleted == False).first()
     if not pack:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pack not found")
@@ -517,6 +536,7 @@ def list_delivery_zones(request: Request, db: Session = Depends(get_db)):
 @router.put("/delivery-zones/{zone_id}", response_model=MessageResponse)
 def update_delivery_zone(zone_id: str, body: DeliveryZoneCreate, request: Request, db: Session = Depends(get_db)):
     _require_admin(request, db)
+    _validate_uuid(zone_id)
     zone = db.query(DeliveryZone).filter(DeliveryZone.id == zone_id, DeliveryZone.is_deleted == False).first()
     if not zone:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Delivery zone not found")
@@ -529,6 +549,7 @@ def update_delivery_zone(zone_id: str, body: DeliveryZoneCreate, request: Reques
 @router.delete("/delivery-zones/{zone_id}", response_model=MessageResponse)
 def delete_delivery_zone(zone_id: str, request: Request, db: Session = Depends(get_db)):
     _require_admin(request, db)
+    _validate_uuid(zone_id)
     zone = db.query(DeliveryZone).filter(DeliveryZone.id == zone_id, DeliveryZone.is_deleted == False).first()
     if not zone:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Delivery zone not found")

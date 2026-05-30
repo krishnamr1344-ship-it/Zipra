@@ -61,7 +61,7 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
     final loc = await _locationService.getCurrentLocation();
     if (loc.error != null) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(loc.error ?? 'Failed')));
-      setState(() => _loadingGps = false);
+      if (mounted) setState(() => _loadingGps = false);
       return;
     }
     _latitude = loc.latitude;
@@ -81,7 +81,7 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
       await _loadSaved();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('GPS failed: $e')));
-      setState(() => _loadingGps = false);
+      if (mounted) setState(() => _loadingGps = false);
     }
   }
 

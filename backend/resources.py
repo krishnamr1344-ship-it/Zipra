@@ -59,6 +59,7 @@ def _get_user(user_id: str, db: Session) -> User:
 
 
 def _get_address_or_404(addr_id: str, user_id: str, db: Session) -> Address:
+    _validate_uuid(addr_id)
     addr = db.query(Address).filter(
         Address.id == addr_id,
         Address.user_id == user_id,
@@ -70,6 +71,7 @@ def _get_address_or_404(addr_id: str, user_id: str, db: Session) -> Address:
 
 
 def _get_cart_item_or_404(item_id: str, user_id: str, db: Session) -> CartItem:
+    _validate_uuid(item_id)
     item = db.query(CartItem).filter(
         CartItem.id == item_id,
         CartItem.user_id == user_id,
@@ -80,17 +82,30 @@ def _get_cart_item_or_404(item_id: str, user_id: str, db: Session) -> CartItem:
     return item
 
 
-def _get_product_or_404(prod_id: str, db: Session) -> Product:
-    prod = db.query(Product).filter(
+def _validate_uuid(uuid_str: str) -> str:
+    try:
+        uuid.UUID(uuid_str)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid ID format")
+    return uuid_str
+
+
+def _get_product_or_404(prod_id: str, db: Session, for_update: bool = False) -> Product:
+    _validate_uuid(prod_id)
+    query = db.query(Product).filter(
         Product.id == prod_id,
         Product.is_deleted == False,
-    ).first()
+    )
+    if for_update:
+        query = query.with_for_update()
+    prod = query.first()
     if not prod:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
     return prod
 
 
 def _get_order_or_404(order_id: str, user_id: str, db: Session) -> Order:
+    _validate_uuid(order_id)
     order = db.query(Order).filter(
         Order.id == order_id,
         Order.user_id == user_id,
@@ -106,7 +121,7 @@ def _cart_item_to_response(item: CartItem) -> CartItemResponse:
         id=str(item.id),
         product_id=str(item.product_id),
         product_name=item.product.name,
-        product_price=float(item.product.price),
+        product_price=round(float(item.product.price), 2),
         product_unit=item.product.unit,
         product_image=item.product.images[0].image_url if item.product.images else None,
         quantity=item.quantity,
@@ -122,9 +137,9 @@ def _order_to_response(order: Order) -> OrderResponse:
                 id=str(oi.id),
                 product_id=str(oi.product_id),
                 product_name=oi.product_name,
-                product_price=float(oi.product_price),
+                product_price=round(float(oi.product_price), 2),
                 quantity=oi.quantity,
-                subtotal=float(oi.subtotal),
+                subtotal=round(float(oi.subtotal), 2),
             ))
     delivery_address = None
     if order.address_id and order.address:
@@ -147,7 +162,7 @@ def _order_to_response(order: Order) -> OrderResponse:
     return OrderResponse(
         id=str(order.id),
         status=order.status,
-        total_amount=float(order.total_amount),
+        total_amount=round(float(order.total_amount), 2),
         payment_method=order.payment_method,
         items=items,
         delivery_address=delivery_address,
@@ -168,6 +183,7 @@ def list_categories(db: Session = Depends(get_db)):
 
 @router.get("/categories/{category_id}", response_model=CategoryResponse)
 def get_category(category_id: str, db: Session = Depends(get_db)):
+    _validate_uuid(category_id)
     cat = db.query(Category).filter(Category.id == category_id, Category.is_deleted == False).first()
     if not cat:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
@@ -180,6 +196,7 @@ def get_category(category_id: str, db: Session = Depends(get_db)):
 def list_products(category_id: Optional[str] = None, db: Session = Depends(get_db)):
     query = db.query(Product).filter(Product.is_deleted == False)
     if category_id:
+        _validate_uuid(category_id)
         query = query.filter(Product.category_id == category_id)
     products = query.order_by(Product.name).all()
     result = []
@@ -190,7 +207,7 @@ def list_products(category_id: Optional[str] = None, db: Session = Depends(get_d
             category_name=p.category.name if p.category else None,
             name=p.name,
             description=p.description,
-            price=float(p.price),
+            price=round(float(p.price), 2),
             unit=p.unit,
             images=[img.image_url for img in p.images if not img.is_deleted],
             stock=p.stock,
@@ -200,6 +217,7 @@ def list_products(category_id: Optional[str] = None, db: Session = Depends(get_d
 
 @router.get("/products/{product_id}", response_model=ProductResponse)
 def get_product(product_id: str, db: Session = Depends(get_db)):
+    _validate_uuid(product_id)
     p = db.query(Product).filter(Product.id == product_id, Product.is_deleted == False).first()
     if not p:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
@@ -209,7 +227,7 @@ def get_product(product_id: str, db: Session = Depends(get_db)):
         category_name=p.category.name if p.category else None,
         name=p.name,
         description=p.description,
-        price=float(p.price),
+        price=round(float(p.price), 2),
         unit=p.unit,
         images=[img.image_url for img in p.images if not img.is_deleted],
         stock=p.stock,
@@ -284,6 +302,7 @@ def create_address(body: AddressCreate, request: Request, db: Session = Depends(
 @router.put("/addresses/{address_id}", response_model=AddressResponse)
 def update_address(address_id: str, body: AddressUpdate, request: Request, db: Session = Depends(get_db)):
     user_id = _get_user_id(request)
+    _validate_uuid(address_id)
     addr = _get_address_or_404(address_id, user_id, db)
 
     if body.is_default is True:
@@ -317,6 +336,7 @@ def update_address(address_id: str, body: AddressUpdate, request: Request, db: S
 @router.delete("/addresses/{address_id}", response_model=MessageResponse)
 def delete_address(address_id: str, request: Request, db: Session = Depends(get_db)):
     user_id = _get_user_id(request)
+    _validate_uuid(address_id)
     addr = _get_address_or_404(address_id, user_id, db)
     addr.is_deleted = True
     db.commit()
@@ -335,7 +355,7 @@ def create_address_from_gps(body: GpsAddressCreate, request: Request, db: Sessio
     pincode = "000000"
 
     try:
-        with httpx.Client(timeout=10) as client:
+        with httpx.Client(timeout=httpx.Timeout(10.0, connect=5, read=8, write=5, pool=5)) as client:
             resp = client.get(
                 "https://nominatim.openstreetmap.org/reverse",
                 params={"lat": body.latitude, "lon": body.longitude, "format": "json"},
@@ -437,7 +457,7 @@ def create_address_from_gps(body: GpsAddressCreate, request: Request, db: Sessio
 def reverse_geocode(lat: float, lng: float, db: Session = Depends(get_db)):
     try:
         import httpx
-        with httpx.Client(timeout=10) as client:
+        with httpx.Client(timeout=httpx.Timeout(10.0, connect=5, read=8, write=5, pool=5)) as client:
             resp = client.get(
                 "https://nominatim.openstreetmap.org/reverse",
                 params={"lat": lat, "lon": lng, "format": "json", "addressdetails": 1},
@@ -475,7 +495,7 @@ def reverse_geocode(lat: float, lng: float, db: Session = Depends(get_db)):
 def search_places(q: str, request: Request, db: Session = Depends(get_db)):
     try:
         import httpx
-        with httpx.Client(timeout=10) as client:
+        with httpx.Client(timeout=httpx.Timeout(10.0, connect=5, read=8, write=5, pool=5)) as client:
             resp = client.get(
                 "https://nominatim.openstreetmap.org/search",
                 params={"q": q, "format": "json", "limit": 10, "addressdetails": 1},
@@ -518,7 +538,7 @@ def list_wishlist(request: Request, db: Session = Depends(get_db)):
             id=str(item.id),
             product_id=str(item.product_id),
             product_name=prod.name if prod else "",
-            product_price=float(prod.price) if prod else 0,
+            product_price=round(float(prod.price), 2) if prod else 0,
             product_unit=prod.unit if prod else "",
             product_image=prod.images[0].image_url if prod and prod.images else None,
             created_at=item.created_at,
@@ -542,7 +562,7 @@ def add_to_wishlist(body: WishlistAddRequest, request: Request, db: Session = De
             id=str(existing.id),
             product_id=str(existing.product_id),
             product_name=product.name,
-            product_price=float(product.price),
+            product_price=round(float(product.price), 2),
             product_unit=product.unit,
             product_image=product.images[0].image_url if product.images else None,
             created_at=existing.created_at,
@@ -561,7 +581,7 @@ def add_to_wishlist(body: WishlistAddRequest, request: Request, db: Session = De
             id=str(soft.id),
             product_id=str(soft.product_id),
             product_name=product.name,
-            product_price=float(product.price),
+            product_price=round(float(product.price), 2),
             product_unit=product.unit,
             product_image=product.images[0].image_url if product.images else None,
             created_at=soft.created_at,
@@ -575,7 +595,7 @@ def add_to_wishlist(body: WishlistAddRequest, request: Request, db: Session = De
         id=str(item.id),
         product_id=str(item.product_id),
         product_name=product.name,
-        product_price=float(product.price),
+        product_price=round(float(product.price), 2),
         product_unit=product.unit,
         product_image=product.images[0].image_url if product.images else None,
         created_at=item.created_at,
@@ -585,6 +605,7 @@ def add_to_wishlist(body: WishlistAddRequest, request: Request, db: Session = De
 @router.delete("/wishlist/{product_id}", response_model=MessageResponse)
 def remove_from_wishlist(product_id: str, request: Request, db: Session = Depends(get_db)):
     user_id = _get_user_id(request)
+    _validate_uuid(product_id)
     item = db.query(WishlistItem).filter(
         WishlistItem.user_id == user_id,
         WishlistItem.product_id == product_id,
@@ -614,7 +635,7 @@ def list_cart(request: Request, db: Session = Depends(get_db)):
 def add_to_cart(body: CartAddRequest, request: Request, db: Session = Depends(get_db)):
     user_id = _get_user_id(request)
     _get_user(user_id, db)
-    product = _get_product_or_404(body.product_id, db)
+    product = _get_product_or_404(body.product_id, db, for_update=True)
 
     if product.stock < body.quantity:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Insufficient stock")
@@ -654,12 +675,14 @@ def add_to_cart(body: CartAddRequest, request: Request, db: Session = Depends(ge
 @router.put("/cart/{item_id}", response_model=CartItemResponse)
 def update_cart_item(item_id: str, body: CartUpdateRequest, request: Request, db: Session = Depends(get_db)):
     user_id = _get_user_id(request)
+    _validate_uuid(item_id)
     item = _get_cart_item_or_404(item_id, user_id, db)
 
     if body.quantity == 0:
         item.is_deleted = True
         db.commit()
-        raise HTTPException(status_code=status.HTTP_200_OK, detail="Item removed from cart")
+        from fastapi.responses import JSONResponse
+        return JSONResponse(content={"detail": "Item removed from cart"}, status_code=status.HTTP_200_OK)
 
     item.quantity = body.quantity
     db.commit()
@@ -670,6 +693,7 @@ def update_cart_item(item_id: str, body: CartUpdateRequest, request: Request, db
 @router.delete("/cart/{item_id}", response_model=MessageResponse)
 def remove_cart_item(item_id: str, request: Request, db: Session = Depends(get_db)):
     user_id = _get_user_id(request)
+    _validate_uuid(item_id)
     item = _get_cart_item_or_404(item_id, user_id, db)
     item.is_deleted = True
     db.commit()
@@ -705,6 +729,7 @@ def list_orders(request: Request, db: Session = Depends(get_db)):
 @router.get("/orders/{order_id}", response_model=OrderResponse)
 def get_order(order_id: str, request: Request, db: Session = Depends(get_db)):
     user_id = _get_user_id(request)
+    _validate_uuid(order_id)
     order = _get_order_or_404(order_id, user_id, db)
     return _order_to_response(order)
 
@@ -725,24 +750,17 @@ def create_order(body: OrderCreateRequest, request: Request, db: Session = Depen
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cart is empty")
 
     total = Decimal("0.00")
-    order_items_data = []
+    products_with_qty = []
 
     for ci in cart_items:
-        product = _get_product_or_404(str(ci.product_id), db)
+        product = _get_product_or_404(str(ci.product_id), db, for_update=True)
         if product.stock < ci.quantity:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Insufficient stock for {product.name}",
             )
-        subtotal = product.price * ci.quantity
-        total += subtotal
-        order_items_data.append({
-            "product_id": product.id,
-            "product_name": product.name,
-            "product_price": product.price,
-            "quantity": ci.quantity,
-            "subtotal": subtotal,
-        })
+        total += product.price * ci.quantity
+        products_with_qty.append((product, ci.quantity))
 
     order = Order(
         user_id=user_id,
@@ -753,16 +771,27 @@ def create_order(body: OrderCreateRequest, request: Request, db: Session = Depen
     db.add(order)
     db.flush()
 
-    for oi_data in order_items_data:
-        oi = OrderItem(order_id=order.id, **oi_data)
-        db.add(oi)
-        product = _get_product_or_404(str(oi_data["product_id"]), db)
-        product.stock -= oi_data["quantity"]
+    try:
+        for product, qty in products_with_qty:
+            oi = OrderItem(
+                order_id=order.id,
+                product_id=product.id,
+                product_name=product.name,
+                product_price=product.price,
+                quantity=qty,
+                subtotal=product.price * qty,
+            )
+            db.add(oi)
+            product.stock -= qty
 
-    for ci in cart_items:
-        ci.is_deleted = True
+        for ci in cart_items:
+            ci.is_deleted = True
 
-    db.commit()
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
     db.refresh(order)
     return _order_to_response(order)
 
@@ -773,27 +802,21 @@ def create_order_direct(body: OrderDirectCreateRequest, request: Request, db: Se
     _get_user(user_id, db)
 
     total = Decimal("0.00")
-    order_items_data = []
+    products_with_qty = []
 
     for item in body.items:
-        product = _get_product_or_404(item.product_id, db)
+        product = _get_product_or_404(item.product_id, db, for_update=True)
         if product.stock < item.quantity:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Insufficient stock for {product.name}",
             )
-        subtotal = product.price * item.quantity
-        total += subtotal
-        order_items_data.append({
-            "product_id": product.id,
-            "product_name": product.name,
-            "product_price": product.price,
-            "quantity": item.quantity,
-            "subtotal": subtotal,
-        })
+        total += product.price * item.quantity
+        products_with_qty.append((product, item.quantity))
 
     address_id = body.address_id
     if address_id:
+        _validate_uuid(address_id)
         addr = db.query(Address).filter(
             Address.id == address_id,
             Address.user_id == user_id,
@@ -802,7 +825,6 @@ def create_order_direct(body: OrderDirectCreateRequest, request: Request, db: Se
         if not addr:
             address_id = None
         else:
-            # Server-side delivery zone validation
             if addr.latitude is not None and addr.longitude is not None:
                 zones = db.query(DeliveryZone).filter(
                     DeliveryZone.is_deleted == False,
@@ -837,23 +859,34 @@ def create_order_direct(body: OrderDirectCreateRequest, request: Request, db: Se
     db.add(order)
     db.flush()
 
-    for oi_data in order_items_data:
-        oi = OrderItem(order_id=order.id, **oi_data)
-        db.add(oi)
-        product = _get_product_or_404(str(oi_data["product_id"]), db)
-        product.stock -= oi_data["quantity"]
+    try:
+        for product, qty in products_with_qty:
+            oi = OrderItem(
+                order_id=order.id,
+                product_id=product.id,
+                product_name=product.name,
+                product_price=product.price,
+                quantity=qty,
+                subtotal=product.price * qty,
+            )
+            db.add(oi)
+            product.stock -= qty
 
-    payment = Payment(
-        order_id=order.id,
-        user_id=user_id,
-        method=body.payment_method,
-        status="success",
-        amount=total,
-    )
-    payment.transaction_id = str(uuid.uuid4()).replace("-", "")[:16].upper()
-    db.add(payment)
+        payment = Payment(
+            order_id=order.id,
+            user_id=user_id,
+            method=body.payment_method,
+            status="success",
+            amount=total,
+        )
+        payment.transaction_id = str(uuid.uuid4()).replace("-", "")[:16].upper()
+        db.add(payment)
 
-    db.commit()
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
     db.refresh(order)
     return _order_to_response(order)
 
@@ -870,7 +903,7 @@ def _payment_to_response(payment: Payment) -> PaymentResponse:
     return PaymentResponse(
         id=str(payment.id),
         order_id=str(payment.order_id),
-        amount=float(payment.amount),
+        amount=round(float(payment.amount), 2),
         method=payment.method,
         status=payment.status,
         transaction_id=payment.transaction_id,
@@ -894,6 +927,7 @@ def _check_payment_expiry(payment: Payment, db: Session):
 def process_payment(body: PaymentProcessRequest, request: Request, db: Session = Depends(get_db)):
     user_id = _get_user_id(request)
     _get_user(user_id, db)
+    _validate_uuid(body.order_id)
 
     order = db.query(Order).filter(
         Order.id == body.order_id,
@@ -931,6 +965,7 @@ def process_payment(body: PaymentProcessRequest, request: Request, db: Session =
 @router.get("/payments/{order_id}", response_model=PaymentResponse)
 def get_payment(order_id: str, request: Request, db: Session = Depends(get_db)):
     user_id = _get_user_id(request)
+    _validate_uuid(order_id)
     payment = db.query(Payment).filter(
         Payment.order_id == order_id,
         Payment.user_id == user_id,
@@ -977,7 +1012,7 @@ def _pack_to_response(pack: ComboPack) -> dict:
                 "id": str(pi.id),
                 "product_id": str(pi.product_id),
                 "product_name": prod.name if prod else "",
-                "product_price": float(prod.price) if prod else 0,
+                "product_price": round(float(prod.price), 2) if prod else 0,
                 "product_unit": prod.unit if prod else "",
                 "product_image": prod.images[0].image_url if prod and prod.images else None,
                 "quantity": pi.quantity,
@@ -987,7 +1022,7 @@ def _pack_to_response(pack: ComboPack) -> dict:
         "name": pack.name,
         "description": pack.description,
         "image_url": pack.image_url,
-        "total_price": float(pack.total_price),
+        "total_price": round(float(pack.total_price), 2),
         "discount_label": pack.discount_label,
         "savings_text": pack.savings_text,
         "is_enabled": pack.is_enabled,
@@ -1022,6 +1057,7 @@ def list_combo_packs(db: Session = Depends(get_db)):
 def add_pack_to_cart(body: PackAddRequest, request: Request, db: Session = Depends(get_db)):
     user_id = _get_user_id(request)
     _get_user(user_id, db)
+    _validate_uuid(body.pack_id)
 
     pack = db.query(ComboPack).filter(
         ComboPack.id == body.pack_id,
@@ -1035,7 +1071,7 @@ def add_pack_to_cart(body: PackAddRequest, request: Request, db: Session = Depen
     for pi in pack.items:
         if pi.is_deleted:
             continue
-        prod = _get_product_or_404(str(pi.product_id), db)
+        prod = _get_product_or_404(str(pi.product_id), db, for_update=True)
         if prod.stock < pi.quantity:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

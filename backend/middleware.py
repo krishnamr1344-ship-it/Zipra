@@ -8,6 +8,7 @@ Security:
 """
 import os
 import time
+import threading
 from collections import defaultdict
 
 from typing import Optional
@@ -26,6 +27,7 @@ RATE_LIMIT_BLOCK_MINUTES = int(os.getenv("RATE_LIMIT_BLOCK_MINUTES", "5"))
 
 _rate_store: dict[str, list[float]] = defaultdict(list)
 _blocked_ips: dict[str, float] = {}
+_rate_lock = threading.Lock()
 
 
 PUBLIC_PATHS = {"/", "/api/auth/register", "/api/auth/login", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/check-zone", "/api/categories", "/api/products", "/api/places/search", "/api/places/reverse", "/api/combo-packs", "/api/suggest-product", "/docs", "/openapi.json", "/redoc"}
@@ -36,24 +38,26 @@ FAILURE_CODES = {401, 400, 422}
 class RateLimitMiddleware(BaseHTTPMiddleware):
 
     def _is_blocked(self, ip: str, now: float) -> Optional[JSONResponse]:
-        if ip in _blocked_ips:
-            if now < _blocked_ips[ip]:
-                remaining = int(_blocked_ips[ip] - now)
-                return JSONResponse(
-                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    content={"detail": f"Too many attempts. Try again in {remaining} seconds."},
-                    headers={"Retry-After": str(remaining)},
-                )
-            else:
-                del _blocked_ips[ip]
+        with _rate_lock:
+            if ip in _blocked_ips:
+                if now < _blocked_ips[ip]:
+                    remaining = int(_blocked_ips[ip] - now)
+                    return JSONResponse(
+                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                        content={"detail": f"Too many attempts. Try again in {remaining} seconds."},
+                        headers={"Retry-After": str(remaining)},
+                    )
+                else:
+                    del _blocked_ips[ip]
         return None
 
     def _record_failure(self, ip: str, now: float):
-        _rate_store[ip] = [t for t in _rate_store[ip] if now - t < RATE_LIMIT_WINDOW_SECONDS]
-        _rate_store[ip].append(now)
-        if len(_rate_store[ip]) >= RATE_LIMIT_MAX_ATTEMPTS:
-            _blocked_ips[ip] = now + (RATE_LIMIT_BLOCK_MINUTES * 60)
-            _rate_store[ip] = []
+        with _rate_lock:
+            _rate_store[ip] = [t for t in _rate_store[ip] if now - t < RATE_LIMIT_WINDOW_SECONDS]
+            _rate_store[ip].append(now)
+            if len(_rate_store[ip]) >= RATE_LIMIT_MAX_ATTEMPTS:
+                _blocked_ips[ip] = now + (RATE_LIMIT_BLOCK_MINUTES * 60)
+                _rate_store[ip] = []
 
     async def dispatch(self, request: Request, call_next):
         ip = request.client.host if request.client else "unknown"

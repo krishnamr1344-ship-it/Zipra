@@ -91,7 +91,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
       if (!mounted) return;
       Navigator.pop(context, result);
     } catch (e) {
-      setState(() => _saving = false);
+      if (mounted) setState(() => _saving = false);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'), behavior: SnackBarBehavior.floating));
     }
   }

@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import (
     Column, String, Boolean, DateTime, Text, Integer, Numeric,
-    ForeignKey, UniqueConstraint,
+    ForeignKey, UniqueConstraint, Index,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -129,7 +129,10 @@ class CartItem(Base):
     user = relationship("User", back_populates="cart_items")
     product = relationship("Product", back_populates="cart_items")
 
-    __table_args__ = (UniqueConstraint("user_id", "product_id", name="uq_user_product_cart"),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "product_id", name="uq_user_product_cart"),
+        Index("ix_cart_items_user_deleted", "user_id", "is_deleted"),
+    )
 
 
 class Order(Base):
@@ -148,6 +151,8 @@ class Order(Base):
     address = relationship("Address")
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
     payment = relationship("Payment", back_populates="order", uselist=False, cascade="all, delete-orphan")
+
+    __table_args__ = (Index("ix_orders_user_deleted", "user_id", "is_deleted"),)
 
 
 class OrderItem(Base):
@@ -249,7 +254,10 @@ class WishlistItem(Base):
     user = relationship("User", backref="wishlist_items")
     product = relationship("Product", backref="wishlist_items")
 
-    __table_args__ = (UniqueConstraint("user_id", "product_id", name="uq_user_product_wishlist"),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "product_id", name="uq_user_product_wishlist"),
+        Index("ix_wishlist_user_deleted", "user_id", "is_deleted"),
+    )
 
 
 class DeliveryZone(Base):

@@ -8,7 +8,7 @@ Security:
   - Generic error messages only — never leak DB or stack details.
 """
 import os
-import random
+import secrets
 import string
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -216,7 +216,7 @@ def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
         # Don't reveal whether email exists — always return same message
         return {"message": "If this email is registered, a reset code has been generated", "code": None}
 
-    code = ''.join(random.choices(string.digits, k=6))
+    code = ''.join(secrets.choice(string.digits) for _ in range(6))
     _reset_codes[body.email] = {
         "code": code,
         "expires_at": datetime.now(timezone.utc) + timedelta(minutes=15),

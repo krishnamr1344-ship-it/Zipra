@@ -9,6 +9,7 @@ class ProductCard extends StatefulWidget {
   final VoidCallback onFav;
   final bool isFav;
   final VoidCallback onTap;
+  final int initialQuantity;
 
   const ProductCard({
     super.key,
@@ -19,6 +20,7 @@ class ProductCard extends StatefulWidget {
     required this.onFav,
     this.isFav = false,
     required this.onTap,
+    this.initialQuantity = 0,
   });
 
   @override
@@ -27,6 +29,20 @@ class ProductCard extends StatefulWidget {
 
 class _ProductCardState extends State<ProductCard> {
   int _quantity = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _quantity = widget.initialQuantity;
+  }
+
+  @override
+  void didUpdateWidget(ProductCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.inCart != oldWidget.inCart) {
+      _quantity = widget.inCart ? (_quantity == 0 ? 1 : _quantity) : 0;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

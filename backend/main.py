@@ -79,7 +79,6 @@ async def csrf_origin_check(request: Request, call_next):
             try:
                 parsed = urlparse(origin)
                 allowed = {urlparse(FRONTEND_URL).netloc}
-                # Also allow the API's own hostname for server-to-server calls
                 if request.url.hostname:
                     allowed.add(request.url.hostname)
                     if request.url.port:
@@ -96,6 +95,9 @@ async def csrf_origin_check(request: Request, call_next):
 
 
 # ─── CORS ───────────────────────────────────────────────────────
+if FRONTEND_URL == "*":
+    import warnings
+    warnings.warn("FRONTEND_URL is set to '*' — CORS allow_credentials=True will be invalid per spec")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[FRONTEND_URL],

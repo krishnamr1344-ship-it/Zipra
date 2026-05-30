@@ -164,7 +164,8 @@ class _HomePageState extends State<HomePage> {
         _allProducts = prods.cast<Map<String, dynamic>>();
         _loadingProducts = false;
       });
-    } catch (_) {
+    } catch (e) {
+      debugPrint('HomePage._loadData error: $e');
       if (!mounted) return;
       setState(() { _loadingProducts = false; _error = true; });
     }

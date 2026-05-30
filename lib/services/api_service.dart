@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -32,7 +33,11 @@ class ApiService {
 
   Future<Map<String, dynamic>> _handleResponse(http.Response res) async {
     if (res.statusCode >= 200 && res.statusCode < 300) {
-      return jsonDecode(res.body) as Map<String, dynamic>;
+      try {
+        final decoded = jsonDecode(res.body);
+        if (decoded is Map<String, dynamic>) return decoded;
+      } catch (_) {}
+      throw ApiException('Invalid response (${res.statusCode})');
     }
     debugPrint('API Error ${res.statusCode}: ${res.body}');
     final msg = _tryDecodeDetail(res.body) ?? 'Request failed (${res.statusCode})';
@@ -44,7 +49,11 @@ class ApiService {
       debugPrint('API Error ${res.statusCode}: ${res.body}');
       throw ApiException(_tryDecodeDetail(res.body) ?? 'Request failed (${res.statusCode})');
     }
-    return jsonDecode(res.body) as List<dynamic>;
+    try {
+      final decoded = jsonDecode(res.body);
+      if (decoded is List<dynamic>) return decoded;
+    } catch (_) {}
+    throw ApiException('Invalid response (${res.statusCode})');
   }
 
   String? _tryDecodeDetail(String body) {
@@ -60,7 +69,7 @@ class ApiService {
       Uri.parse('$_baseUrl/api/auth/register'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'name': name, 'email': email, 'phone': phone, 'password': password}),
-    );
+    ).timeout(const Duration(seconds: 30));
     final body = await _handleResponse(res);
     await _saveToken(body['token']);
     await _saveUserLocally(body['user']['name'], body['user']['email'], phone, body['user']['role'] ?? 'user');
@@ -72,7 +81,7 @@ class ApiService {
       Uri.parse('$_baseUrl/api/auth/login'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
-    );
+    ).timeout(const Duration(seconds: 30));
     final body = await _handleResponse(res);
     await _saveToken(body['token']);
     await _saveUserLocally(body['user']['name'], body['user']['email'], '', body['user']['role'] ?? 'user');
@@ -87,7 +96,7 @@ class ApiService {
           Uri.parse('$_baseUrl/api/auth/logout'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({'token': token}),
-        );
+        ).timeout(const Duration(seconds: 30));
       } catch (_) {}
     }
     await _clearToken();
@@ -119,7 +128,7 @@ class ApiService {
       Uri.parse('$_baseUrl/api/auth/profile'),
       headers: headers,
       body: jsonEncode({'name': name, 'email': email, 'phone': phone}),
-    );
+    ).timeout(const Duration(seconds: 30));
     final body = await _handleResponse(res);
     await _saveUserLocally(body['user']['name'], body['user']['email'], phone, body['user']['role'] ?? 'user');
     return body;
@@ -154,7 +163,7 @@ class ApiService {
     if (addressType != null && addressType.isNotEmpty) bodyMap['address_type'] = addressType;
     if (houseNumber != null && houseNumber.isNotEmpty) bodyMap['house_number'] = houseNumber;
     if (floorNumber != null && floorNumber.isNotEmpty) bodyMap['floor_number'] = floorNumber;
-    final res = await http.post(Uri.parse('$_baseUrl/api/addresses/auto'), headers: headers, body: jsonEncode(bodyMap));
+    final res = await http.post(Uri.parse('$_baseUrl/api/addresses/auto'), headers: headers, body: jsonEncode(bodyMap)).timeout(const Duration(seconds: 30));
     return _handleResponse(res);
   }
 
@@ -163,21 +172,21 @@ class ApiService {
     if (headers['Authorization'] == null) {
       return {'id': '', 'address_line1': data['address_line1'] ?? ''};
     }
-    final res = await http.post(Uri.parse('$_baseUrl/api/addresses'), headers: headers, body: jsonEncode(data));
+    final res = await http.post(Uri.parse('$_baseUrl/api/addresses'), headers: headers, body: jsonEncode(data)).timeout(const Duration(seconds: 30));
     return _handleResponse(res);
   }
 
   Future<List<dynamic>> getAddresses() async {
     final headers = await _authHeaders();
     if (headers['Authorization'] == null) return [];
-    final res = await http.get(Uri.parse('$_baseUrl/api/addresses'), headers: headers);
+    final res = await http.get(Uri.parse('$_baseUrl/api/addresses'), headers: headers).timeout(const Duration(seconds: 30));
     return _handleListResponse(res);
   }
 
   Future<void> deleteAddress(String addressId) async {
     final headers = await _authHeaders();
     if (headers['Authorization'] == null) throw ApiException('Login required');
-    final res = await http.delete(Uri.parse('$_baseUrl/api/addresses/$addressId'), headers: headers);
+    final res = await http.delete(Uri.parse('$_baseUrl/api/addresses/$addressId'), headers: headers).timeout(const Duration(seconds: 30));
     if (res.statusCode != 200) {
       debugPrint('API Error ${res.statusCode}: ${res.body}');
       throw ApiException(_tryDecodeDetail(res.body) ?? 'Failed to delete address');
@@ -187,7 +196,7 @@ class ApiService {
   Future<Map<String, dynamic>> updateAddress(String addressId, Map<String, dynamic> data) async {
     final headers = await _authHeaders();
     if (headers['Authorization'] == null) throw ApiException('Login required');
-    final res = await http.put(Uri.parse('$_baseUrl/api/addresses/$addressId'), headers: headers, body: jsonEncode(data));
+    final res = await http.put(Uri.parse('$_baseUrl/api/addresses/$addressId'), headers: headers, body: jsonEncode(data)).timeout(const Duration(seconds: 30));
     return _handleResponse(res);
   }
 
@@ -196,7 +205,7 @@ class ApiService {
       final res = await http.get(
         Uri.parse('https://nominatim.openstreetmap.org/reverse?lat=$lat&lon=$lng&format=json&addressdetails=1'),
         headers: {'User-Agent': 'DeliveryApp/1.0'},
-      );
+      ).timeout(const Duration(seconds: 30));
       if (res.statusCode != 200) return {};
       final data = jsonDecode(res.body) as Map<String, dynamic>;
       final addr = data['address'] as Map<String, dynamic>? ?? {};
@@ -227,7 +236,7 @@ class ApiService {
       final res = await http.get(
         Uri.parse('https://nominatim.openstreetmap.org/search?q=${Uri.encodeQueryComponent(query)}&format=json&limit=10&addressdetails=1'),
         headers: {'User-Agent': 'DeliveryApp/1.0'},
-      );
+      ).timeout(const Duration(seconds: 30));
       if (res.statusCode != 200) return [];
       final data = jsonDecode(res.body) as List<dynamic>;
       return data.map((item) {
@@ -252,13 +261,13 @@ class ApiService {
 
   Future<List<dynamic>> getCategories() async {
     final headers = await _authHeaders();
-    final res = await http.get(Uri.parse('$_baseUrl/api/categories'), headers: headers);
+    final res = await http.get(Uri.parse('$_baseUrl/api/categories'), headers: headers).timeout(const Duration(seconds: 30));
     return _handleListResponse(res);
   }
 
   Future<List<dynamic>> getProducts() async {
     final headers = await _authHeaders();
-    final res = await http.get(Uri.parse('$_baseUrl/api/products'), headers: headers);
+    final res = await http.get(Uri.parse('$_baseUrl/api/products'), headers: headers).timeout(const Duration(seconds: 30));
     return _handleListResponse(res);
   }
 
@@ -269,23 +278,27 @@ class ApiService {
       'payment_method': paymentMethod,
     };
     if (addressId != null) bodyMap['address_id'] = addressId;
-    final res = await http.post(Uri.parse('$_baseUrl/api/orders/direct'), headers: headers, body: jsonEncode(bodyMap));
+    final res = await http.post(Uri.parse('$_baseUrl/api/orders/direct'), headers: headers, body: jsonEncode(bodyMap)).timeout(const Duration(seconds: 30));
     return _handleResponse(res);
   }
 
   Future<List<dynamic>> getOrders() async {
     final headers = await _authHeaders();
     if (headers['Authorization'] == null) return [];
-    final res = await http.get(Uri.parse('$_baseUrl/api/orders'), headers: headers);
+    final res = await http.get(Uri.parse('$_baseUrl/api/orders'), headers: headers).timeout(const Duration(seconds: 30));
     return _handleListResponse(res);
   }
 
   // ─── Combo Packs ──────────────────────────────────────────────────
 
   Future<List<dynamic>> getComboPacks() async {
-    final res = await http.get(Uri.parse('$_baseUrl/api/combo-packs'));
-    if (res.statusCode != 200) return [];
-    return jsonDecode(res.body) as List<dynamic>;
+    try {
+      final res = await http.get(Uri.parse('$_baseUrl/api/combo-packs')).timeout(const Duration(seconds: 30));
+      if (res.statusCode != 200) return [];
+      final decoded = jsonDecode(res.body);
+      if (decoded is List<dynamic>) return decoded;
+    } catch (_) {}
+    return [];
   }
 
   // ─── Forgot Password ────────────────────────────────────────────
@@ -295,7 +308,7 @@ class ApiService {
       Uri.parse('$_baseUrl/api/auth/forgot-password'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email}),
-    );
+    ).timeout(const Duration(seconds: 30));
     return _handleResponse(res);
   }
 
@@ -304,7 +317,7 @@ class ApiService {
       Uri.parse('$_baseUrl/api/auth/reset-password'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'code': code, 'new_password': newPassword}),
-    );
+    ).timeout(const Duration(seconds: 30));
     return _handleResponse(res);
   }
 
@@ -313,7 +326,7 @@ class ApiService {
   Future<List<dynamic>> getCart() async {
     final headers = await _authHeaders();
     if (headers['Authorization'] == null) return [];
-    final res = await http.get(Uri.parse('$_baseUrl/api/cart'), headers: headers);
+    final res = await http.get(Uri.parse('$_baseUrl/api/cart'), headers: headers).timeout(const Duration(seconds: 30));
     return _handleListResponse(res);
   }
 
@@ -323,7 +336,7 @@ class ApiService {
       Uri.parse('$_baseUrl/api/cart'),
       headers: headers,
       body: jsonEncode({'product_id': productId, 'quantity': quantity}),
-    );
+    ).timeout(const Duration(seconds: 30));
     return _handleResponse(res);
   }
 
@@ -333,21 +346,21 @@ class ApiService {
       Uri.parse('$_baseUrl/api/cart/$itemId'),
       headers: headers,
       body: jsonEncode({'quantity': quantity}),
-    );
+    ).timeout(const Duration(seconds: 30));
     if (res.statusCode >= 200 && res.statusCode < 300) return;
     throw ApiException('Failed to update cart');
   }
 
   Future<void> removeCartItem(String itemId) async {
     final headers = await _authHeaders(required: true);
-    final res = await http.delete(Uri.parse('$_baseUrl/api/cart/$itemId'), headers: headers);
+    final res = await http.delete(Uri.parse('$_baseUrl/api/cart/$itemId'), headers: headers).timeout(const Duration(seconds: 30));
     if (res.statusCode >= 200 && res.statusCode < 300) return;
     throw ApiException('Failed to remove cart item');
   }
 
   Future<void> clearCart() async {
     final headers = await _authHeaders(required: true);
-    await http.delete(Uri.parse('$_baseUrl/api/cart'), headers: headers);
+    await http.delete(Uri.parse('$_baseUrl/api/cart'), headers: headers).timeout(const Duration(seconds: 30));
   }
 
   // ─── Wishlist ────────────────────────────────────────────────────
@@ -355,7 +368,7 @@ class ApiService {
   Future<List<dynamic>> getWishlist() async {
     final headers = await _authHeaders();
     if (headers['Authorization'] == null) return [];
-    final res = await http.get(Uri.parse('$_baseUrl/api/wishlist'), headers: headers);
+    final res = await http.get(Uri.parse('$_baseUrl/api/wishlist'), headers: headers).timeout(const Duration(seconds: 30));
     return _handleListResponse(res);
   }
 
@@ -365,13 +378,13 @@ class ApiService {
       Uri.parse('$_baseUrl/api/wishlist'),
       headers: headers,
       body: jsonEncode({'product_id': productId}),
-    );
+    ).timeout(const Duration(seconds: 30));
     return _handleResponse(res);
   }
 
   Future<void> removeFromWishlist(String productId) async {
     final headers = await _authHeaders(required: true);
-    final res = await http.delete(Uri.parse('$_baseUrl/api/wishlist/$productId'), headers: headers);
+    final res = await http.delete(Uri.parse('$_baseUrl/api/wishlist/$productId'), headers: headers).timeout(const Duration(seconds: 30));
     if (res.statusCode >= 200 && res.statusCode < 300) return;
     throw ApiException('Failed to remove from wishlist');
   }
@@ -384,7 +397,7 @@ class ApiService {
       Uri.parse('$_baseUrl/api/suggest-product'),
       headers: headers,
       body: jsonEncode({'product_name': productName, 'reason': reason}),
-    );
+    ).timeout(const Duration(seconds: 30));
     return _handleResponse(res);
   }
 
@@ -394,7 +407,7 @@ class ApiService {
       Uri.parse('$_baseUrl/api/combo-packs/add-to-cart'),
       headers: headers,
       body: jsonEncode({'pack_id': packId}),
-    );
+    ).timeout(const Duration(seconds: 30));
     return _handleResponse(res);
   }
 }
