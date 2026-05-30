@@ -7,9 +7,8 @@ Security:
   - Generic error responses only.
 
 Database:
-  - Local PostgreSQL via SQLAlchemy (models.py, database.py)
-  - Supabase via supabase-py (supabase_db.py) — service_role key
-  - Both run in parallel during migration
+  - PostgreSQL via SQLAlchemy (models.py, database.py)
+  - Render PostgreSQL in production, local PostgreSQL in development
 """
 import os
 from pathlib import Path
@@ -32,7 +31,6 @@ from middleware import RateLimitMiddleware
 from resources import router as resources_router
 from admin import router as admin_router
 from models import Category, Product, ProductImage, User, ComboPack, ComboPackItem
-import supabase_db
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 API_KEY = os.getenv("API_KEY")
