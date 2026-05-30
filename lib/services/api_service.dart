@@ -192,26 +192,60 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> reverseGeocode(double lat, double lng) async {
-    final headers = await _authHeaders();
-    final res = await http.get(
-      Uri.parse('$_baseUrl/api/places/reverse?lat=$lat&lng=$lng'),
-      headers: headers,
-    );
-    if (res.statusCode != 200) return {};
-    return jsonDecode(res.body) as Map<String, dynamic>;
+    try {
+      final res = await http.get(
+        Uri.parse('https://nominatim.openstreetmap.org/reverse?lat=$lat&lon=$lng&format=json&addressdetails=1'),
+        headers: {'User-Agent': 'DeliveryApp/1.0'},
+      );
+      if (res.statusCode != 200) return {};
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      final addr = data['address'] as Map<String, dynamic>? ?? {};
+      final road = (addr['road'] as String?) ?? '';
+      final house = (addr['house_number'] as String?) ?? '';
+      final parts = <String>[];
+      if (road.isNotEmpty) parts.add(road);
+      if (house.isNotEmpty) parts.add(house);
+      final areaRaw = (addr['suburb'] as String?) ?? (addr['city_district'] as String?) ?? '';
+      final area = areaRaw.replaceAll(RegExp(r'^Zone\s+'), '').trim();
+      var cityRaw = (addr['city'] as String?) ?? (addr['town'] as String?) ?? (addr['village'] as String?) ?? (addr['county'] as String?) ?? '';
+      cityRaw = cityRaw.replaceAll(RegExp(r'\s+(Corporation|Municipal|Municipality|Municipal\s+Corporation)\s*$'), '').trim();
+      return {
+        'display_name': data['display_name'] as String? ?? '',
+        'address_line1': parts.isNotEmpty ? parts.join(', ') : (data['display_name'] as String? ?? ''),
+        'address_line2': area.isNotEmpty && cityRaw.isNotEmpty ? '$area, $cityRaw' : (area.isNotEmpty ? area : ''),
+        'city': cityRaw,
+        'state': addr['state'] as String? ?? '',
+        'pincode': addr['postcode'] as String? ?? '',
+      };
+    } catch (_) {
+      return {};
+    }
   }
 
   Future<List<dynamic>> searchPlaces(String query) async {
-    final headers = await _authHeaders();
-    final res = await http.get(
-      Uri.parse('$_baseUrl/api/places/search?q=${Uri.encodeQueryComponent(query)}'),
-      headers: headers,
-    );
-    if (res.statusCode != 200) {
-      debugPrint('API Error ${res.statusCode}: ${res.body}');
+    try {
+      final res = await http.get(
+        Uri.parse('https://nominatim.openstreetmap.org/search?q=${Uri.encodeQueryComponent(query)}&format=json&limit=10&addressdetails=1'),
+        headers: {'User-Agent': 'DeliveryApp/1.0'},
+      );
+      if (res.statusCode != 200) return [];
+      final data = jsonDecode(res.body) as List<dynamic>;
+      return data.map((item) {
+        final addr = (item['address'] as Map<String, dynamic>?) ?? {};
+        return {
+          'display_name': item['display_name'] as String? ?? '',
+          'latitude': (item['lat'] as num?)?.toDouble() ?? 0.0,
+          'longitude': (item['lon'] as num?)?.toDouble() ?? 0.0,
+          'address_line1': [addr['road'], addr['house_number']].whereType<String>().where((s) => s.isNotEmpty).join(', '),
+          'address_line2': (addr['suburb'] as String?) ?? (addr['city_district'] as String?) ?? '',
+          'city': (addr['city'] as String?) ?? (addr['town'] as String?) ?? (addr['village'] as String?) ?? (addr['county'] as String?) ?? '',
+          'state': addr['state'] as String? ?? '',
+          'pincode': addr['postcode'] as String? ?? '',
+        };
+      }).toList();
+    } catch (_) {
       return [];
     }
-    return jsonDecode(res.body) as List<dynamic>;
   }
 
   // ─── Products & Categories (user-facing) ───────────────────────
