@@ -26,11 +26,15 @@ from schemas import (
 router = APIRouter(prefix="/api/admin")
 
 
-def _require_admin(request: Request) -> str:
+def _require_admin(request: Request, db: Session = None) -> str:
     role = getattr(request.state, "user_role", None)
     user_id = getattr(request.state, "user_id", None)
     if role != "admin" or not user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+    if db is not None:
+        user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
+        if not user:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     return user_id
 
 
@@ -38,7 +42,7 @@ def _require_admin(request: Request) -> str:
 
 @router.get("/stats")
 def dashboard_stats(request: Request, db: Session = Depends(get_db)):
-    _require_admin(request)
+    _require_admin(request, db)
     products = db.query(Product).filter(Product.is_deleted == False).count()
     categories = db.query(Category).filter(Category.is_deleted == False).count()
     orders = db.query(Order).filter(Order.is_deleted == False).count()
@@ -56,7 +60,7 @@ def dashboard_stats(request: Request, db: Session = Depends(get_db)):
 
 @router.get("/products", response_model=list[ProductResponse])
 def list_products(request: Request, db: Session = Depends(get_db)):
-    _require_admin(request)
+    _require_admin(request, db)
     products = db.query(Product).filter(Product.is_deleted == False).order_by(Product.name).all()
     return [
         ProductResponse(
@@ -72,7 +76,7 @@ def list_products(request: Request, db: Session = Depends(get_db)):
 
 @router.post("/products", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
 def create_product(body: ProductCreate, request: Request, db: Session = Depends(get_db)):
-    _require_admin(request)
+    _require_admin(request, db)
     cat = db.query(Category).filter(Category.id == body.category_id, Category.is_deleted == False).first()
     if not cat:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
@@ -100,7 +104,7 @@ def create_product(body: ProductCreate, request: Request, db: Session = Depends(
 
 @router.put("/products/{product_id}", response_model=ProductResponse)
 def update_product(product_id: str, body: ProductCreate, request: Request, db: Session = Depends(get_db)):
-    _require_admin(request)
+    _require_admin(request, db)
     product = db.query(Product).filter(Product.id == product_id, Product.is_deleted == False).first()
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
@@ -132,7 +136,7 @@ def update_product(product_id: str, body: ProductCreate, request: Request, db: S
 
 @router.delete("/products/{product_id}", response_model=MessageResponse)
 def delete_product(product_id: str, request: Request, db: Session = Depends(get_db)):
-    _require_admin(request)
+    _require_admin(request, db)
     product = db.query(Product).filter(Product.id == product_id, Product.is_deleted == False).first()
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
@@ -143,14 +147,14 @@ def delete_product(product_id: str, request: Request, db: Session = Depends(get_
 
 @router.get("/categories", response_model=list[CategoryResponse])
 def list_categories(request: Request, db: Session = Depends(get_db)):
-    _require_admin(request)
+    _require_admin(request, db)
     cats = db.query(Category).filter(Category.is_deleted == False).order_by(Category.name).all()
     return [CategoryResponse(id=str(c.id), name=c.name, description=c.description, image=c.image) for c in cats]
 
 
 @router.post("/categories", response_model=CategoryResponse, status_code=status.HTTP_201_CREATED)
 def create_category(body: CategoryCreate, request: Request, db: Session = Depends(get_db)):
-    _require_admin(request)
+    _require_admin(request, db)
     existing = db.query(Category).filter(Category.name == body.name.strip(), Category.is_deleted == False).first()
     if existing:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Category already exists")
@@ -167,7 +171,7 @@ def create_category(body: CategoryCreate, request: Request, db: Session = Depend
 
 @router.put("/categories/{category_id}", response_model=CategoryResponse)
 def update_category(category_id: str, body: CategoryCreate, request: Request, db: Session = Depends(get_db)):
-    _require_admin(request)
+    _require_admin(request, db)
     cat = db.query(Category).filter(Category.id == category_id, Category.is_deleted == False).first()
     if not cat:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
@@ -184,7 +188,7 @@ def update_category(category_id: str, body: CategoryCreate, request: Request, db
 
 @router.delete("/categories/{category_id}", response_model=MessageResponse)
 def delete_category(category_id: str, request: Request, db: Session = Depends(get_db)):
-    _require_admin(request)
+    _require_admin(request, db)
     cat = db.query(Category).filter(Category.id == category_id, Category.is_deleted == False).first()
     if not cat:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
@@ -198,7 +202,7 @@ def delete_category(category_id: str, request: Request, db: Session = Depends(ge
 
 @router.get("/orders")
 def list_orders(request: Request, db: Session = Depends(get_db)):
-    _require_admin(request)
+    _require_admin(request, db)
     orders = db.query(Order).filter(Order.is_deleted == False).order_by(Order.created_at.desc()).all()
     result = []
     for o in orders:
@@ -270,7 +274,7 @@ def list_orders(request: Request, db: Session = Depends(get_db)):
 
 @router.put("/orders/{order_id}/status", response_model=MessageResponse)
 def update_order_status(order_id: str, body: StatusUpdateRequest, request: Request, db: Session = Depends(get_db)):
-    _require_admin(request)
+    _require_admin(request, db)
     order = db.query(Order).filter(Order.id == order_id, Order.is_deleted == False).first()
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
@@ -281,7 +285,7 @@ def update_order_status(order_id: str, body: StatusUpdateRequest, request: Reque
 
 @router.delete("/orders/{order_id}", response_model=MessageResponse)
 def delete_order(order_id: str, request: Request, db: Session = Depends(get_db)):
-    _require_admin(request)
+    _require_admin(request, db)
     order = db.query(Order).filter(Order.id == order_id, Order.is_deleted == False).first()
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
@@ -292,7 +296,9 @@ def delete_order(order_id: str, request: Request, db: Session = Depends(get_db))
 
 @router.delete("/users/{user_id}", response_model=MessageResponse)
 def delete_user(user_id: str, request: Request, db: Session = Depends(get_db)):
-    _require_admin(request)
+    admin_id = _require_admin(request, db)
+    if user_id == admin_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot delete yourself")
     user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
@@ -301,9 +307,25 @@ def delete_user(user_id: str, request: Request, db: Session = Depends(get_db)):
     return MessageResponse(message="User deleted")
 
 
+@router.post("/users/restore-admin", response_model=MessageResponse)
+def restore_admin(request: Request, db: Session = Depends(get_db)):
+    role = getattr(request.state, "user_role", None)
+    user_id = getattr(request.state, "user_id", None)
+    if role != "admin" or not user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+    admin = db.query(User).filter(User.role == "admin", User.is_deleted == True).first()
+    if not admin:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No deleted admin found")
+    admin.is_deleted = False
+    db.commit()
+    return MessageResponse(message="Admin restored")
+
+
 @router.delete("/users/{user_id}/hard", response_model=MessageResponse)
 def hard_delete_user(user_id: str, request: Request, db: Session = Depends(get_db)):
-    _require_admin(request)
+    admin_id = _require_admin(request, db)
+    if user_id == admin_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot delete yourself")
     import uuid
     uid = uuid.UUID(user_id)
     user = db.query(User).filter(User.id == uid).first()
@@ -325,7 +347,7 @@ def hard_delete_user(user_id: str, request: Request, db: Session = Depends(get_d
 
 @router.get("/users")
 def list_users(request: Request, db: Session = Depends(get_db)):
-    _require_admin(request)
+    _require_admin(request, db)
     users = db.query(User).filter(User.is_deleted == False).order_by(User.created_at.desc()).all()
     result = []
     for u in users:
@@ -365,7 +387,7 @@ def list_users(request: Request, db: Session = Depends(get_db)):
 
 @router.post("/delivery-zone", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
 def create_delivery_zone(body: DeliveryZoneCreate, request: Request, db: Session = Depends(get_db)):
-    _require_admin(request)
+    _require_admin(request, db)
     zone = DeliveryZone(
         zone_name=body.zone_name,
         geojson_data=body.geojson_data,
@@ -408,14 +430,14 @@ def _pack_to_admin_response(pack: ComboPack) -> dict:
 
 @router.get("/combo-packs")
 def list_combo_packs_admin(request: Request, db: Session = Depends(get_db)):
-    _require_admin(request)
+    _require_admin(request, db)
     packs = db.query(ComboPack).filter(ComboPack.is_deleted == False).order_by(ComboPack.name).all()
     return [_pack_to_admin_response(p) for p in packs]
 
 
 @router.post("/combo-packs", status_code=status.HTTP_201_CREATED)
 def create_combo_pack(body: ComboPackCreate, request: Request, db: Session = Depends(get_db)):
-    _require_admin(request)
+    _require_admin(request, db)
     pack = ComboPack(
         name=body.name.strip(),
         description=body.description.strip() if body.description else None,
@@ -438,7 +460,7 @@ def create_combo_pack(body: ComboPackCreate, request: Request, db: Session = Dep
 
 @router.put("/combo-packs/{pack_id}")
 def update_combo_pack(pack_id: str, body: ComboPackUpdate, request: Request, db: Session = Depends(get_db)):
-    _require_admin(request)
+    _require_admin(request, db)
     pack = db.query(ComboPack).filter(ComboPack.id == pack_id, ComboPack.is_deleted == False).first()
     if not pack:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pack not found")
@@ -471,7 +493,7 @@ def update_combo_pack(pack_id: str, body: ComboPackUpdate, request: Request, db:
 
 @router.delete("/combo-packs/{pack_id}")
 def delete_combo_pack(pack_id: str, request: Request, db: Session = Depends(get_db)):
-    _require_admin(request)
+    _require_admin(request, db)
     pack = db.query(ComboPack).filter(ComboPack.id == pack_id, ComboPack.is_deleted == False).first()
     if not pack:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pack not found")
@@ -482,7 +504,7 @@ def delete_combo_pack(pack_id: str, request: Request, db: Session = Depends(get_
 
 @router.put("/combo-packs/{pack_id}/toggle")
 def toggle_combo_pack(pack_id: str, request: Request, db: Session = Depends(get_db)):
-    _require_admin(request)
+    _require_admin(request, db)
     pack = db.query(ComboPack).filter(ComboPack.id == pack_id, ComboPack.is_deleted == False).first()
     if not pack:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pack not found")
@@ -493,7 +515,7 @@ def toggle_combo_pack(pack_id: str, request: Request, db: Session = Depends(get_
 
 @router.get("/delivery-zones")
 def list_delivery_zones(request: Request, db: Session = Depends(get_db)):
-    _require_admin(request)
+    _require_admin(request, db)
     zones = db.query(DeliveryZone).filter(DeliveryZone.is_deleted == False, DeliveryZone.is_active == True).all()
     return [
         {
@@ -508,7 +530,7 @@ def list_delivery_zones(request: Request, db: Session = Depends(get_db)):
 
 @router.put("/delivery-zones/{zone_id}", response_model=MessageResponse)
 def update_delivery_zone(zone_id: str, body: DeliveryZoneCreate, request: Request, db: Session = Depends(get_db)):
-    _require_admin(request)
+    _require_admin(request, db)
     zone = db.query(DeliveryZone).filter(DeliveryZone.id == zone_id, DeliveryZone.is_deleted == False).first()
     if not zone:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Delivery zone not found")
@@ -520,7 +542,7 @@ def update_delivery_zone(zone_id: str, body: DeliveryZoneCreate, request: Reques
 
 @router.delete("/delivery-zones/{zone_id}", response_model=MessageResponse)
 def delete_delivery_zone(zone_id: str, request: Request, db: Session = Depends(get_db)):
-    _require_admin(request)
+    _require_admin(request, db)
     zone = db.query(DeliveryZone).filter(DeliveryZone.id == zone_id, DeliveryZone.is_deleted == False).first()
     if not zone:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Delivery zone not found")
