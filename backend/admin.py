@@ -310,6 +310,21 @@ def delete_order(order_id: str, request: Request, db: Session = Depends(get_db))
     return MessageResponse(message="Order deleted")
 
 
+@router.delete("/orders/{order_id}/hard", response_model=MessageResponse)
+def hard_delete_order(order_id: str, request: Request, db: Session = Depends(get_db)):
+    _require_admin(request, db)
+    _validate_uuid(order_id)
+    oid = uuid.UUID(order_id)
+    order = db.query(Order).filter(Order.id == oid).first()
+    if not order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+    db.execute(text("DELETE FROM payments WHERE order_id = :oid"), {"oid": oid})
+    db.execute(text("DELETE FROM order_items WHERE order_id = :oid"), {"oid": oid})
+    db.execute(text("DELETE FROM orders WHERE id = :oid"), {"oid": oid})
+    db.commit()
+    return MessageResponse(message="Order permanently deleted")
+
+
 @router.delete("/users/{user_id}", response_model=MessageResponse)
 def delete_user(user_id: str, request: Request, db: Session = Depends(get_db)):
     admin_id = _require_admin(request, db)
