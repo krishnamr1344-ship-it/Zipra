@@ -12,7 +12,6 @@ from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
-from sqlalchemy import text
 
 from database import get_db
 from models import User, Category, Product, ProductImage, Address, Order, Payment, DeliveryZone, ComboPack, ComboPackItem
@@ -508,17 +507,4 @@ def delete_delivery_zone(zone_id: str, request: Request, db: Session = Depends(g
     return MessageResponse(message="Delivery zone deleted")
 
 
-# ─── TEMP: Hard delete user by email ─────────────────────────────────────
-@router.delete("/hard-delete-user/{email}")
-def hard_delete_user(email: str, request: Request, db: Session = Depends(get_db)):
-    _require_admin(request)
-    # Raw SQL to bypass FK constraints
-    db.execute(text("DELETE FROM addresses WHERE user_id = (SELECT id FROM users WHERE email = :e)"), {"e": email})
-    db.execute(text("DELETE FROM cart_items WHERE user_id = (SELECT id FROM users WHERE email = :e)"), {"e": email})
-    db.execute(text("DELETE FROM order_items WHERE order_id IN (SELECT id FROM orders WHERE user_id = (SELECT id FROM users WHERE email = :e))"), {"e": email})
-    db.execute(text("DELETE FROM payments WHERE user_id = (SELECT id FROM users WHERE email = :e)"), {"e": email})
-    db.execute(text("DELETE FROM orders WHERE user_id = (SELECT id FROM users WHERE email = :e)"), {"e": email})
-    db.execute(text("DELETE FROM wishlist_items WHERE user_id = (SELECT id FROM users WHERE email = :e)"), {"e": email})
-    db.execute(text("DELETE FROM users WHERE email = :e"), {"e": email})
-    db.commit()
-    return MessageResponse(message=f"User {email} hard deleted")
+
