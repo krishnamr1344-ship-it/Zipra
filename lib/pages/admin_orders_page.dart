@@ -114,169 +114,9 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
     return _orders.where((o) => (o as Map)['status'] == status).length;
   }
 
-  void _deleteOrder(String orderId) async {
-    try {
-      await _api.deleteOrder(orderId);
-      if (!mounted) return;
-      _load();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Order deleted'),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.red.shade700,
-          action: SnackBarAction(label: 'OK', textColor: Colors.white, onPressed: () {}),
-        ),
-      );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$e'), behavior: SnackBarBehavior.floating),
-        );
-      }
-    }
-  }
-
-  void _changeStatus(String orderId, String currentStatus) {
-    final statuses = ['Confirmed', 'Shipped', 'Delivered', 'Cancelled'];
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: _statusColor(currentStatus).withAlpha(20),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(
-                    _statusIcon(currentStatus),
-                    color: _statusColor(currentStatus),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Update Status',
-                      style:
-                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      'Current: $currentStatus',
-                      style: TextStyle(
-                          fontSize: 13, color: Colors.grey.shade500),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            ...statuses
-                .where((s) => s != currentStatus)
-                .map((s) => Container(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      decoration: BoxDecoration(
-                        color: _statusColor(s).withAlpha(10),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                            color: _statusColor(s).withAlpha(40)),
-                      ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 4),
-                        leading: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: _statusColor(s).withAlpha(20),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(_statusIcon(s),
-                              size: 22, color: _statusColor(s)),
-                        ),
-                        title: Text(s,
-                            style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                color: _statusColor(s))),
-                        subtitle: Text(
-                          _statusSubtitle(s),
-                          style:
-                              TextStyle(fontSize: 12, color: Colors.grey.shade500),
-                        ),
-                        trailing: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: _statusColor(s).withAlpha(15),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Icon(Icons.arrow_forward,
-                              size: 16, color: _statusColor(s)),
-                        ),
-                        onTap: () async {
-                          Navigator.pop(ctx);
-                          try {
-                            await _api.updateOrderStatus(orderId, s);
-                            if (!context.mounted) return;
-                            _load();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Order $s'),
-                                behavior: SnackBarBehavior.floating,
-                                backgroundColor: _statusColor(s),
-                              ),
-                            );
-                          } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                    content: Text('$e'),
-                                    behavior: SnackBarBehavior.floating),
-                              );
-                            }
-                          }
-                        },
-                      ),
-                    )),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _statusSubtitle(String status) {
-    switch (status) {
-      case 'Confirmed':
-        return 'Accept the order and confirm stock availability';
-      case 'Shipped':
-        return 'Order is out for delivery';
-      case 'Delivered':
-        return 'Mark as successfully delivered';
-      case 'Cancelled':
-        return 'Cancel this order';
-      default:
-        return '';
-    }
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   @override
@@ -562,46 +402,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                           : o['id'].toString();
                       final timeAgo = _timeAgo(o['created_at']?.toString());
 
-                      return Dismissible(
-                        key: Key(o['id'].toString()),
-                        direction: DismissDirection.endToStart,
-                        background: Container(
-                          alignment: Alignment.centerRight,
-                          padding: const EdgeInsets.only(right: 24),
-                          margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            color: Colors.red.shade500,
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          child: const Icon(Icons.delete_outline,
-                              color: Colors.white, size: 28),
-                        ),
-                        confirmDismiss: (_) async {
-                          return await showDialog<bool>(
-                            context: context,
-                            builder: (ctx) => AlertDialog(
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20)),
-                              title: const Text('Delete Order?'),
-                              content: Text(
-                                  'Delete order #$shortId? This cannot be undone.'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(ctx, false),
-                                  child: const Text('Cancel'),
-                                ),
-                                TextButton(
-                                  onPressed: () => Navigator.pop(ctx, true),
-                                  style: TextButton.styleFrom(
-                                      foregroundColor: Colors.red),
-                                  child: const Text('Delete'),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                        onDismissed: (_) => _deleteOrder(o['id']),
-                        child: Container(
+                      return Container(
                           margin: const EdgeInsets.only(bottom: 12),
                           decoration: BoxDecoration(
                             color: Colors.white,
@@ -805,8 +606,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                               ),
                             ),
                           ),
-                        ),
-                      );
+                        );
                     },
                     childCount: _filtered.length,
                   ),
