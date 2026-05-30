@@ -307,6 +307,15 @@ def hard_delete_user(user_id: str, request: Request, db: Session = Depends(get_d
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    db.query(Address).filter(Address.user_id == user_id).delete()
+    db.query(CartItem).filter(CartItem.user_id == user_id).delete()
+    orders = db.query(Order).filter(Order.user_id == user_id).all()
+    for order in orders:
+        db.query(Payment).filter(Payment.order_id == order.id).delete()
+        db.query(OrderItem).filter(OrderItem.order_id == order.id).delete()
+        db.delete(order)
+    db.query(WishlistItem).filter(WishlistItem.user_id == user_id).delete()
+    db.query(ProductSuggestion).filter(ProductSuggestion.user_id == user_id).delete()
     db.delete(user)
     db.commit()
     return MessageResponse(message="User permanently deleted")
