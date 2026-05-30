@@ -6,15 +6,15 @@ Security: Every input is validated BEFORE touching the database.
           Max lengths prevent buffer exhaustion / DoS via large payloads.
           Payments NEVER accept or expose sensitive data (card numbers, CVV, etc.).
 """
-import regex as re
+import re
 from decimal import Decimal
 from typing import Optional
 from datetime import datetime
 from pydantic import BaseModel, Field, field_validator
 
-NAME_REGEX = r"^[\p{L}\s.\-]{2,50}$"
+NAME_REGEX = r"^.{2,50}$"
 
-NAME_REGEX_MSG = "Invalid name format (only letters, spaces, dots, hyphens; 2-50 chars)"
+NAME_REGEX_MSG = "Invalid name format (2-50 characters)"
 
 MAX_NAME_LENGTH = 100
 MAX_EMAIL_LENGTH = 255
