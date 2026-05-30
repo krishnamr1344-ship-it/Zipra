@@ -19,7 +19,7 @@ class DeliveryZoneService {
       Uri.parse('$_baseUrl/api/check-zone'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'lat': lat, 'lng': lng}),
-    );
+    ).timeout(const Duration(seconds: 60));
     if (res.statusCode != 200) {
       throw DeliveryZoneException('Zone check failed (${res.statusCode})');
     }

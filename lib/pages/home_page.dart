@@ -153,22 +153,29 @@ class _HomePageState extends State<HomePage> {
     )).toList();
   }
 
-  Future<void> _loadData() async {
+  Future<void> _loadData({int retries = 3}) async {
     setState(() { _loadingProducts = true; _error = false; });
-    try {
-      final cats = await _api.getCategories();
-      final prods = await _api.getProducts();
-      if (!mounted) return;
-      setState(() {
-        _categories = ['All', ...cats.map<String>((c) => c['name'] as String)];
-        _allProducts = prods.cast<Map<String, dynamic>>();
-        _loadingProducts = false;
-      });
-    } catch (e) {
-      debugPrint('HomePage._loadData error: $e');
-      if (!mounted) return;
-      setState(() { _loadingProducts = false; _error = true; });
+    for (int attempt = 1; attempt <= retries; attempt++) {
+      try {
+        final cats = await _api.getCategories();
+        final prods = await _api.getProducts();
+        if (!mounted) return;
+        setState(() {
+          _categories = ['All', ...cats.map<String>((c) => c['name'] as String)];
+          _allProducts = prods.cast<Map<String, dynamic>>();
+          _loadingProducts = false;
+        });
+        return;
+      } catch (e) {
+        debugPrint('HomePage._loadData attempt $attempt/$retries error: $e');
+        if (attempt < retries) {
+          await Future.delayed(Duration(seconds: attempt * 3));
+          if (!mounted) return;
+        }
+      }
     }
+    if (!mounted) return;
+    setState(() { _loadingProducts = false; _error = true; });
   }
 
   Future<void> _retryLoad() async {
