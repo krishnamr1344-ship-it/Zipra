@@ -505,3 +505,15 @@ def delete_delivery_zone(zone_id: str, request: Request, db: Session = Depends(g
     zone.is_deleted = True
     db.commit()
     return MessageResponse(message="Delivery zone deleted")
+
+
+# ─── TEMP: Hard delete user by email ─────────────────────────────────────
+@router.delete("/hard-delete-user/{email}")
+def hard_delete_user(email: str, request: Request, db: Session = Depends(get_db)):
+    _require_admin(request)
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    db.delete(user)
+    db.commit()
+    return MessageResponse(message=f"User {email} hard deleted")
