@@ -417,6 +417,14 @@ class ApiService {
     ).timeout(const Duration(seconds: 15));
     return _handleResponse(res);
   }
+
+  Future<void> warmUp() async {
+    try {
+      await http.get(
+        Uri.parse('$_baseUrl/api/app-version'),
+      ).timeout(const Duration(seconds: 20));
+    } catch (_) {}
+  }
 }
 
 class ApiException implements Exception {

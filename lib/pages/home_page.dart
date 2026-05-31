@@ -194,9 +194,11 @@ class _HomePageState extends State<HomePage> {
     )).toList();
   }
 
-  Future<void> _loadData({int retries = 3}) async {
+  Future<void> _loadData() async {
+    const maxRetries = 8;
     setState(() { _loadingProducts = true; _error = false; });
-    for (int attempt = 1; attempt <= retries; attempt++) {
+    _api.warmUp();
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         final cats = await _api.getCategories();
         final prods = await _api.getProducts();
@@ -208,9 +210,9 @@ class _HomePageState extends State<HomePage> {
         });
         return;
       } catch (e) {
-        debugPrint('HomePage._loadData attempt $attempt/$retries error: $e');
-        if (attempt < retries) {
-          await Future.delayed(Duration(seconds: attempt * 3));
+        debugPrint('HomePage._loadData attempt $attempt/$maxRetries error: $e');
+        if (attempt < maxRetries) {
+          await Future.delayed(Duration(seconds: (attempt * 3).clamp(3, 15)));
           if (!mounted) return;
         }
       }
