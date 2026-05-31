@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../constants/theme.dart';
 import '../services/api_service.dart';
 import '../services/app_info.dart';
@@ -64,6 +65,21 @@ class _CheckUpdatesPageState extends State<CheckUpdatesPage> {
       if (aVal > bVal) return 1;
     }
     return 0;
+  }
+
+  Future<void> _launchUpdateUrl() async {
+    final uri = Uri.parse(_apkUrl);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Could not open download link. Please try again later.'),
+          behavior: SnackBarBehavior.floating, backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -240,14 +256,7 @@ class _CheckUpdatesPageState extends State<CheckUpdatesPage> {
           SizedBox(
             width: double.infinity, height: 50,
             child: ElevatedButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Opening download page\u2026'),
-                    behavior: SnackBarBehavior.floating, backgroundColor: AppColors.success,
-                  ),
-                );
-              },
+              onPressed: () => _launchUpdateUrl(),
               icon: const Icon(Icons.download, size: 20),
               label: const Text('Update Now', style: TextStyle(fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
