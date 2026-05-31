@@ -214,6 +214,16 @@ def _seed_data():
             db.add(admin)
             db.commit()
 
+        # Seed app version (runs regardless of whether other seed data exists)
+        if db.query(AppVersion).count() == 0:
+            db.add(AppVersion(
+                version="1.1.1",
+                apk_download_url="https://github.com/selvaabi5555/delivery-app/releases/download/v1.1.1/delivery-app-v1.1.1.apk",
+                release_notes="Redesigned home screen with Blinkit/Zepto-style UI\n• New orange curved header\n• Premium pill-shaped search bar\n• Improved product cards with green ADD button\n• Updated offers pack detail view\n• In-app update system",
+                is_active=True,
+            ))
+            db.commit()
+
         if db.query(Category).count() > 0:
             # Categories exist — only seed combo packs if needed
             if db.query(ComboPack).count() == 0:
@@ -272,16 +282,6 @@ def _seed_data():
 
         # Seed combo packs
         _seed_combo_packs(db)
-
-        # Seed app version
-        if db.query(AppVersion).count() == 0:
-            db.add(AppVersion(
-                version="1.1.1",
-                apk_download_url="https://github.com/selvaabi5555/delivery-app/releases/download/v1.1.1/delivery-app-v1.1.1.apk",
-                release_notes="Redesigned home screen with Blinkit/Zepto-style UI\n• New orange curved header\n• Premium pill-shaped search bar\n• Improved product cards with green ADD button\n• Updated offers pack detail view\n• In-app update system",
-                is_active=True,
-            ))
-            db.commit()
     finally:
         db.close()
 
