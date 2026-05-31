@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/theme.dart';
 import '../models/grocery_product.dart';
 
 class ProductCard extends StatefulWidget {
@@ -149,13 +150,13 @@ class _ProductCardState extends State<ProductCard> {
         widget.onAdd();
       },
       style: OutlinedButton.styleFrom(
-        side: const BorderSide(color: Color(0xFFFF6B00), width: 1.5),
+        side: BorderSide(color: AppColors.success, width: 1.5),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         padding: EdgeInsets.symmetric(horizontal: sz * 1.5, vertical: sz * 0.6),
         minimumSize: Size.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
-      child: Text('ADD', style: TextStyle(color: const Color(0xFFFF6B00), fontSize: sz * 1.4, fontWeight: FontWeight.bold)),
+      child: Text('ADD', style: TextStyle(color: AppColors.success, fontSize: sz * 1.4, fontWeight: FontWeight.bold)),
     );
   }
 
@@ -164,7 +165,7 @@ class _ProductCardState extends State<ProductCard> {
     final btnH = sz * 3.2;
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFFF6B00), width: 1.5),
+        border: Border.all(color: AppColors.success, width: 1.5),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -176,12 +177,12 @@ class _ProductCardState extends State<ProductCard> {
                 if (_quantity > 1) { _quantity--; } else { _quantity = 0; }
               });
             },
-            child: Container(width: btnW, height: btnH, color: const Color(0xFFFF6B00), child: Icon(Icons.remove, color: Colors.white, size: sz * 1.5)),
+            child: Container(width: btnW, height: btnH, color: AppColors.success, child: Icon(Icons.remove, color: Colors.white, size: sz * 1.5)),
           ),
-          Container(width: btnW, height: btnH, color: Colors.white, child: Center(child: Text(_quantity.toString(), style: TextStyle(color: const Color(0xFFFF6B00), fontSize: sz * 1.6, fontWeight: FontWeight.bold)))),
+          Container(width: btnW, height: btnH, color: Colors.white, child: Center(child: Text(_quantity.toString(), style: TextStyle(color: AppColors.success, fontSize: sz * 1.6, fontWeight: FontWeight.bold)))),
           GestureDetector(
             onTap: () => setState(() => _quantity++),
-            child: Container(width: btnW, height: btnH, color: const Color(0xFFFF6B00), child: Icon(Icons.add, color: Colors.white, size: sz * 1.5)),
+            child: Container(width: btnW, height: btnH, color: AppColors.success, child: Icon(Icons.add, color: Colors.white, size: sz * 1.5)),
           ),
         ],
       ),
