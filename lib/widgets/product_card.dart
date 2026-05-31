@@ -47,37 +47,38 @@ class _ProductCardState extends State<ProductCard> {
 
   @override
   Widget build(BuildContext context) {
-    final p = widget.product;
-    final screenW = MediaQuery.of(context).size.width;
-    final cardW = (screenW - 44) / 2;
-    final imgH = cardW * 0.72;
-    final sz = cardW * 0.04;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final p = widget.product;
+        final cardW = constraints.maxWidth;
+        final imgH = cardW * 0.72;
+        final sz = cardW * 0.04;
 
-    return GestureDetector(
-      onTap: widget.onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: const [
-            BoxShadow(color: Colors.black12, blurRadius: 5, offset: Offset(0, 2)),
-          ],
-        ),
-        child: Column(
-          children: [
-            Container(
-              height: imgH,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: p.imageBg,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: Stack(
-                children: [
-                  widget.images.isNotEmpty && widget.images[0].startsWith('http')
-                      ? Image.network(widget.images[0], fit: BoxFit.cover, width: double.infinity, height: imgH, errorBuilder: (_, __, ___) => Center(child: Text(p.emoji, style: TextStyle(fontSize: cardW * 0.38))))
-                      : Center(child: Text(p.emoji, style: TextStyle(fontSize: cardW * 0.38))),
+        return GestureDetector(
+          onTap: widget.onTap,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: const [
+                BoxShadow(color: Colors.black12, blurRadius: 5, offset: Offset(0, 2)),
+              ],
+            ),
+            child: Column(
+              children: [
+                Container(
+                  height: imgH,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: p.imageBg,
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Stack(
+                    children: [
+                      widget.images.isNotEmpty && widget.images[0].startsWith('http')
+                          ? Image.network(widget.images[0], fit: BoxFit.cover, width: double.infinity, height: imgH, errorBuilder: (_, __, ___) => Center(child: Text(p.emoji, style: TextStyle(fontSize: cardW * 0.38))))
+                          : Center(child: Text(p.emoji, style: TextStyle(fontSize: cardW * 0.38))),
                   if (p.discountPercent != null)
                     Positioned(
                       top: 0, left: 0,
@@ -140,6 +141,8 @@ class _ProductCardState extends State<ProductCard> {
           ],
         ),
       ),
+    );
+      },
     );
   }
 
