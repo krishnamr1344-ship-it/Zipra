@@ -301,78 +301,78 @@ class _HomePageState extends State<HomePage> {
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 20, offset: const Offset(0, -4))],
       ),
       child: SafeArea(
-        child: SizedBox(
-          height: 60,
-          child: Row(
-            children: List.generate(items.length, (i) {
-              final isSelected = _selectedIndex == i;
-              return Expanded(
-                child: GestureDetector(
-                  onTap: () async {
-                    if (i >= 3) {
-                      final token = await _api.getToken();
-                      if (token == null) {
-                        final loggedIn = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => const LoginPage()));
-                        if (loggedIn != true) return;
-                        await _loadProfile();
+          child: SizedBox(
+            height: 64,
+            child: Row(
+              children: List.generate(items.length, (i) {
+                final isSelected = _selectedIndex == i;
+                return Expanded(
+                  child: GestureDetector(
+                    onTap: () async {
+                      if (i >= 3) {
+                        final token = await _api.getToken();
+                        if (token == null) {
+                          final loggedIn = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => const LoginPage()));
+                          if (loggedIn != true) return;
+                          await _loadProfile();
+                        }
                       }
-                    }
-                    setState(() => _selectedIndex = i);
-                  },
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SizedBox(
-                        height: 26,
-                        child: Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            Icon(
-                              isSelected ? items[i].$1 : items[i].$2,
-                              size: 22,
-                              color: isSelected ? _orange : const Color(0xFF9E9E9E),
-                            ),
-                            if (i == 3)
-                              ListenableBuilder(
-                                listenable: cartNotifier,
-                                builder: (_, _) => cartNotifier.itemCount > 0
-                                    ? Positioned(
-                                        right: -8, top: -4,
-                                        child: Container(
-                                          padding: const EdgeInsets.all(3),
-                                          decoration: BoxDecoration(color: AppColors.error, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 1.5)),
-                                          child: Text('${cartNotifier.itemCount}',
-                                            style: const TextStyle(color: Colors.white, fontSize: 7, fontWeight: FontWeight.bold)),
-                                        ),
-                                      )
-                                    : const SizedBox.shrink(),
+                      setState(() => _selectedIndex = i);
+                    },
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          height: 30,
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Icon(
+                                isSelected ? items[i].$1 : items[i].$2,
+                                size: 26,
+                                color: isSelected ? _orange : const Color(0xFF9E9E9E),
                               ),
-                          ],
+                              if (i == 3)
+                                ListenableBuilder(
+                                  listenable: cartNotifier,
+                                  builder: (_, _) => cartNotifier.itemCount > 0
+                                      ? Positioned(
+                                          right: -9, top: -4,
+                                          child: Container(
+                                            padding: const EdgeInsets.all(4),
+                                            decoration: BoxDecoration(color: AppColors.error, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 1.5)),
+                                            child: Text('${cartNotifier.itemCount}',
+                                              style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                                          ),
+                                        )
+                                      : const SizedBox.shrink(),
+                                ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 3),
-                      Container(
-                        width: isSelected ? 16 : 0,
-                        height: 3,
-                        decoration: BoxDecoration(
-                          color: isSelected ? _orange : Colors.transparent,
-                          borderRadius: BorderRadius.circular(2),
+                        const SizedBox(height: 4),
+                        Container(
+                          width: isSelected ? 20 : 0,
+                          height: 3,
+                          decoration: BoxDecoration(
+                            color: isSelected ? _orange : Colors.transparent,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(items[i].$3, style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                        color: isSelected ? _orange : const Color(0xFF9E9E9E),
-                      )),
-                    ],
+                        const SizedBox(height: 3),
+                        Text(items[i].$3, style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                          color: isSelected ? _orange : const Color(0xFF9E9E9E),
+                        )),
+                      ],
+                    ),
                   ),
-                ),
-              );
-            }),
+                );
+              }),
+            ),
           ),
-        ),
       ),
     );
   }

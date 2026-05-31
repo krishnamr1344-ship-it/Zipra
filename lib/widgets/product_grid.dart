@@ -26,13 +26,15 @@ class ProductGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenW = MediaQuery.of(context).size.width;
     final spacing = screenW * 0.03;
-    final aspectRatio = screenW > 600 ? 0.8 : 0.85;
+    final crossAxisCount = screenW > 600 ? 3 : 2;
+    final cardW = (screenW - 32 - spacing) / crossAxisCount;
+    final aspectRatio = cardW / (cardW * 0.72 + 75);
 
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: screenW > 600 ? 3 : 2,
+        crossAxisCount: crossAxisCount,
         childAspectRatio: aspectRatio,
         crossAxisSpacing: spacing,
         mainAxisSpacing: spacing,
