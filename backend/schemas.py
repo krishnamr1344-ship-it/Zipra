@@ -821,3 +821,9 @@ class StatusUpdateRequest(BaseModel):
         if v not in VALID_ORDER_STATUSES:
             raise ValueError(f"Status must be one of: {', '.join(sorted(VALID_ORDER_STATUSES))}")
         return v
+
+
+class AppVersionResponse(BaseModel):
+    latest_version: str
+    apk_download_url: str
+    release_notes: Optional[str] = None

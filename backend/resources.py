@@ -24,7 +24,7 @@ from database import get_db
 from models import (
     User, Category, Product, ProductImage, Address, CartItem,
     Order, OrderItem, Payment, DeliveryZone, ComboPack, ComboPackItem, ProductSuggestion,
-    WishlistItem,
+    WishlistItem, AppVersion,
 )
 from schemas import (
     CategoryCreate, CategoryResponse,
@@ -37,6 +37,7 @@ from schemas import (
     ComboPackItemInput, ComboPackItemResponse, ComboPackResponse, PackAddRequest,
     SuggestProductRequest,
     WishlistAddRequest, WishlistItemResponse,
+    AppVersionResponse,
 )
 
 router = APIRouter(prefix="/api")
@@ -1122,3 +1123,18 @@ def suggest_product(body: SuggestProductRequest, request: Request, db: Session =
     db.add(suggestion)
     db.commit()
     return {"message": "Thanks for your suggestion!"}
+
+
+# ─── APP VERSION ─────────────────────────────────────────────────
+
+
+@router.get("/app-version", response_model=AppVersionResponse)
+def get_latest_app_version(db: Session = Depends(get_db)):
+    record = db.query(AppVersion).filter(AppVersion.is_active == True).order_by(AppVersion.created_at.desc()).first()
+    if not record:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No version info available")
+    return AppVersionResponse(
+        latest_version=record.version,
+        apk_download_url=record.apk_download_url,
+        release_notes=record.release_notes,
+    )

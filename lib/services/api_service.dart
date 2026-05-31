@@ -410,6 +410,13 @@ class ApiService {
     ).timeout(const Duration(seconds: 60));
     return _handleResponse(res);
   }
+
+  Future<Map<String, dynamic>> getAppVersion() async {
+    final res = await http.get(
+      Uri.parse('$_baseUrl/api/app-version'),
+    ).timeout(const Duration(seconds: 15));
+    return _handleResponse(res);
+  }
 }
 
 class ApiException implements Exception {

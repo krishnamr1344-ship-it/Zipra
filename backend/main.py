@@ -30,11 +30,11 @@ from auth import router as auth_router
 from middleware import RateLimitMiddleware
 from resources import router as resources_router
 from admin import router as admin_router
-from models import Category, Product, ProductImage, User, ComboPack, ComboPackItem
+from models import Category, Product, ProductImage, User, ComboPack, ComboPackItem, AppVersion
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 API_KEY = os.getenv("API_KEY")
-PUBLIC_PATHS_C4 = {"/", "/docs", "/openapi.json", "/redoc", "/api/auth/register", "/api/auth/login", "/api/auth/forgot-password", "/api/auth/reset-password"}
+PUBLIC_PATHS_C4 = {"/", "/docs", "/openapi.json", "/redoc", "/api/auth/register", "/api/auth/login", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/app-version"}
 
 # Create all tables on startup.
 Base.metadata.create_all(bind=engine)
@@ -272,6 +272,16 @@ def _seed_data():
 
         # Seed combo packs
         _seed_combo_packs(db)
+
+        # Seed app version
+        if db.query(AppVersion).count() == 0:
+            db.add(AppVersion(
+                version="1.1.1",
+                apk_download_url="https://github.com/selvaabi5555/delivery-app/releases/download/v1.1.1/delivery-app-v1.1.1.apk",
+                release_notes="Redesigned home screen with Blinkit/Zepto-style UI\n• New orange curved header\n• Premium pill-shaped search bar\n• Improved product cards with green ADD button\n• Updated offers pack detail view\n• In-app update system",
+                is_active=True,
+            ))
+            db.commit()
     finally:
         db.close()
 
