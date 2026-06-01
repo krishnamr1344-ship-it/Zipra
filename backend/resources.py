@@ -45,6 +45,260 @@ router = APIRouter(prefix="/api")
 
 # ─── HELPERS ──────────────────────────────────────────────────────
 
+import re as _re
+
+_ZONE_RE = _re.compile(r'\s*Zone\s+\d+\s*', _re.IGNORECASE)
+
+# Map ward/division numbers to locality names for Chennai.
+# Used when Nominatim only returns zone-based admin names.
+# Source: Chennai Ward GeoJSON + manual research.
+# Zone X (Kodambakkam) wards that are actually part of Vadapalani locality.
+_WARD_TO_LOCALITY: dict[str, str] = {
+    "0": "St. Thomas Mount Cantonment",
+    "1": "Ennore",
+    "2": "Kathivakkam",
+    "3": "Ernavur",
+    "4": "Ernavur",
+    "5": "Ernavur",
+    "6": "Kargil Nagar",
+    "7": "Tiruvottiyur",
+    "8": "Tiruvottiyur",
+    "9": "Tiruvottiyur",
+    "10": "Tiruvottiyur",
+    "11": "Tiruvottiyur",
+    "12": "Tiruvottiyur",
+    "13": "Tiruvottiyur",
+    "14": "Tiruvottiyur",
+    "15": "Edayanchavadi",
+    "16": "Dwaraka Nagar",
+    "17": "Mathur",
+    "18": "Manali",
+    "19": "Mathur",
+    "20": "Manali",
+    "21": "Manali",
+    "22": "Puzhal",
+    "23": "Puzhal",
+    "24": "Surapattu",
+    "25": "Kathirvedu",
+    "26": "Kathirvedu",
+    "27": "Madhavaram Milk Colony",
+    "28": "Madhavaram Milk Colony",
+    "29": "Manali",
+    "30": "Madhavaram",
+    "31": "Madhavaram",
+    "32": "Kolathur",
+    "33": "Madhavaram",
+    "34": "Chinna Kodungaiyur",
+    "35": "Kodungaiyur",
+    "36": "Vyasarpadi",
+    "37": "Vyasarpadi",
+    "38": "New Washermanpet",
+    "39": "New Washermanpet",
+    "40": "New Washermanpet",
+    "41": "Korukkupet",
+    "42": "Korukkupet",
+    "43": "Tondiarpet",
+    "44": "Perambur",
+    "45": "Vyasarpadi",
+    "46": "Thiru Vi Ka Nagar",
+    "47": "Washermanpet",
+    "48": "Washermanpet",
+    "49": "Royapuram",
+    "50": "Royapuram",
+    "51": "Washermanpet",
+    "52": "Royapuram",
+    "53": "Basin Bridge",
+    "54": "Vallalar Nagar",
+    "55": "Vallalar Nagar",
+    "56": "Vallalar Nagar",
+    "57": "George Town",
+    "58": "Vepery",
+    "59": "Island Grounds",
+    "60": "George Town",
+    "61": "Egmore",
+    "62": "Chintadripet",
+    "63": "Triplicane",
+    "64": "Periyar Nagar",
+    "65": "Villivakkam",
+    "66": "Periyar Nagar",
+    "67": "Periyar Nagar",
+    "68": "Perambur",
+    "69": "Perambur",
+    "70": "Perambur",
+    "71": "Otteri",
+    "72": "Pulianthope",
+    "73": "Otteri",
+    "74": "Otteri",
+    "75": "Otteri",
+    "76": "Choolai",
+    "77": "Pulianthope",
+    "78": "Choolai",
+    "79": "Venkatapuram",
+    "80": "Venkatapuram",
+    "81": "Ambattur",
+    "82": "Venkatapuram",
+    "83": "Korattur",
+    "84": "Korattur",
+    "85": "Ambattur",
+    "86": "Nolambur",
+    "87": "Anna Nagar West",
+    "88": "Anna Nagar West",
+    "89": "Mogappair East",
+    "90": "Anna Nagar West",
+    "91": "Nolambur",
+    "92": "Mogappair East",
+    "93": "Mogappair East",
+    "94": "Villivakkam",
+    "95": "Villivakkam",
+    "96": "ICF Colony",
+    "97": "Ayanavaram",
+    "98": "Ayanavaram",
+    "99": "Anna Nagar West",
+    "100": "Anna Nagar",
+    "101": "Anna Nagar",
+    "102": "Shenoy Nagar",
+    "103": "Kilpauk",
+    "104": "Purasawalkam",
+    "105": "Arumbakkam",
+    "106": "Aminjikarai",
+    "107": "Chetpet",
+    "108": "Aminjikarai",
+    "109": "Aminjikarai",
+    "110": "Nungambakkam",
+    "111": "Thousand Lights",
+    "112": "Kodambakkam",
+    "113": "Nungambakkam",
+    "114": "Chepauk",
+    "115": "Royapettah",
+    "116": "Triplicane",
+    "117": "Teynampet",
+    "118": "Teynampet",
+    "119": "Gopalapuram",
+    "120": "Triplicane",
+    "121": "Mylapore",
+    "122": "Nandanam",
+    "123": "Abhiramapuram",
+    "124": "Mylapore",
+    "125": "Santhome",
+    "126": "Mylapore",
+    "127": "Saligramam",
+    "128": "Virugambakkam",
+    "129": "Vadapalani",
+    "130": "Vadapalani",
+    "131": "K.K.Nagar",
+    "132": "Ashok Nagar",
+    "133": "Ashok Nagar",
+    "134": "Kodambakkam",
+    "135": "West Mambalam",
+    "136": "West Mambalam",
+    "137": "K.K.Nagar",
+    "138": "Jafferkhanpet",
+    "139": "Ekkattuthangal",
+    "140": "Thiyagaraya Nagar",
+    "141": "Thiyagaraya Nagar",
+    "142": "Saidapet",
+    "143": "Nolambur",
+    "144": "Nerkundram",
+    "145": "Nerkundram",
+    "146": "Alapakkam",
+    "147": "Alapakkam",
+    "148": "Virugambakkam",
+    "149": "Valasaravakkam",
+    "150": "Karampakkam",
+    "151": "Porur",
+    "152": "Valasaravakkam",
+    "153": "Porur",
+    "154": "Ramapuram",
+    "155": "Nesapakkam",
+    "156": "Porur",
+    "157": "Manapakkam",
+    "158": "Nandambakkam",
+    "159": "Alandur",
+    "160": "St. Thomas Mount Cantonment",
+    "161": "St. Thomas Mount Cantonment",
+    "162": "St. Thomas Mount Cantonment",
+    "163": "St. Thomas Mount Cantonment",
+    "164": "St. Thomas Mount Cantonment",
+    "165": "Alandur",
+    "166": "Alandur",
+    "167": "Alandur",
+    "168": "Perungudi",
+    "169": "Perungudi",
+    "170": "SIDCO Industrial Estate",
+    "171": "Little Mount",
+    "172": "Kotturpuram",
+    "173": "MRC Nagar",
+    "174": "Guindy",
+    "175": "Adyar",
+    "176": "Adyar",
+    "177": "Adyar",
+    "178": "Adyar",
+    "179": "Adyar",
+    "180": "Adyar",
+    "181": "Adyar",
+    "182": "Adyar",
+    "183": "Perungudi",
+    "184": "Perungudi",
+    "185": "Perungudi",
+    "186": "Perungudi",
+    "187": "Perungudi",
+    "188": "Perungudi",
+    "189": "Perungudi",
+    "190": "Perungudi",
+    "191": "Perungudi",
+    "192": "Sozhinganallur",
+    "193": "Sozhinganallur",
+    "194": "Sozhinganallur",
+    "195": "Sozhinganallur",
+    "196": "Sozhinganallur",
+    "197": "Sozhinganallur",
+    "198": "Sozhinganallur",
+    "199": "Sozhinganallur",
+    "200": "Sozhinganallur",
+}
+
+def _extract_area(addr_data: dict) -> str:
+    """Extract locality name from Nominatim address.
+
+    Strategy:
+    1. If primary admin fields contain "Zone N" (zone-based name), check
+       locality-specific fields (railway, station, metro, etc.).
+       Only use them if the zone-stripped primary is NOT a substring of the
+       specific value (avoids picking POI names like "Anna Nagar Tower Exit"
+       over the correct "Anna Nagar").
+    2. If no suitable specific field found, try to extract a ward/division
+       number from the neighbourhood field and look it up in _WARD_TO_LOCALITY.
+    3. Fall back to zone-stripped primary name.
+    """
+    primary = ""
+    for key in ("suburb", "neighbourhood", "city_district", "city"):
+        val = addr_data.get(key)
+        if val:
+            primary = val
+            break
+
+    if "zone" in primary.lower():
+        stripped_primary = _ZONE_RE.sub("", primary).strip().lower()
+
+        # Try locality-specific fields (railway, station, metro, locality, hamlet)
+        for key in ("railway", "station", "metro", "locality", "hamlet"):
+            val = addr_data.get(key)
+            if val and "zone" not in val.lower():
+                # Skip if the specific value is just a POI named after the primary area
+                # e.g. railway="Anna Nagar Tower Exit" while zone-stripped="Anna Nagar"
+                if not stripped_primary or stripped_primary not in val.lower():
+                    return _ZONE_RE.sub("", val).strip()
+
+        # Try ward/division number mapping from neighbourhood field
+        neighbourhood = addr_data.get("neighbourhood") or ""
+        ward_match = _re.search(r"(?:Division|Ward)\s*(\d+)", neighbourhood, _re.IGNORECASE)
+        if ward_match:
+            ward_no = ward_match.group(1)
+            if ward_no in _WARD_TO_LOCALITY:
+                return _WARD_TO_LOCALITY[ward_no]
+
+    return _ZONE_RE.sub("", primary).strip()
+
 def _get_user_id(request: Request) -> str:
     user_id = getattr(request.state, "user_id", None)
     if not user_id:
@@ -366,7 +620,7 @@ def create_address_from_gps(body: GpsAddressCreate, request: Request, db: Sessio
             data = resp.json()
             if "address" in data:
                 addr_data = data["address"]
-                area = addr_data.get("suburb") or addr_data.get("city_district") or ""
+                area = _extract_area(addr_data)
                 road = addr_data.get("road") or ""
                 house = addr_data.get("house_number") or ""
                 parts = []
@@ -470,11 +724,10 @@ def reverse_geocode(lat: float, lng: float, db: Session = Depends(get_db)):
         addr_data = data.get("address", {})
         road = addr_data.get("road") or ""
         house = addr_data.get("house_number") or ""
-        area_raw = addr_data.get("suburb") or addr_data.get("city_district") or ""
-        area = area_raw.replace("Zone ", "").strip()
+        area = _extract_area(addr_data)
         city_raw = addr_data.get("city") or addr_data.get("town") or addr_data.get("village") or addr_data.get("county") or ""
-        import re as _re
-        city = _re.sub(r'\s+(Corporation|Municipal|Municipality|Municipal\s+Corporation)\s*$', '', city_raw).strip()
+        city = _ZONE_RE.sub("", city_raw).strip()
+        city = _re.sub(r'\s+(Corporation|Municipal|Municipality|Municipal\s+Corporation)\s*$', '', city).strip()
         parts = []
         if road:
             parts.append(road)
@@ -513,7 +766,7 @@ def search_places(q: str, request: Request, db: Session = Depends(get_db)):
                 "latitude": float(item.get("lat", 0)),
                 "longitude": float(item.get("lon", 0)),
                 "address_line1": ", ".join(filter(None, [addr_data.get("road", ""), addr_data.get("house_number", "")])),
-                "address_line2": addr_data.get("suburb") or addr_data.get("city_district") or "",
+                "address_line2": _extract_area(addr_data),
                 "city": addr_data.get("city") or addr_data.get("town") or addr_data.get("village") or addr_data.get("county") or "",
                 "state": addr_data.get("state") or "",
                 "pincode": addr_data.get("postcode") or "",
