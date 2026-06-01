@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/theme.dart';
 import '../services/location_service.dart';
 import '../services/api_service.dart';
+import '../widgets/app_snackbar.dart';
 
 class MapPickerPage extends StatefulWidget {
   const MapPickerPage({super.key});
@@ -79,9 +80,7 @@ class _MapPickerPageState extends State<MapPickerPage> {
       _mapCtl.move(pos, 15);
       _reverseGeocode();
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(loc.error ?? 'Could not get location')),
-      );
+      AppSnackbar.show(context, loc.error ?? 'Could not get location', type: SnackbarType.error);
     }
   }
 

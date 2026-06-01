@@ -3,6 +3,7 @@ import '../constants/theme.dart';
 import '../services/api_service.dart';
 import '../services/location_service.dart';
 import '../services/delivery_zone_service.dart';
+import '../widgets/app_snackbar.dart';
 import 'signup_page.dart';
 import 'forgot_password_page.dart';
 import 'home_page.dart';
@@ -58,19 +59,11 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
             try {
               final zoneCheck = await DeliveryZoneService().checkLocation(locResult.latitude, locResult.longitude);
               if (!zoneCheck.serviceable && mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text(zoneCheck.message ?? 'Sorry, delivery not available in your area'),
-                  behavior: SnackBarBehavior.floating,
-                  backgroundColor: AppColors.error,
-                ));
+                AppSnackbar.show(context, zoneCheck.message ?? 'Sorry, delivery not available in your area', type: SnackbarType.error);
               }
             } catch (_) {
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: const Text('Could not verify delivery area. Please try again.'),
-                  behavior: SnackBarBehavior.floating,
-                  backgroundColor: AppColors.warning,
-                ));
+                AppSnackbar.show(context, 'Could not verify delivery area. Please try again.', type: SnackbarType.warning);
               }
             }
             await LocationService().saveLocationToServer(locResult.latitude, locResult.longitude);
@@ -89,10 +82,10 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       }
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message), behavior: SnackBarBehavior.floating));
+      AppSnackbar.show(context, e.message, type: SnackbarType.error);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Connection failed. Check server.'), behavior: SnackBarBehavior.floating));
+      AppSnackbar.show(context, 'Connection failed. Check server.', type: SnackbarType.error);
     } finally {
       if (mounted) setState(() => _loading = false);
     }

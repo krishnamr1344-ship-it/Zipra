@@ -8,6 +8,7 @@ import '../models/cart_model.dart';
 import '../models/grocery_product.dart';
 import '../widgets/product_grid.dart';
 import '../widgets/state_widgets.dart';
+import '../widgets/app_snackbar.dart';
 import 'login_page.dart';
 import 'cart_page.dart';
 import 'wishlist_page.dart';
@@ -278,7 +279,7 @@ class _HomePageState extends State<HomePage> {
       _buildHome(initial, name),
       _buildCategoriesTab(),
       const OffersPage(),
-      const CartPage(),
+      CartPage(onBrowse: () => setState(() => _selectedIndex = 0)),
       _buildAccount(initial, name),
     ];
 
@@ -882,11 +883,7 @@ class _HomePageState extends State<HomePage> {
                   if (!mounted) return;
                   await cartNotifier.add(p.id, name: p.name, qty: p.qty, price: p.price);
                   if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text('${p.name} added'),
-                    duration: const Duration(seconds: 1),
-                    backgroundColor: AppColors.success,
-                  ));
+                  AppSnackbar.show(context, '${p.name} added to cart');
                 },
                 onFav: (gp) {
                   final p = products.firstWhere((e) => e.name == gp.name);
@@ -1035,7 +1032,7 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 8),
               _menuCard([
                 _menuItem(Icons.feedback_outlined, 'Suggest Products', 'Tell us what you need', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SuggestProductsPage()))),
-                _menuItem(Icons.notifications_outlined, 'Notifications', 'Manage alerts & updates', () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Coming soon!'), behavior: SnackBarBehavior.floating, duration: Duration(seconds: 1)))),
+                _menuItem(Icons.notifications_outlined, 'Notifications', 'Manage alerts & updates', () => AppSnackbar.show(context, 'Coming soon!', type: SnackbarType.info)),
                 _menuItem(Icons.favorite, 'Favorites', '${wishlistNotifier.itemCount} items', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WishlistPage()))),
                 _menuItem(Icons.support_outlined, 'Help & Support', 'FAQs & contact', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpSupportPage()))),
               ]),

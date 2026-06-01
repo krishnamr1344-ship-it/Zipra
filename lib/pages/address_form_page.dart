@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/theme.dart';
 import '../services/api_service.dart';
+import '../widgets/app_snackbar.dart';
 
 class AddressFormPage extends StatefulWidget {
   final Map<String, dynamic>? initialData;
@@ -49,7 +50,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
 
   Future<void> _save() async {
     if (_line1Ctl.text.trim().isEmpty || _cityCtl.text.trim().isEmpty || _pincodeCtl.text.trim().length < 5) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fill required fields'), behavior: SnackBarBehavior.floating));
+      AppSnackbar.show(context, 'Fill required fields', type: SnackbarType.warning);
       return;
     }
     setState(() => _saving = true);
@@ -92,7 +93,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
       Navigator.pop(context, result);
     } catch (e) {
       if (mounted) setState(() => _saving = false);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'), behavior: SnackBarBehavior.floating));
+      if (mounted) AppSnackbar.show(context, '$e', type: SnackbarType.error);
     }
   }
 

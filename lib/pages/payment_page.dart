@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../constants/theme.dart';
 import '../models/cart_model.dart';
 import '../services/api_service.dart';
+import '../widgets/app_snackbar.dart';
 import 'home_page.dart';
 import 'orders_page.dart';
 import 'delivery_location_page.dart';
@@ -95,9 +96,7 @@ class _PaymentPageState extends State<PaymentPage> {
     } catch (e) {
       if (mounted) setState(() => _processing = false);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$e'), backgroundColor: AppColors.error, behavior: SnackBarBehavior.floating),
-      );
+      AppSnackbar.show(context, 'Failed to place order. $e', type: SnackbarType.error);
       return;
     }
     cartNotifier.clear();

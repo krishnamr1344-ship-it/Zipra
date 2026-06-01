@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/theme.dart';
 import '../services/api_service.dart';
+import '../widgets/app_snackbar.dart';
 
 class EditProfilePage extends StatefulWidget {
   final Map<String, dynamic> user;
@@ -46,7 +47,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   void _showSnack(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating));
+    AppSnackbar.show(context, msg, type: SnackbarType.warning);
   }
 
   InputDecoration _fieldStyle(String label, IconData icon) {

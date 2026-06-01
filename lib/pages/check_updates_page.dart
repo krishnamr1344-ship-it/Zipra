@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../constants/theme.dart';
 import '../services/api_service.dart';
 import '../services/app_info.dart';
+import '../widgets/app_snackbar.dart';
 
 class CheckUpdatesPage extends StatefulWidget {
   const CheckUpdatesPage({super.key});
@@ -73,12 +74,7 @@ class _CheckUpdatesPageState extends State<CheckUpdatesPage> {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Could not open download link. Please try again later.'),
-          behavior: SnackBarBehavior.floating, backgroundColor: Colors.red,
-        ),
-      );
+      AppSnackbar.show(context, 'Could not open download link. Please try again later.', type: SnackbarType.error);
     }
   }
 

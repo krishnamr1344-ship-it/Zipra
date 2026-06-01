@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/theme.dart';
 import '../services/api_service.dart';
+import '../widgets/app_snackbar.dart';
 
 class SuggestProductsPage extends StatefulWidget {
   const SuggestProductsPage({super.key});
@@ -43,26 +44,15 @@ class _SuggestProductsPageState extends State<SuggestProductsPage> {
         _reasonController.text.trim(),
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Thanks for your suggestion!'),
-          backgroundColor: AppColors.primary,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-        ),
-      );
+      AppSnackbar.show(context, 'Thanks for your suggestion!', type: SnackbarType.success);
       _productController.clear();
       _reasonController.clear();
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message), backgroundColor: AppColors.error, behavior: SnackBarBehavior.floating),
-      );
+      AppSnackbar.show(context, e.message, type: SnackbarType.error);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$e'), backgroundColor: AppColors.error, behavior: SnackBarBehavior.floating),
-      );
+      AppSnackbar.show(context, '$e', type: SnackbarType.error);
     } finally {
       if (mounted) setState(() => _saving = false);
     }

@@ -4,6 +4,7 @@ import '../constants/theme.dart';
 import '../services/location_service.dart';
 import '../services/api_service.dart';
 import 'login_page.dart';
+import '../widgets/app_snackbar.dart';
 
 class DeliveryLocationPage extends StatefulWidget {
   const DeliveryLocationPage({super.key});
@@ -60,7 +61,7 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
     setState(() => _loadingGps = true);
     final loc = await _locationService.getCurrentLocation();
     if (loc.error != null) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(loc.error ?? 'Failed')));
+      if (mounted) AppSnackbar.show(context, loc.error ?? 'Failed', type: SnackbarType.error);
       if (mounted) setState(() => _loadingGps = false);
       return;
     }
@@ -80,33 +81,33 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
       if (!mounted) return;
       await _loadSaved();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('GPS failed: $e')));
+      if (mounted) AppSnackbar.show(context, 'GPS failed: $e', type: SnackbarType.error);
       if (mounted) setState(() => _loadingGps = false);
     }
   }
 
   Future<Map<String, dynamic>?> confirmAndSave() async {
     if (_line1Ctl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Street address is required'), behavior: SnackBarBehavior.floating));
+      AppSnackbar.show(context, 'Street address is required', type: SnackbarType.warning);
       return null;
     }
     if (_cityCtl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('City is required'), behavior: SnackBarBehavior.floating));
+      AppSnackbar.show(context, 'City is required', type: SnackbarType.warning);
       return null;
     }
     if (_pincodeCtl.text.trim().length < 5) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Valid pincode is required'), behavior: SnackBarBehavior.floating));
+      AppSnackbar.show(context, 'Valid pincode is required', type: SnackbarType.warning);
       return null;
     }
     if (_gpsAddressId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please refresh your GPS location first'), behavior: SnackBarBehavior.floating));
+      AppSnackbar.show(context, 'Please refresh your GPS location first', type: SnackbarType.warning);
       return null;
     }
     try {
       final token = await _api.getToken();
       if (token == null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Session expired. Please login again.'), behavior: SnackBarBehavior.floating));
+          AppSnackbar.show(context, 'Session expired. Please login again.', type: SnackbarType.error);
           Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginPage()), (r) => false);
         }
         return null;
@@ -124,11 +125,11 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
       if (msg.toLowerCase().contains('token') || msg.toLowerCase().contains('unauthorized') || msg.toLowerCase().contains('401')) {
         await _api.clearToken();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Session expired. Please login again.'), behavior: SnackBarBehavior.floating));
+          AppSnackbar.show(context, 'Session expired. Please login again.', type: SnackbarType.error);
           Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginPage()), (r) => false);
         }
       } else {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Save failed: $e'), behavior: SnackBarBehavior.floating));
+        if (mounted) AppSnackbar.show(context, 'Save failed: $e', type: SnackbarType.error);
       }
       return null;
     }

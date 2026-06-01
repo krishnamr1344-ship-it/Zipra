@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import '../constants/theme.dart';
 import '../services/api_service.dart';
+import '../widgets/app_snackbar.dart';
+import '../widgets/success_modal.dart';
 import 'login_page.dart';
+import 'home_page.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -53,23 +56,43 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
     try {
       await ApiService().register(_nameCtl.text.trim(), _emailCtl.text.trim(), _phoneCtl.text.trim(), _passCtl.text);
       if (!mounted) return;
-      _showSnack('Account created successfully! Please login.');
-      Future.delayed(const Duration(seconds: 1), () {
-        if (mounted) Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginPage()), (r) => false);
-      });
+      await SuccessModal.show(
+        context,
+        title: 'Account Created Successfully',
+        subtitle: 'Welcome to Boss Tech Delivery',
+        description: 'Your account is ready. Start shopping now.',
+        primaryLabel: 'Continue Shopping',
+        secondaryLabel: 'View Profile',
+        onPrimary: () {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const HomePage()),
+            (route) => false,
+          );
+        },
+        onSecondary: () {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const HomePage()),
+            (route) => false,
+          );
+        },
+      );
+      if (!mounted) return;
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+        (route) => false,
+      );
     } on ApiException catch (e) {
       if (!mounted) return;
-      _showSnack(e.message);
+      AppSnackbar.show(context, e.message, type: SnackbarType.error);
     } catch (e) {
       if (!mounted) return;
-      _showSnack('Connection failed. Check server.');
+      AppSnackbar.show(context, 'Connection failed. Check server.', type: SnackbarType.error);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
-  }
-
-  void _showSnack(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating));
   }
 
   InputDecoration _fieldStyle(String label, IconData icon, {Widget? suffix}) {

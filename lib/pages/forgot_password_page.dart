@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/theme.dart';
 import '../services/api_service.dart';
+import '../widgets/app_snackbar.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -52,15 +53,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     try {
       await ApiService().resetPassword(email, code, password);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password reset successful!'), backgroundColor: AppColors.success, behavior: SnackBarBehavior.floating),
-      );
+      AppSnackbar.show(context, 'Password reset successful!', type: SnackbarType.success);
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$e'), backgroundColor: AppColors.error, behavior: SnackBarBehavior.floating),
-      );
+      AppSnackbar.show(context, '$e', type: SnackbarType.error);
     } finally {
       if (mounted) setState(() => _resetting = false);
     }
@@ -70,7 +67,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Reset Password')),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(28),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

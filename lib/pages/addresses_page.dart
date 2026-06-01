@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../constants/theme.dart';
 import '../services/api_service.dart';
 import '../widgets/state_widgets.dart';
+import '../widgets/app_snackbar.dart';
 import 'address_form_page.dart';
 
 class AddressesPage extends StatefulWidget {
@@ -56,7 +57,7 @@ class _AddressesPageState extends State<AddressesPage> {
       if (!mounted) return;
       _load();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'), behavior: SnackBarBehavior.floating));
+      if (mounted) AppSnackbar.show(context, '$e', type: SnackbarType.error);
     }
   }
 

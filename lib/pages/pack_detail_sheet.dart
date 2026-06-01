@@ -3,6 +3,7 @@ import '../constants/theme.dart';
 import '../models/combo_pack.dart';
 import '../models/cart_model.dart';
 import '../services/api_service.dart';
+import '../widgets/app_snackbar.dart';
 
 class PackDetailSheet extends StatefulWidget {
   final ComboPack pack;
@@ -34,18 +35,10 @@ class _PackDetailSheetState extends State<PackDetailSheet> {
       }
       if (!mounted) return;
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${widget.pack.name} added to cart!'),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: AppColors.success,
-        ),
-      );
+      AppSnackbar.show(context, '${widget.pack.name} added to cart!', type: SnackbarType.success);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed: $e'), behavior: SnackBarBehavior.floating),
-      );
+      AppSnackbar.show(context, 'Failed: $e', type: SnackbarType.error);
     }
     if (mounted) setState(() => _adding = false);
   }
