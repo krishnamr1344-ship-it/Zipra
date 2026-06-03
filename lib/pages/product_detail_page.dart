@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../constants/theme.dart';
 import '../models/cart_model.dart';
 
@@ -75,8 +74,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final primary = theme.colorScheme.primary;
     final isFav = wishlistNotifier.contains(widget.name);
     final displayImages = widget.images.where((i) => i.isNotEmpty).toList();
     final totalPrice = widget.price * _qty;

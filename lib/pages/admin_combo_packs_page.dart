@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/theme.dart';
 import '../services/admin_api_service.dart';
-import '../services/api_service.dart';
+import '../services/notification_service.dart';
 import '../widgets/state_widgets.dart';
 
 class AdminComboPacksPage extends StatefulWidget {
@@ -183,6 +183,12 @@ class _AdminComboPacksPageState extends State<AdminComboPacksPage> {
                       };
                       if (pack == null) {
                         await _api.createComboPack(body);
+                        notificationService.sendNotification({
+                          'title': 'New Offer: ${nameCtl.text.trim()}',
+                          'message': 'Check out our new combo pack at just ₹${priceCtl.text.trim()}',
+                          'type': 'offer',
+                          'image_url': imageCtl.text.trim().isEmpty ? null : imageCtl.text.trim(),
+                        });
                       } else {
                         await _api.updateComboPack(pack['id'], body);
                       }

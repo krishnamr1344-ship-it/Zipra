@@ -30,7 +30,7 @@ from auth import router as auth_router
 from middleware import RateLimitMiddleware
 from resources import router as resources_router
 from admin import router as admin_router
-from models import Category, Product, ProductImage, User, ComboPack, ComboPackItem, AppVersion
+from models import Category, Product, ProductImage, User, ComboPack, ComboPackItem, AppVersion, Notification
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 API_KEY = os.getenv("API_KEY")

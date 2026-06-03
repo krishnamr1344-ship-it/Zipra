@@ -16,13 +16,14 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, Category, Product, ProductImage, Address, Order, Payment, DeliveryZone, ComboPack, ComboPackItem
+from models import User, Category, Product, ProductImage, Address, Order, Payment, DeliveryZone, ComboPack, ComboPackItem, Notification
 from schemas import (
     CategoryCreate, CategoryResponse,
     ProductCreate, ProductResponse,
     StatusUpdateRequest, MessageResponse,
     DeliveryZoneCreate,
     ComboPackCreate, ComboPackUpdate, ComboPackResponse, ComboPackItemResponse, ComboPackItemInput,
+    NotificationCreate, NotificationResponse,
 )
 
 router = APIRouter(prefix="/api/admin")
@@ -573,4 +574,29 @@ def delete_delivery_zone(zone_id: str, request: Request, db: Session = Depends(g
     return MessageResponse(message="Delivery zone deleted")
 
 
+# ─── NOTIFICATIONS ────────────────────────────────────────────────
+
+
+@router.post("/notifications", response_model=NotificationResponse, status_code=status.HTTP_201_CREATED)
+def create_notification(body: NotificationCreate, request: Request, db: Session = Depends(get_db)):
+    _require_admin(request, db)
+    notif = Notification(
+        title=body.title.strip(),
+        message=body.message.strip() if body.message else None,
+        type=body.type,
+        image_url=body.image_url.strip() if body.image_url else None,
+        link=body.link.strip() if body.link else None,
+    )
+    db.add(notif)
+    db.commit()
+    db.refresh(notif)
+    return NotificationResponse(
+        id=str(notif.id),
+        title=notif.title,
+        message=notif.message,
+        type=notif.type,
+        image_url=notif.image_url,
+        link=notif.link,
+        created_at=notif.created_at,
+    )
 

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/theme.dart';
+import '../services/notification_service.dart';
+import 'notifications_page.dart';
 import '../services/api_service.dart';
 import '../services/location_service.dart';
 import '../services/delivery_zone_service.dart';
@@ -102,6 +104,7 @@ class _HomePageState extends State<HomePage> {
     _loadGpsAddress();
     cartNotifier.load();
     wishlistNotifier.load();
+    notificationService.load();
   }
 
   @override
@@ -511,6 +514,32 @@ class _HomePageState extends State<HomePage> {
                     onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WishlistPage())),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                  ),
+                ),
+                ListenableBuilder(
+                  listenable: notificationService,
+                  builder: (_, _) => Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 22),
+                        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsPage())),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                      ),
+                      if (notificationService.unreadCount > 0)
+                        Positioned(
+                          right: 4, top: 2,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
+                            child: Text(
+                              '${notificationService.unreadCount}',
+                              style: const TextStyle(color: Colors.white, fontSize: 7, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 ListenableBuilder(
@@ -983,7 +1012,6 @@ class _HomePageState extends State<HomePage> {
     final email = _user?['email'] ?? '';
     return LayoutBuilder(
       builder: (context, constraints) {
-        final avatarR = (constraints.maxWidth * 0.12).clamp(42.0, 52.0);
         return SingleChildScrollView(
           child: Column(
             children: [
@@ -1083,29 +1111,6 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: _orange,
         child: Text(initial,
           style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
-      ),
-    );
-  }
-
-  Widget _statBox(IconData icon, String label, String value) {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
-        ),
-        child: Column(
-          children: [
-            Icon(icon, size: 22, color: _orange),
-            const SizedBox(height: 6),
-            Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF222222))),
-            const SizedBox(height: 2),
-            Text(label, style: const TextStyle(fontSize: 10, color: Color(0xFF757575))),
-          ],
-        ),
       ),
     );
   }

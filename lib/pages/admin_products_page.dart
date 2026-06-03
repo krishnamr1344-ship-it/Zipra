@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/theme.dart';
 import '../services/admin_api_service.dart';
+import '../services/notification_service.dart';
 import '../widgets/state_widgets.dart';
 
 class AdminProductsPage extends StatefulWidget {
@@ -223,8 +224,16 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                           'stock': int.parse(stockCtl.text),
                           'images': images.map((c) => c.text.trim()).toList(),
                         };
-                        if (product == null) await _api.createProduct(data);
-                        else await _api.updateProduct(product['id'], data);
+                        if (product == null) {
+                          await _api.createProduct(data);
+                          notificationService.sendNotification({
+                            'title': 'New Product: ${nameCtl.text.trim()}',
+                            'message': '${nameCtl.text.trim()} is now available at ₹${priceCtl.text.trim()}/${unitCtl.text.trim()}',
+                            'type': 'offer',
+                          });
+                        } else {
+                          await _api.updateProduct(product['id'], data);
+                        }
                         if (!ctx.mounted) return;
                         Navigator.pop(ctx);
                         _load();

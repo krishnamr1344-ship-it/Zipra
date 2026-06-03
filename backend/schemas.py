@@ -827,3 +827,50 @@ class AppVersionResponse(BaseModel):
     latest_version: str
     apk_download_url: str
     release_notes: Optional[str] = None
+
+
+class NotificationCreate(BaseModel):
+    title: str
+    message: Optional[str] = None
+    type: str = "offer"
+    image_url: Optional[str] = None
+    link: Optional[str] = None
+
+    @field_validator("title")
+    @classmethod
+    def valid_title(cls, v):
+        v = v.strip()
+        if not v:
+            raise ValueError("Title is required")
+        if len(v) > 200:
+            raise ValueError("Title must not exceed 200 characters")
+        return v
+
+    @field_validator("message")
+    @classmethod
+    def valid_msg(cls, v):
+        if v and len(v) > 2000:
+            raise ValueError("Message must not exceed 2000 characters")
+        return v
+
+    @field_validator("type")
+    @classmethod
+    def valid_type(cls, v):
+        v = v.strip().lower()
+        allowed = {"offer", "promo", "update", "info"}
+        if v not in allowed:
+            raise ValueError(f"Type must be one of: {', '.join(sorted(allowed))}")
+        return v
+
+
+class NotificationResponse(BaseModel):
+    id: str
+    title: str
+    message: Optional[str] = None
+    type: str
+    image_url: Optional[str] = None
+    link: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

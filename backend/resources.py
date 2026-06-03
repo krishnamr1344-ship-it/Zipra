@@ -24,7 +24,7 @@ from database import get_db
 from models import (
     User, Category, Product, ProductImage, Address, CartItem,
     Order, OrderItem, Payment, DeliveryZone, ComboPack, ComboPackItem, ProductSuggestion,
-    WishlistItem, AppVersion,
+    WishlistItem, AppVersion, Notification,
 )
 from schemas import (
     CategoryCreate, CategoryResponse,
@@ -37,7 +37,7 @@ from schemas import (
     ComboPackItemInput, ComboPackItemResponse, ComboPackResponse, PackAddRequest,
     SuggestProductRequest,
     WishlistAddRequest, WishlistItemResponse,
-    AppVersionResponse,
+    AppVersionResponse, NotificationResponse,
 )
 
 router = APIRouter(prefix="/api")
@@ -1391,3 +1391,25 @@ def get_latest_app_version(db: Session = Depends(get_db)):
         apk_download_url=record.apk_download_url,
         release_notes=record.release_notes,
     )
+
+
+# ─── NOTIFICATIONS ────────────────────────────────────────────────
+
+
+@router.get("/notifications", response_model=list[NotificationResponse])
+def list_notifications(request: Request, db: Session = Depends(get_db)):
+    _get_user_id(request)
+    notifications = db.query(Notification).filter(
+        Notification.is_deleted == False,
+    ).order_by(Notification.created_at.desc()).limit(50).all()
+    return [
+        NotificationResponse(
+            id=str(n.id),
+            title=n.title,
+            message=n.message,
+            type=n.type,
+            image_url=n.image_url,
+            link=n.link,
+            created_at=n.created_at,
+        ) for n in notifications
+    ]
