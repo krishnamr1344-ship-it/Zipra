@@ -44,20 +44,29 @@ class LocationService {
     }
 
     try {
-      Position? position;
       try {
-        position = await Geolocator.getLastKnownPosition();
-      } catch (_) {}
-      position ??= await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 8),
-        ),
-      );
-      return LocationResult(
-        latitude: position.latitude,
-        longitude: position.longitude,
-      );
+        Position position = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 15),
+          ),
+        );
+        return LocationResult(
+          latitude: position.latitude,
+          longitude: position.longitude,
+        );
+      } catch (_) {
+        Position position = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.low,
+            timeLimit: Duration(seconds: 10),
+          ),
+        );
+        return LocationResult(
+          latitude: position.latitude,
+          longitude: position.longitude,
+        );
+      }
     } catch (e) {
       return LocationResult(
         latitude: 0,

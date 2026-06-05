@@ -38,8 +38,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         _codeCtl.text = code;
         setState(() => _showResetForm = true);
       }
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
+      AppSnackbar.show(context, 'Failed: $e', type: SnackbarType.error);
       setState(() => _sent = false);
     }
   }

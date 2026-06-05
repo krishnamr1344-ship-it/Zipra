@@ -44,6 +44,8 @@ class _MapPickerPageState extends State<MapPickerPage> {
         _selected = pos;
       });
       WidgetsBinding.instance.addPostFrameCallback((_) => _mapCtl.move(pos, 15));
+    } else if (mounted) {
+      AppSnackbar.show(context, loc.error!, type: SnackbarType.error);
     }
     setState(() => _loading = false);
     _reverseGeocode();
@@ -59,7 +61,9 @@ class _MapPickerPageState extends State<MapPickerPage> {
         _addressLine2 = data['address_line2'] ?? '';
         _city = data['city'] ?? '';
       });
-    } catch (_) {}
+    } catch (_) {
+      if (mounted) AppSnackbar.show(context, 'Could not fetch address', type: SnackbarType.error);
+    }
     if (mounted) setState(() => _geocoding = false);
   }
 

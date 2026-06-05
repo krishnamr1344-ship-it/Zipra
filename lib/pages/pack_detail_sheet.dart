@@ -29,7 +29,7 @@ class _PackDetailSheetState extends State<PackDetailSheet> {
           item['product_id']?.toString() ?? '',
           name: item['product_name'] ?? '',
           qty: '${item['quantity'] ?? 1}',
-          price: 0,
+          price: item['product_price'] ?? 0,
         );
       }
       if (!mounted) return;

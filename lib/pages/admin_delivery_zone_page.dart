@@ -59,11 +59,11 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
       final zones = await _api.getDeliveryZones();
       if (!mounted) return;
       setState(() {
-        _savedZones = zones.map((z) => SavedZone(
-          id: z['id'] ?? '',
-          name: z['zone_name'] ?? '',
-          geojson: z['geojson_data'] ?? '',
-          color: _colorForIndex(_savedZones.length),
+        _savedZones = zones.asMap().entries.map((e) => SavedZone(
+          id: e.value['id'] ?? '',
+          name: e.value['zone_name'] ?? '',
+          geojson: e.value['geojson_data'] ?? '',
+          color: _colorForIndex(e.key),
         )).toList();
         _loading = false;
       });

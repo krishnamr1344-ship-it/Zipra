@@ -7,6 +7,7 @@ import 'pages/admin_home_page.dart';
 import 'services/api_service.dart';
 import 'services/theme_service.dart';
 import 'services/app_info.dart';
+import 'services/update_service.dart';
 import 'constants/theme.dart';
 
 void main() async {
@@ -51,7 +52,7 @@ class MyApp extends StatelessWidget {
       valueListenable: ThemeService.modeNotifier,
       builder: (context, mode, _) {
         return MaterialApp(
-          title: 'Grocery App',
+          title: 'Zipra',
           debugShowCheckedModeBanner: false,
           scrollBehavior: const NoGlowScrollBehavior(),
           themeMode: mode,
@@ -126,10 +127,12 @@ class _AppEntryState extends State<_AppEntry> {
   @override
   void initState() {
     super.initState();
-    _checkAuth();
+    _startup();
   }
 
-  Future<void> _checkAuth() async {
+  Future<void> _startup() async {
+    await UpdateService.checkForUpdate(context);
+    if (!mounted) return;
     final token = await _api.getToken();
     if (token != null) {
       final user = await _api.getSavedUser();

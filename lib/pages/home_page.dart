@@ -241,6 +241,7 @@ class _HomePageState extends State<HomePage> {
   Future<bool> _requireLogin() async {
     final token = await _api.getToken();
     if (token != null) return true;
+    if (!mounted) return false;
     final loggedIn = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => const LoginPage()));
     return loggedIn == true;
   }
@@ -261,6 +262,7 @@ class _HomePageState extends State<HomePage> {
       isScrollControlled: true,
       builder: (_) => const LocationPickerSheet(),
     );
+    if (!mounted) return;
     if (openMap == true) {
       final confirmed = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => const MapPickerPage()));
       if (confirmed == true) _loadGpsAddress();
@@ -318,11 +320,14 @@ class _HomePageState extends State<HomePage> {
                       if (i >= 3) {
                         final token = await _api.getToken();
                         if (token == null) {
+                          if (!mounted) return;
                           final loggedIn = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => const LoginPage()));
                           if (loggedIn != true) return;
+                          if (!mounted) return;
                           await _loadProfile();
                         }
                       }
+                      if (!mounted) return;
                       setState(() => _selectedIndex = i);
                     },
                     child: Column(

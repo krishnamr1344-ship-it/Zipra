@@ -39,14 +39,14 @@ class ApiService {
       } catch (_) {}
       throw ApiException('Invalid response (${res.statusCode})');
     }
-    debugPrint('API Error ${res.statusCode}: ${res.body}');
+    if (kDebugMode) debugPrint('API Error ${res.statusCode}: ${res.body}');
     final msg = _tryDecodeDetail(res.body) ?? 'Request failed (${res.statusCode})';
     throw ApiException(msg);
   }
 
   List<dynamic> _handleListResponse(http.Response res) {
     if (res.statusCode != 200) {
-      debugPrint('API Error ${res.statusCode}: ${res.body}');
+      if (kDebugMode) debugPrint('API Error ${res.statusCode}: ${res.body}');
       throw ApiException(_tryDecodeDetail(res.body) ?? 'Request failed (${res.statusCode})');
     }
     try {
@@ -188,7 +188,7 @@ class ApiService {
     if (headers['Authorization'] == null) throw ApiException('Login required');
     final res = await http.delete(Uri.parse('$_baseUrl/api/addresses/$addressId'), headers: headers).timeout(const Duration(seconds: 60));
     if (res.statusCode != 200) {
-      debugPrint('API Error ${res.statusCode}: ${res.body}');
+      if (kDebugMode) debugPrint('API Error ${res.statusCode}: ${res.body}');
       throw ApiException(_tryDecodeDetail(res.body) ?? 'Failed to delete address');
     }
   }

@@ -3,7 +3,6 @@ import '../constants/theme.dart';
 import '../services/api_service.dart';
 import '../widgets/app_snackbar.dart';
 import '../widgets/success_modal.dart';
-import 'login_page.dart';
 import 'home_page.dart';
 
 class SignupPage extends StatefulWidget {
@@ -81,7 +80,7 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
       if (!mounted) return;
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const LoginPage()),
+        MaterialPageRoute(builder: (_) => const HomePage()),
         (route) => false,
       );
     } on ApiException catch (e) {

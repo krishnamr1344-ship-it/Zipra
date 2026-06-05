@@ -52,7 +52,10 @@ class CartNotifier extends ChangeNotifier {
       }
       _loaded = true;
       notifyListeners();
-    } catch (_) {}
+    } catch (_) {
+      _loaded = true;
+      notifyListeners();
+    }
   }
 
   Future<void> add(String productId, {String name = '', String qty = '', int price = 0, String? image}) async {
