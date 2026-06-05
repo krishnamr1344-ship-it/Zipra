@@ -21,7 +21,7 @@ class UpdateInfo {
 
 class UpdateService {
   static const String _versionUrl =
-      'https://raw.githubusercontent.com/your-username/your-repo/main/version.json';
+      'https://raw.githubusercontent.com/selvaabi5555/delivery-app/main/version.json';
 
   static Future<UpdateInfo?> fetchUpdateInfo() async {
     try {
