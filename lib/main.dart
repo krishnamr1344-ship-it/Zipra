@@ -7,7 +7,6 @@ import 'pages/admin_home_page.dart';
 import 'services/api_service.dart';
 import 'services/theme_service.dart';
 import 'services/app_info.dart';
-import 'services/update_service.dart';
 import 'constants/theme.dart';
 
 void main() async {
@@ -131,8 +130,6 @@ class _AppEntryState extends State<_AppEntry> {
   }
 
   Future<void> _startup() async {
-    await UpdateService.checkForUpdate(context);
-    if (!mounted) return;
     final token = await _api.getToken();
     if (token != null) {
       final user = await _api.getSavedUser();
