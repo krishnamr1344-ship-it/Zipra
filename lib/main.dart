@@ -1,6 +1,3 @@
-import 'dart:io';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'pages/home_page.dart';
 import 'pages/admin_home_page.dart';
@@ -10,9 +7,6 @@ import 'services/app_info.dart';
 import 'constants/theme.dart';
 
 void main() async {
-  if (kDebugMode) {
-    HttpOverrides.global = _AllowSelfSignedCert();
-  }
   WidgetsFlutterBinding.ensureInitialized();
 
   FlutterError.onError = (details) {
@@ -23,14 +17,6 @@ void main() async {
     await AppInfo.load();
 
     runApp(const MyApp());
-}
-
-class _AllowSelfSignedCert extends HttpOverrides {
-  @override
-  HttpClient createHttpClient(SecurityContext? context) {
-    return super.createHttpClient(context)
-      ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
-  }
 }
 
 class NoGlowScrollBehavior extends ScrollBehavior {

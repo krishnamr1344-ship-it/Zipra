@@ -65,7 +65,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         now = time.time()
 
         is_auth = (
-            (path == "/api/auth/login" or path == "/api/auth/register")
+            (path == "/api/auth/login" or path == "/api/auth/register" or path == "/api/auth/forgot-password" or path == "/api/auth/reset-password")
             and request.method == "POST"
         )
 

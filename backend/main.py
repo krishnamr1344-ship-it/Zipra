@@ -32,9 +32,24 @@ from resources import router as resources_router
 from admin import router as admin_router
 from models import Category, Product, ProductImage, User, ComboPack, ComboPackItem, AppVersion, Notification
 
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+FRONTEND_URL = os.getenv("FRONTEND_URL")
 API_KEY = os.getenv("API_KEY")
-PUBLIC_PATHS_C4 = {"/", "/docs", "/openapi.json", "/redoc", "/api/auth/register", "/api/auth/login", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/app-version"}
+
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+
+# Crash on startup if critical env vars are missing (never fall back to defaults).
+_missing = []
+if not FRONTEND_URL:
+    _missing.append("FRONTEND_URL")
+if not ADMIN_EMAIL:
+    _missing.append("ADMIN_EMAIL")
+if not ADMIN_PASSWORD:
+    _missing.append("ADMIN_PASSWORD")
+if _missing:
+    raise RuntimeError(f"Missing required environment variables: {', '.join(_missing)}")
+
+PUBLIC_PATHS_C4 = {"/", "/docs", "/openapi.json", "/redoc", "/api/auth/register", "/api/auth/login", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/app-version", "/api/categories", "/api/products", "/api/combo-packs", "/api/check-zone", "/api/places/search", "/api/places/reverse", "/api/suggest-product"}
 
 # Create all tables on startup.
 Base.metadata.create_all(bind=engine)
@@ -198,14 +213,12 @@ def _seed_data():
         except Exception:
             db.rollback()
 
-        # Create admin user if not exists – credentials from .env.
-        admin_email = os.getenv("ADMIN_EMAIL", "admin@yourdomain.com")
-        admin_password = os.getenv("ADMIN_PASSWORD", "YourStrongAdminPass#2024")
-        admin = db.query(User).filter(User.email == admin_email).first()
+        # Create admin user if not exists – credentials from .env (already validated at module level).
+        admin = db.query(User).filter(User.email == ADMIN_EMAIL).first()
         if not admin:
-            hashed = bcrypt.hashpw(admin_password.encode("utf-8"), bcrypt.gensalt(rounds=12)).decode("utf-8")
+            hashed = bcrypt.hashpw(ADMIN_PASSWORD.encode("utf-8"), bcrypt.gensalt(rounds=12)).decode("utf-8")
             admin = User(
-                email=admin_email,
+                email=ADMIN_EMAIL,
                 password_hash=hashed,
                 name="Admin",
                 phone="0000000000",

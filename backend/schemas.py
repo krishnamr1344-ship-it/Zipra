@@ -794,6 +794,12 @@ class ResetPasswordRequest(BaseModel):
             raise ValueError("Password must be at least 8 characters")
         if len(v) > MAX_PASSWORD_LENGTH:
             raise ValueError(f"Password must not exceed {MAX_PASSWORD_LENGTH} characters")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("Password must contain an uppercase letter")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("Password must contain a lowercase letter")
+        if not re.search(r"\d", v):
+            raise ValueError("Password must contain a digit")
         return v
 
 

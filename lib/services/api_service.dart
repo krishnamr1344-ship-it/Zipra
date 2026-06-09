@@ -2,31 +2,34 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ApiService {
   static const _baseUrl = 'https://delivery-app-api-16t0.onrender.com';
   static const _tokenKey = 'auth_token';
+  static const _userNameKey = 'user_name';
+  static const _userEmailKey = 'user_email';
+  static const _userPhoneKey = 'user_phone';
+  static const _userRoleKey = 'user_role';
+
+  final _secureStorage = const FlutterSecureStorage();
 
   // ─── Token Management ──────────────────────────────────────────
 
   Future<String?> getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_tokenKey);
+    return await _secureStorage.read(key: _tokenKey);
   }
 
   Future<void> _saveToken(String token) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_tokenKey, token);
+    await _secureStorage.write(key: _tokenKey, value: token);
   }
 
   Future<void> _clearToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_tokenKey);
-    await prefs.remove('user_name');
-    await prefs.remove('user_email');
-    await prefs.remove('user_phone');
-    await prefs.remove('user_role');
+    await _secureStorage.delete(key: _tokenKey);
+    await _secureStorage.delete(key: _userNameKey);
+    await _secureStorage.delete(key: _userEmailKey);
+    await _secureStorage.delete(key: _userPhoneKey);
+    await _secureStorage.delete(key: _userRoleKey);
   }
 
   // ─── API Calls ─────────────────────────────────────────────────
@@ -105,21 +108,19 @@ class ApiService {
   // ─── Local User Storage (fallback) ─────────────────────────────
 
   Future<Map<String, dynamic>> getSavedUser() async {
-    final prefs = await SharedPreferences.getInstance();
     return {
-      'name': prefs.getString('user_name') ?? 'User',
-      'email': prefs.getString('user_email') ?? '',
-      'phone': prefs.getString('user_phone') ?? '',
-      'role': prefs.getString('user_role') ?? 'user',
+      'name': await _secureStorage.read(key: _userNameKey) ?? 'User',
+      'email': await _secureStorage.read(key: _userEmailKey) ?? '',
+      'phone': await _secureStorage.read(key: _userPhoneKey) ?? '',
+      'role': await _secureStorage.read(key: _userRoleKey) ?? 'user',
     };
   }
 
   Future<void> _saveUserLocally(String name, String email, String phone, [String role = 'user']) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user_name', name);
-    await prefs.setString('user_email', email);
-    await prefs.setString('user_phone', phone);
-    await prefs.setString('user_role', role);
+    await _secureStorage.write(key: _userNameKey, value: name);
+    await _secureStorage.write(key: _userEmailKey, value: email);
+    await _secureStorage.write(key: _userPhoneKey, value: phone);
+    await _secureStorage.write(key: _userRoleKey, value: role);
   }
 
   Future<Map<String, dynamic>> updateProfile(String name, String email, {String phone = ''}) async {

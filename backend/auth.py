@@ -7,6 +7,7 @@ Security:
   - On /logout, token JTI saved to blacklist table.
   - Generic error messages only — never leak DB or stack details.
 """
+import hashlib
 import os
 import secrets
 import string
@@ -19,7 +20,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, TokenBlacklist
+from models import User, TokenBlacklist, PasswordResetCode
 from schemas import RegisterRequest, LoginRequest, LogoutRequest, UpdateProfileRequest, ForgotPasswordRequest, ResetPasswordRequest
 
 JWT_SECRET = os.getenv("JWT_SECRET")
@@ -29,8 +30,7 @@ BCRYPT_ROUNDS = int(os.getenv("BCRYPT_ROUNDS", "12"))
 if not JWT_SECRET:
     raise RuntimeError("JWT_SECRET not set in environment variables")
 
-# In-memory password reset code store (ephemeral — for dev/demo)
-_reset_codes: dict[str, dict] = {}
+RESET_CODE_EXPIRY_MINUTES = 15
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -214,31 +214,43 @@ def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
     ).first()
     if not user:
         # Don't reveal whether email exists — always return same message
-        return {"message": "If this email is registered, a reset code has been generated", "code": None}
+        return {"message": "If this email is registered, a reset code has been generated"}
+
+    # Invalidate any previous unused codes for this email
+    db.query(PasswordResetCode).filter(
+        PasswordResetCode.email == body.email,
+        PasswordResetCode.used_at.is_(None),
+        PasswordResetCode.is_deleted == False,
+    ).update({"is_deleted": True})
+    db.commit()
 
     code = ''.join(secrets.choice(string.digits) for _ in range(6))
-    _reset_codes[body.email] = {
-        "code": code,
-        "expires_at": datetime.now(timezone.utc) + timedelta(minutes=15),
-    }
+    code_hash = hashlib.sha256(code.encode()).hexdigest()
+    reset_code = PasswordResetCode(
+        email=body.email,
+        code_hash=code_hash,
+        expires_at=datetime.now(timezone.utc) + timedelta(minutes=RESET_CODE_EXPIRY_MINUTES),
+    )
+    db.add(reset_code)
+    db.commit()
     return {
         "message": "If this email is registered, a reset code has been generated",
-        "code": code,  # Returned directly in dev since no email service
     }
 
 
 @router.post("/reset-password")
 def reset_password(body: ResetPasswordRequest, db: Session = Depends(get_db)):
-    record = _reset_codes.get(body.email)
+    now = datetime.now(timezone.utc)
+    code_hash = hashlib.sha256(body.code.encode()).hexdigest()
+    record = db.query(PasswordResetCode).filter(
+        PasswordResetCode.email == body.email,
+        PasswordResetCode.code_hash == code_hash,
+        PasswordResetCode.used_at.is_(None),
+        PasswordResetCode.expires_at > now,
+        PasswordResetCode.is_deleted == False,
+    ).first()
     if not record:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No reset code requested for this email")
-
-    if datetime.now(timezone.utc) > record["expires_at"]:
-        _reset_codes.pop(body.email, None)
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Reset code expired")
-
-    if record["code"] != body.code:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reset code")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired reset code")
 
     user = db.query(User).filter(
         User.email == body.email,
@@ -248,6 +260,6 @@ def reset_password(body: ResetPasswordRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     user.password_hash = _hash_password(body.new_password)
-    _reset_codes.pop(body.email, None)
+    record.used_at = now
     db.commit()
     return {"message": "Password reset successful"}
