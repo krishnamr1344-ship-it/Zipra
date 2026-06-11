@@ -178,7 +178,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   List<_ProductData> get _filteredProducts {
-    if (_selectedCategory == 'All') return _allProducts.map((p) => _ProductData(
+    _ProductData fromMap(Map<String, dynamic> p) => _ProductData(
       p['id'] ?? '',
       _catIcon(p['category_name'] ?? ''),
       p['name'] ?? '',
@@ -186,16 +186,10 @@ class _HomePageState extends State<HomePage> {
       p['unit'] ?? '',
       p['category_name'] ?? '',
       p['images'] is List ? (p['images'] as List).cast<String>() : [],
-    )).toList();
-    return _allProducts.where((p) => p['category_name'] == _selectedCategory).map((p) => _ProductData(
-      p['id'] ?? '',
-      _catIcon(p['category_name'] ?? ''),
-      p['name'] ?? '',
-      (p['price'] ?? 0).toInt(),
-      p['unit'] ?? '',
-      p['category_name'] ?? '',
-      p['images'] is List ? (p['images'] as List).cast<String>() : [],
-    )).toList();
+      isEnabled: p['is_enabled'] != false,
+    );
+    if (_selectedCategory == 'All') return _allProducts.map((p) => fromMap(p)).toList();
+    return _allProducts.where((p) => p['category_name'] == _selectedCategory).map((p) => fromMap(p)).toList();
   }
 
   Future<void> _loadData() async {
@@ -929,7 +923,7 @@ class _HomePageState extends State<HomePage> {
                   Navigator.push(context, MaterialPageRoute(
                     builder: (_) => ProductDetailPage(
                       icon: p.icon, color: _orange, name: p.name, price: p.price, qty: p.qty, images: p.images,
-                      inCart: count > 0,
+                      inCart: count > 0, isEnabled: p.isEnabled,
                       onAdd: () async {
                         if (!await _requireLogin()) return;
                         if (!mounted) return;
@@ -1172,7 +1166,8 @@ class _ProductData {
   final String qty;
   final String category;
   final List<String> images;
-  const _ProductData(this.id, this.icon, this.name, this.price, this.qty, this.category, this.images);
+  final bool isEnabled;
+  const _ProductData(this.id, this.icon, this.name, this.price, this.qty, this.category, this.images, {this.isEnabled = true});
 }
 
 String _emojiFor(String name) {
@@ -1209,5 +1204,6 @@ GroceryProduct _toGroceryProduct(_ProductData p) {
     discountPercent: ((mrp - p.price) / mrp * 100).round(),
     emoji: _emojiFor(p.name),
     imageBg: _colorFor(p.category),
+    isEnabled: p.isEnabled,
   );
 }

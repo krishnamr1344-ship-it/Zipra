@@ -80,7 +80,7 @@ def list_products(request: Request, db: Session = Depends(get_db)):
             name=p.name, description=p.description,
             price=round(float(p.price), 2), unit=p.unit,
             images=[img.image_url for img in p.images if not img.is_deleted],
-            stock=p.stock,
+            stock=p.stock, is_enabled=p.is_enabled,
         ) for p in products
     ]
 
@@ -109,7 +109,7 @@ def create_product(body: ProductCreate, request: Request, db: Session = Depends(
         name=product.name, description=product.description,
         price=round(float(product.price), 2), unit=product.unit,
         images=[img.image_url for img in product.images if not img.is_deleted],
-        stock=product.stock,
+        stock=product.stock, is_enabled=product.is_enabled,
     )
 
 
@@ -142,8 +142,20 @@ def update_product(product_id: str, body: ProductCreate, request: Request, db: S
         name=product.name, description=product.description,
         price=round(float(product.price), 2), unit=product.unit,
         images=[img.image_url for img in product.images if not img.is_deleted],
-        stock=product.stock,
+        stock=product.stock, is_enabled=product.is_enabled,
     )
+
+
+@router.put("/products/{product_id}/toggle")
+def toggle_product(product_id: str, request: Request, db: Session = Depends(get_db)):
+    _require_admin(request, db)
+    _validate_uuid(product_id)
+    product = db.query(Product).filter(Product.id == product_id, Product.is_deleted == False).first()
+    if not product:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+    product.is_enabled = not product.is_enabled
+    db.commit()
+    return {"is_enabled": product.is_enabled, "message": f"Product {'enabled' if product.is_enabled else 'disabled'}"}
 
 
 @router.delete("/products/{product_id}", response_model=MessageResponse)

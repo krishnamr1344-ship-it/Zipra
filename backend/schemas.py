@@ -239,6 +239,7 @@ class ProductResponse(BaseModel):
     unit: str
     images: list[str] = []
     stock: int
+    is_enabled: bool = True
 
     class Config:
         from_attributes = True

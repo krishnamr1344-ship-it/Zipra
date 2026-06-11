@@ -427,37 +427,79 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                                       child: Text(_catName(p['category_id']), style: TextStyle(fontSize: 10, color: primary, fontWeight: FontWeight.w500)),
                                     ),
                                     const SizedBox(height: 6),
-                                    InkWell(
-                                      onTap: () async {
-                                        final confirm = await showDialog<bool>(
-                                          context: context,
-                                          builder: (ctx) => AlertDialog(
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                            title: const Text('Delete Product'),
-                                            content: Text('Remove "${p['name']}"?'),
-                                            actions: [
-                                              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                                              TextButton(onPressed: () => Navigator.pop(ctx, true), style: TextButton.styleFrom(foregroundColor: Colors.red), child: const Text('Delete')),
-                                            ],
-                                          ),
-                                        );
-                                        if (confirm == true) {
-                                          try {
-                                            await _api.deleteProduct(p['id']);
-                                            if (!context.mounted) return;
-                                            _load();
-                                          } catch (e) {
-                                            if (context.mounted) {
-                                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'), behavior: SnackBarBehavior.floating));
-                                            }
-                                          }
-                                        }
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.all(6),
-                                        decoration: BoxDecoration(color: Colors.red.withAlpha(15), borderRadius: BorderRadius.circular(8)),
-                                        child: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                                    if (p['is_enabled'] == false)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(color: Colors.red.withAlpha(20), borderRadius: BorderRadius.circular(8)),
+                                        child: const Text('Off', style: TextStyle(fontSize: 10, color: Colors.red, fontWeight: FontWeight.w600)),
                                       ),
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        InkWell(
+                                          onTap: () async {
+                                            try {
+                                              final enabled = await _api.toggleProduct(p['id']);
+                                              if (!context.mounted) return;
+                                              _load();
+                                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                                content: Text('${p['name']} ${enabled ? 'enabled' : 'disabled'}'),
+                                                behavior: SnackBarBehavior.floating,
+                                              ));
+                                            } catch (e) {
+                                              if (context.mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'), behavior: SnackBarBehavior.floating));
+                                              }
+                                            }
+                                          },
+                                          child: Container(
+                                            padding: const EdgeInsets.all(6),
+                                            decoration: BoxDecoration(
+                                              color: (p['is_enabled'] != false ? Colors.orange : Colors.grey).withAlpha(15),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Icon(
+                                              p['is_enabled'] != false ? Icons.visibility : Icons.visibility_off,
+                                              size: 18,
+                                              color: p['is_enabled'] != false ? Colors.orange : Colors.grey,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        InkWell(
+                                          onTap: () async {
+                                            final confirm = await showDialog<bool>(
+                                              context: context,
+                                              builder: (ctx) => AlertDialog(
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                                title: const Text('Delete Product'),
+                                                content: Text('Remove "${p['name']}"?'),
+                                                actions: [
+                                                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                                                  TextButton(onPressed: () => Navigator.pop(ctx, true), style: TextButton.styleFrom(foregroundColor: Colors.red), child: const Text('Delete')),
+                                                ],
+                                              ),
+                                            );
+                                            if (confirm == true) {
+                                              try {
+                                                await _api.deleteProduct(p['id']);
+                                                if (!context.mounted) return;
+                                                _load();
+                                              } catch (e) {
+                                                if (context.mounted) {
+                                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'), behavior: SnackBarBehavior.floating));
+                                                }
+                                              }
+                                            }
+                                          },
+                                          child: Container(
+                                            padding: const EdgeInsets.all(6),
+                                            decoration: BoxDecoration(color: Colors.red.withAlpha(15), borderRadius: BorderRadius.circular(8)),
+                                            child: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),

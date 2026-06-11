@@ -9,6 +9,7 @@ class GroceryProduct {
   final int? discountPercent;
   final String emoji;
   final Color imageBg;
+  final bool isEnabled;
 
   const GroceryProduct({
     required this.id,
@@ -19,5 +20,6 @@ class GroceryProduct {
     this.discountPercent,
     required this.emoji,
     this.imageBg = const Color(0xFFFFF3EA),
+    this.isEnabled = true,
   });
 }

@@ -47,6 +47,13 @@ class AdminApiService {
     if (res.statusCode != 200) throw ApiException(_decodeJson(res.body)['detail'] ?? 'Failed to update product');
   }
 
+  Future<bool> toggleProduct(String id) async {
+    final res = await http.put(Uri.parse('$_baseUrl/api/admin/products/$id/toggle'), headers: await _authHeader()).timeout(_timeout);
+    if (res.statusCode != 200) throw ApiException('Failed to toggle product');
+    final body = _decodeJson(res.body);
+    return body['is_enabled'] ?? false;
+  }
+
   Future<void> deleteProduct(String id) async {
     final res = await http.delete(Uri.parse('$_baseUrl/api/admin/products/$id'), headers: await _authHeader()).timeout(_timeout);
     if (res.statusCode != 200) {

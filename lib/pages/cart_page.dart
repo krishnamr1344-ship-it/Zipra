@@ -18,9 +18,7 @@ class CartPage extends StatelessWidget {
           return Scaffold(
             backgroundColor: AppColors.background,
             appBar: _buildHeader(context),
-            body: EmptyCartWidget(
-              onBrowse: onBrowse,
-            ),
+            body: EmptyCartWidget(onBrowse: onBrowse),
           );
         }
         return Scaffold(
@@ -84,25 +82,31 @@ class CartPage extends StatelessWidget {
       actions: cartNotifier.items.isNotEmpty
           ? [
               IconButton(
-                icon: Icon(Icons.delete_sweep_outlined,
-                    color: Colors.grey.shade600, size: 22),
+                icon: Icon(
+                  Icons.delete_sweep_outlined,
+                  color: Colors.grey.shade600,
+                  size: 22,
+                ),
                 onPressed: () async {
                   final ok = await showDialog<bool>(
                     context: context,
                     builder: (ctx) => AlertDialog(
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20)),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
                       title: const Text('Clear Cart'),
-                      content: const Text(
-                          'Remove all items from your cart?'),
+                      content: const Text('Remove all items from your cart?'),
                       actions: [
                         TextButton(
-                            onPressed: () => Navigator.pop(ctx, false),
-                            child: const Text('Cancel')),
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Cancel'),
+                        ),
                         TextButton(
                           onPressed: () => Navigator.pop(ctx, true),
-                          child: const Text('Clear',
-                              style: TextStyle(color: Colors.red)),
+                          child: const Text(
+                            'Clear',
+                            style: TextStyle(color: Colors.red),
+                          ),
                         ),
                       ],
                     ),
@@ -110,8 +114,11 @@ class CartPage extends StatelessWidget {
                   if (ok == true) {
                     await cartNotifier.clear();
                     if (context.mounted) {
-                      AppSnackbar.show(context, 'Cart cleared',
-                          type: SnackbarType.info);
+                      AppSnackbar.show(
+                        context,
+                        'Cart cleared',
+                        type: SnackbarType.info,
+                      );
                     }
                   }
                 },
@@ -144,24 +151,32 @@ class _CartItemCard extends StatelessWidget {
             color: AppColors.error,
             borderRadius: BorderRadius.circular(18),
           ),
-          child: const Icon(Icons.delete_outline, color: Colors.white, size: 28),
+          child: const Icon(
+            Icons.delete_outline,
+            color: Colors.white,
+            size: 28,
+          ),
         ),
         confirmDismiss: (_) async {
           return await showDialog<bool>(
             context: context,
             builder: (ctx) => AlertDialog(
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20)),
+                borderRadius: BorderRadius.circular(20),
+              ),
               title: const Text('Remove Item'),
               content: Text('Remove ${item.name} from cart?'),
               actions: [
                 TextButton(
-                    onPressed: () => Navigator.pop(ctx, false),
-                    child: const Text('Cancel')),
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancel'),
+                ),
                 TextButton(
                   onPressed: () => Navigator.pop(ctx, true),
-                  child: const Text('Remove',
-                      style: TextStyle(color: Colors.red)),
+                  child: const Text(
+                    'Remove',
+                    style: TextStyle(color: Colors.red),
+                  ),
                 ),
               ],
             ),
@@ -170,8 +185,11 @@ class _CartItemCard extends StatelessWidget {
         onDismissed: (_) {
           cartNotifier.removeAll(item.productId);
           if (context.mounted) {
-            AppSnackbar.show(context, '${item.name} removed',
-                type: SnackbarType.info);
+            AppSnackbar.show(
+              context,
+              '${item.name} removed',
+              type: SnackbarType.info,
+            );
           }
         },
         child: Container(
@@ -200,7 +218,7 @@ class _CartItemCard extends StatelessWidget {
                         ? Image.network(
                             item.image!,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _placeholderIcon(item),
+                            errorBuilder: (_, _, _) => _placeholderIcon(item),
                           )
                         : _placeholderIcon(item),
                   ),
@@ -275,10 +293,7 @@ class _QuantityControlState extends State<_QuantityControl>
       vsync: this,
       duration: const Duration(milliseconds: 200),
     );
-    _scaleAnim = CurvedAnimation(
-      parent: _animCtl,
-      curve: Curves.elasticIn,
-    );
+    _scaleAnim = CurvedAnimation(parent: _animCtl, curve: Curves.elasticIn);
   }
 
   void _animate() {
@@ -308,8 +323,11 @@ class _QuantityControlState extends State<_QuantityControl>
             } else {
               cartNotifier.removeAll(widget.item.productId);
               if (context.mounted) {
-                AppSnackbar.show(context, '${widget.item.name} removed',
-                    type: SnackbarType.info);
+                AppSnackbar.show(
+                  context,
+                  '${widget.item.name} removed',
+                  type: SnackbarType.info,
+                );
               }
             }
           }),
@@ -385,24 +403,17 @@ class _PriceSummary extends StatelessWidget {
             const SizedBox(height: 8),
             _row(
               'Delivery Fee',
-              delivery == 0
-                  ? 'FREE'
-                  : '₹$delivery',
+              delivery == 0 ? 'FREE' : '₹$delivery',
               valueColor: delivery == 0
                   ? AppColors.success
                   : AppColors.textPrimary,
-              valueWeight: delivery == 0
-                  ? FontWeight.w700
-                  : FontWeight.w500,
+              valueWeight: delivery == 0 ? FontWeight.w700 : FontWeight.w500,
             ),
             if (delivery > 0) ...[
               const SizedBox(height: 2),
               Text(
                 'Add ₹${499 - sub} more for free delivery',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.grey.shade500,
-                ),
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
               ),
             ],
             const Padding(
@@ -442,15 +453,14 @@ class _PriceSummary extends StatelessWidget {
       children: [
         Text(
           label,
-          style: labelStyle ??
-              TextStyle(
-                fontSize: 13,
-                color: Colors.grey.shade600,
-              ),
+          style:
+              labelStyle ??
+              TextStyle(fontSize: 13, color: Colors.grey.shade600),
         ),
         Text(
           value,
-          style: valueStyle ??
+          style:
+              valueStyle ??
               TextStyle(
                 fontSize: 14,
                 fontWeight: valueWeight ?? FontWeight.w600,
@@ -492,10 +502,7 @@ class _CheckoutBar extends StatelessWidget {
               children: [
                 Text(
                   'Total',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade500,
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -516,10 +523,7 @@ class _CheckoutBar extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        PaymentPage(total: total),
-                  ),
+                  MaterialPageRoute(builder: (_) => PaymentPage(total: total)),
                 );
               },
               style: ElevatedButton.styleFrom(
@@ -532,10 +536,7 @@ class _CheckoutBar extends StatelessWidget {
               ),
               child: const Text(
                 'Checkout',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
               ),
             ),
           ),

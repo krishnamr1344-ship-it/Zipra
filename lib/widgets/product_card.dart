@@ -56,15 +56,17 @@ class _ProductCardState extends State<ProductCard> {
 
         return GestureDetector(
           onTap: widget.onTap,
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: const [
-                BoxShadow(color: Colors.black12, blurRadius: 5, offset: Offset(0, 2)),
-              ],
-            ),
-            child: Column(
+          child: Opacity(
+            opacity: widget.product.isEnabled ? 1.0 : 0.55,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: const [
+                  BoxShadow(color: Colors.black12, blurRadius: 5, offset: Offset(0, 2)),
+                ],
+              ),
+              child: Column(
               children: [
                 Container(
                   height: imgH,
@@ -89,6 +91,18 @@ class _ProductCardState extends State<ProductCard> {
                           borderRadius: const BorderRadius.only(topLeft: Radius.circular(14), bottomRight: Radius.circular(6)),
                         ),
                         child: Text('${p.discountPercent}% off', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  if (!p.isEnabled)
+                    Positioned(
+                      top: 0, right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: const BorderRadius.only(topRight: Radius.circular(14), bottomLeft: Radius.circular(6)),
+                        ),
+                        child: const Text('Off', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                       ),
                     ),
                   Positioned(
@@ -141,7 +155,8 @@ class _ProductCardState extends State<ProductCard> {
           ],
         ),
       ),
-    );
+      ),
+      );
       },
     );
   }
