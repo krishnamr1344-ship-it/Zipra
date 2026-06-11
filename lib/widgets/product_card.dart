@@ -163,10 +163,7 @@ class _ProductCardState extends State<ProductCard> {
 
   Widget _buildAddBtn(double sz) {
     return OutlinedButton(
-      onPressed: () {
-        setState(() => _quantity = 1);
-        widget.onAdd();
-      },
+      onPressed: () => widget.onAdd(),
       style: OutlinedButton.styleFrom(
         side: BorderSide(color: AppColors.success, width: 1.5),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
