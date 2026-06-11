@@ -925,7 +925,7 @@ class _HomePageState extends State<HomePage> {
                   Navigator.push(context, MaterialPageRoute(
                     builder: (_) => ProductDetailPage(
                       icon: p.icon, color: _orange, name: p.name, price: p.price, qty: p.qty, images: p.images,
-                      inCart: count > 0, isEnabled: p.isEnabled,
+                      inCart: count > 0, isEnabled: p.isEnabled, discountPercent: p.discountPercent,
                       onAdd: () async {
                         if (!await _requireLogin()) return;
                         if (!mounted) return;

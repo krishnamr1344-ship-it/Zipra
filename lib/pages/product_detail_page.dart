@@ -13,6 +13,7 @@ class ProductDetailPage extends StatefulWidget {
   final bool inCart;
   final VoidCallback onAdd;
   final bool isEnabled;
+  final int discountPercent;
 
   const ProductDetailPage({
     super.key,
@@ -25,6 +26,7 @@ class ProductDetailPage extends StatefulWidget {
     required this.inCart,
     required this.onAdd,
     this.isEnabled = true,
+    this.discountPercent = 0,
   });
 
   @override
@@ -90,6 +92,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     final isFav = wishlistNotifier.contains(widget.name);
     final displayImages = widget.images.where((i) => i.isNotEmpty).toList();
     final totalPrice = widget.price * _qty;
+    final originalPrice = widget.discountPercent > 0
+        ? (widget.price / (1 - widget.discountPercent / 100)).round()
+        : null;
 
     return Scaffold(
       body: CustomScrollView(
@@ -233,16 +238,18 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                             const SizedBox(height: 4),
                             Row(
                               children: [
-                                Text(
-                                  '₹${widget.price}',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                    color: Color(0xFF999999),
-                                    decoration: TextDecoration.lineThrough,
+                                if (originalPrice != null) ...[
+                                  Text(
+                                    '₹$originalPrice',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: Color(0xFF999999),
+                                      decoration: TextDecoration.lineThrough,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 8),
+                                  const SizedBox(width: 8),
+                                ],
                                 Text(
                                   '₹$totalPrice',
                                   style: const TextStyle(
@@ -251,25 +258,27 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                     color: AppColors.textPrimary,
                                   ),
                                 ),
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 3,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.green.withAlpha(15),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: const Text(
-                                    '18% off',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.green,
+                                if (widget.discountPercent > 0) ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.withAlpha(15),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      '${widget.discountPercent}% off',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.green,
+                                      ),
                                     ),
                                   ),
-                                ),
+                                ],
                               ],
                             ),
                           ],
