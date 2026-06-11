@@ -97,12 +97,23 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
       - Password bcrypt-hashed immediately.
       - Duplicate email returns generic error (don't reveal if email exists).
     """
-    # Security: check for existing user (soft-delete aware).
-    existing = db.query(User).filter(
-        User.email == body.email,
-        User.is_deleted == False,
-    ).first()
+    # Security: check for existing user.
+    existing = db.query(User).filter(User.email == body.email).first()
     if existing:
+        if existing.is_deleted:
+            # Reactivate soft-deleted user and update details.
+            existing.is_deleted = False
+            existing.name = body.name
+            existing.phone = body.phone
+            existing.password_hash = _hash_password(body.password)
+            db.commit()
+            db.refresh(existing)
+            token, jti, expires = _create_jwt(str(existing.id), existing.role)
+            return {
+                "message": "Registration successful",
+                "token": token,
+                "user": {"id": str(existing.id), "name": existing.name, "email": existing.email, "role": existing.role},
+            }
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Registration failed")
 
     user = User(
