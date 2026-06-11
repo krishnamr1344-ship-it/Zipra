@@ -62,6 +62,13 @@ if 'discount_percent' not in existing_cols:
         conn.execute(text('ALTER TABLE products ADD COLUMN discount_percent INTEGER NOT NULL DEFAULT 0'))
         conn.commit()
 
+# Migrate existing users table: add is_deleted column if missing.
+user_cols = {c['name'] for c in inspector.get_columns('users')}
+if 'is_deleted' not in user_cols:
+    with engine.connect() as conn:
+        conn.execute(text("ALTER TABLE users ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT FALSE"))
+        conn.commit()
+
 app = FastAPI(
     title="Delivery App API",
     description="Secure backend for delivery application",
