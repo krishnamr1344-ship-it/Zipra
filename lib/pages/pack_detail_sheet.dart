@@ -3,6 +3,7 @@ import '../models/combo_pack.dart';
 import '../models/cart_model.dart';
 import '../services/api_service.dart';
 import '../widgets/app_snackbar.dart';
+import 'login_page.dart';
 
 class PackDetailSheet extends StatefulWidget {
   final ComboPack pack;
@@ -19,7 +20,16 @@ class _PackDetailSheetState extends State<PackDetailSheet> {
   static const _orange = Color(0xFFFF6B00);
   static const _bgWarm = Color(0xFFFFF8F3);
 
+  Future<bool> _requireLogin() async {
+    final token = await _api.getToken();
+    if (token != null) return true;
+    if (!mounted) return false;
+    final loggedIn = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => const LoginPage()));
+    return loggedIn == true;
+  }
+
   Future<void> _addToCart() async {
+    if (!await _requireLogin()) return;
     setState(() => _adding = true);
     try {
       final result = await _api.addPackToCart(widget.pack.id);

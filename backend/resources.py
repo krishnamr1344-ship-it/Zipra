@@ -469,7 +469,8 @@ def list_products(category_id: Optional[str] = None, db: Session = Depends(get_d
             price=round(float(p.price), 2),
             unit=p.unit,
             images=[img.image_url for img in p.images if not img.is_deleted],
-            stock=p.stock, is_enabled=enabled,
+            stock=p.stock, discount_percent=p.discount_percent,
+            is_enabled=enabled,
         ))
     return result
 
@@ -489,7 +490,8 @@ def get_product(product_id: str, db: Session = Depends(get_db)):
         price=round(float(p.price), 2),
         unit=p.unit,
         images=[img.image_url for img in p.images if not img.is_deleted],
-        stock=p.stock, is_enabled=p.flag.is_enabled if p.flag else True,
+        stock=p.stock, discount_percent=p.discount_percent,
+        is_enabled=p.flag.is_enabled if p.flag else True,
     )
 
 

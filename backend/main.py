@@ -51,10 +51,16 @@ if _missing:
 
 PUBLIC_PATHS_C4 = {"/", "/docs", "/openapi.json", "/redoc", "/api/auth/register", "/api/auth/login", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/app-version", "/api/categories", "/api/products", "/api/combo-packs", "/api/check-zone", "/api/places/search", "/api/places/reverse", "/api/suggest-product"}
 
-# Create all tables on startup.
+# Create all tables on startup (new tables only).
 Base.metadata.create_all(bind=engine)
-
-# ProductFlag table is created by create_all above — no migration needed
+# Migrate existing tables: add discount_percent column if missing.
+from sqlalchemy import inspect, text
+inspector = inspect(engine)
+existing_cols = {c['name'] for c in inspector.get_columns('products')}
+if 'discount_percent' not in existing_cols:
+    with engine.connect() as conn:
+        conn.execute(text('ALTER TABLE products ADD COLUMN discount_percent INTEGER NOT NULL DEFAULT 0'))
+        conn.commit()
 
 app = FastAPI(
     title="Delivery App API",

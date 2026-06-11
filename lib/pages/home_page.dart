@@ -187,6 +187,7 @@ class _HomePageState extends State<HomePage> {
       p['category_name'] ?? '',
       p['images'] is List ? (p['images'] as List).cast<String>() : [],
       isEnabled: p['is_enabled'] != false,
+      discountPercent: p['discount_percent'] ?? 0,
     );
     final enabled = _allProducts.where((p) => p['is_enabled'] != false);
     if (_selectedCategory == 'All') return enabled.map((p) => fromMap(p)).toList();
@@ -1168,7 +1169,8 @@ class _ProductData {
   final String category;
   final List<String> images;
   final bool isEnabled;
-  const _ProductData(this.id, this.icon, this.name, this.price, this.qty, this.category, this.images, {this.isEnabled = true});
+  final int discountPercent;
+  const _ProductData(this.id, this.icon, this.name, this.price, this.qty, this.category, this.images, {this.isEnabled = true, this.discountPercent = 0});
 }
 
 String _emojiFor(String name) {
@@ -1195,14 +1197,19 @@ Color _colorFor(String category) {
 }
 
 GroceryProduct _toGroceryProduct(_ProductData p) {
-  final mrp = (p.price * 1.18).round();
+  double? originalPrice;
+  int? discountPercent;
+  if (p.discountPercent > 0) {
+    discountPercent = p.discountPercent;
+    originalPrice = (p.price / (1 - p.discountPercent / 100)).round().toDouble();
+  }
   return GroceryProduct(
     id: p.id.hashCode,
     name: p.name,
     weight: p.qty,
     price: p.price.toDouble(),
-    originalPrice: mrp.toDouble(),
-    discountPercent: ((mrp - p.price) / mrp * 100).round(),
+    originalPrice: originalPrice,
+    discountPercent: discountPercent,
     emoji: _emojiFor(p.name),
     imageBg: _colorFor(p.category),
     isEnabled: p.isEnabled,

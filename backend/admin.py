@@ -80,7 +80,8 @@ def list_products(request: Request, db: Session = Depends(get_db)):
             name=p.name, description=p.description,
             price=round(float(p.price), 2), unit=p.unit,
             images=[img.image_url for img in p.images if not img.is_deleted],
-            stock=p.stock, is_enabled=p.flag.is_enabled if p.flag else True,
+            stock=p.stock, discount_percent=p.discount_percent,
+            is_enabled=p.flag.is_enabled if p.flag else True,
         ) for p in products
     ]
 
@@ -95,7 +96,7 @@ def create_product(body: ProductCreate, request: Request, db: Session = Depends(
         category_id=body.category_id, name=body.name.strip(),
         description=body.description.strip() if body.description else None,
         price=body.price, unit=body.unit.strip().lower(),
-        stock=body.stock,
+        stock=body.stock, discount_percent=body.discount_percent,
     )
     db.add(product)
     db.flush()
@@ -109,8 +110,10 @@ def create_product(body: ProductCreate, request: Request, db: Session = Depends(
         name=product.name, description=product.description,
         price=round(float(product.price), 2), unit=product.unit,
         images=[img.image_url for img in product.images if not img.is_deleted],
-        stock=product.stock, is_enabled=product.flag.is_enabled if product.flag else True,
+        stock=product.stock, discount_percent=product.discount_percent,
+        is_enabled=product.flag.is_enabled if product.flag else True,
     )
+
 
 @router.put("/products/{product_id}", response_model=ProductResponse)
 def update_product(product_id: str, body: ProductCreate, request: Request, db: Session = Depends(get_db)):
@@ -128,6 +131,7 @@ def update_product(product_id: str, body: ProductCreate, request: Request, db: S
     product.price = body.price
     product.unit = body.unit.strip().lower()
     product.stock = body.stock
+    product.discount_percent = body.discount_percent
     # Replace images
     for old_img in product.images:
         old_img.is_deleted = True
@@ -141,7 +145,8 @@ def update_product(product_id: str, body: ProductCreate, request: Request, db: S
         name=product.name, description=product.description,
         price=round(float(product.price), 2), unit=product.unit,
         images=[img.image_url for img in product.images if not img.is_deleted],
-        stock=product.stock, is_enabled=product.flag.is_enabled if product.flag else True,
+        stock=product.stock, discount_percent=product.discount_percent,
+        is_enabled=product.flag.is_enabled if product.flag else True,
     )
 
 

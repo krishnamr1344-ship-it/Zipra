@@ -60,6 +60,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
     final priceCtl = TextEditingController(text: product?['price']?.toString() ?? '');
     final unitCtl = TextEditingController(text: product?['unit'] ?? '');
     final stockCtl = TextEditingController(text: product?['stock']?.toString() ?? '0');
+    final discountCtl = TextEditingController(text: product?['discount_percent']?.toString() ?? '');
     final images = List.generate(3, (i) => TextEditingController(
       text: product != null && product['images'] != null && i < (product['images'] as List).length
           ? (product['images'] as List)[i] ?? ''
@@ -163,6 +164,17 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                   ),
                   keyboardType: TextInputType.number,
                 ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: discountCtl,
+                  decoration: InputDecoration(
+                    labelText: 'Discount %',
+                    hintText: 'e.g. 15 for 15% OFF',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
                 const SizedBox(height: 20),
                 const Text('Product Images (min 3)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF2D2D3A))),
                 const SizedBox(height: 8),
@@ -222,6 +234,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                           'price': double.parse(priceCtl.text),
                           'unit': unitCtl.text,
                           'stock': int.parse(stockCtl.text),
+                          'discount_percent': int.tryParse(discountCtl.text) ?? 0,
                           'images': images.map((c) => c.text.trim()).toList(),
                         };
                         if (product == null) {

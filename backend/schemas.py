@@ -184,6 +184,7 @@ class ProductCreate(BaseModel):
     unit: str
     images: list[str] = []
     stock: int = 0
+    discount_percent: int = 0
 
     @field_validator("name")
     @classmethod
@@ -239,6 +240,7 @@ class ProductResponse(BaseModel):
     unit: str
     images: list[str] = []
     stock: int
+    discount_percent: int = 0
     is_enabled: bool = True
 
     class Config:
