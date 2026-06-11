@@ -30,7 +30,7 @@ _blocked_ips: dict[str, float] = {}
 _rate_lock = threading.Lock()
 
 
-PUBLIC_PATHS = {"/", "/api/auth/register", "/api/auth/login", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/check-zone", "/api/categories", "/api/products", "/api/places/search", "/api/places/reverse", "/api/combo-packs", "/api/suggest-product", "/api/app-version", "/docs", "/openapi.json", "/redoc"}
+PUBLIC_PATHS = {"/", "/api/auth/register", "/api/auth/login", "/api/auth/logout", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/check-zone", "/api/categories", "/api/products", "/api/places/search", "/api/places/reverse", "/api/combo-packs", "/api/suggest-product", "/api/app-version", "/docs", "/openapi.json", "/redoc"}
 
 FAILURE_CODES = {401, 400, 422}
 

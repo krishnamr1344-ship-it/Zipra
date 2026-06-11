@@ -49,7 +49,7 @@ if not ADMIN_PASSWORD:
 if _missing:
     raise RuntimeError(f"Missing required environment variables: {', '.join(_missing)}")
 
-PUBLIC_PATHS_C4 = {"/", "/docs", "/openapi.json", "/redoc", "/api/auth/register", "/api/auth/login", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/app-version", "/api/categories", "/api/products", "/api/combo-packs", "/api/check-zone", "/api/places/search", "/api/places/reverse", "/api/suggest-product"}
+PUBLIC_PATHS_C4 = {"/", "/docs", "/openapi.json", "/redoc", "/api/auth/register", "/api/auth/login", "/api/auth/logout", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/app-version", "/api/categories", "/api/products", "/api/combo-packs", "/api/check-zone", "/api/places/search", "/api/places/reverse", "/api/suggest-product"}
 
 # Create all tables on startup (new tables only).
 Base.metadata.create_all(bind=engine)
