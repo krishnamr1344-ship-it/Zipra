@@ -80,7 +80,7 @@ def list_products(request: Request, db: Session = Depends(get_db)):
             name=p.name, description=p.description,
             price=round(float(p.price), 2), unit=p.unit,
             images=[img.image_url for img in p.images if not img.is_deleted],
-            stock=p.stock, is_enabled=p.is_enabled,
+            stock=p.stock, is_enabled=getattr(p, 'is_enabled', True),
         ) for p in products
     ]
 

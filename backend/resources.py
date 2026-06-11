@@ -456,6 +456,7 @@ def list_products(category_id: Optional[str] = None, db: Session = Depends(get_d
     products = query.order_by(Product.name).all()
     result = []
     for p in products:
+        enabled = getattr(p, 'is_enabled', True)
         result.append(ProductResponse(
             id=str(p.id),
             category_id=str(p.category_id),
@@ -465,7 +466,7 @@ def list_products(category_id: Optional[str] = None, db: Session = Depends(get_d
             price=round(float(p.price), 2),
             unit=p.unit,
             images=[img.image_url for img in p.images if not img.is_deleted],
-            stock=p.stock, is_enabled=p.is_enabled,
+            stock=p.stock, is_enabled=enabled,
         ))
     return result
 
@@ -485,7 +486,7 @@ def get_product(product_id: str, db: Session = Depends(get_db)):
         price=round(float(p.price), 2),
         unit=p.unit,
         images=[img.image_url for img in p.images if not img.is_deleted],
-        stock=p.stock, is_enabled=p.is_enabled,
+        stock=p.stock, is_enabled=getattr(p, 'is_enabled', True),
     )
 
 
