@@ -30,7 +30,7 @@ from auth import router as auth_router
 from middleware import RateLimitMiddleware
 from resources import router as resources_router
 from admin import router as admin_router
-from models import Category, Product, ProductImage, User, ComboPack, ComboPackItem, AppVersion, Notification
+from models import Category, Product, ProductImage, ProductFlag, User, ComboPack, ComboPackItem, AppVersion, Notification
 
 FRONTEND_URL = os.getenv("FRONTEND_URL")
 API_KEY = os.getenv("API_KEY")
@@ -54,13 +54,7 @@ PUBLIC_PATHS_C4 = {"/", "/docs", "/openapi.json", "/redoc", "/api/auth/register"
 # Create all tables on startup.
 Base.metadata.create_all(bind=engine)
 
-# Auto-migrate: add is_enabled column if not exists (deployed DB may lack it)
-try:
-    with engine.connect() as conn:
-        conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS is_enabled BOOLEAN NOT NULL DEFAULT TRUE"))
-        conn.commit()
-except Exception:
-    pass  # Column may already exist or migration not needed
+# ProductFlag table is created by create_all above — no migration needed
 
 app = FastAPI(
     title="Delivery App API",

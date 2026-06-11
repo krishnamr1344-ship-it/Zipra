@@ -77,7 +77,6 @@ class Product(Base):
     unit = Column(String(20), nullable=False)
     image = Column(String(500), nullable=True)
     stock = Column(Integer, default=0, nullable=False)
-    is_enabled = Column(Boolean, default=True, nullable=False)
     is_deleted = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
@@ -91,6 +90,16 @@ class Product(Base):
     )
     cart_items = relationship("CartItem", back_populates="product")
     order_items = relationship("OrderItem", back_populates="product")
+
+
+class ProductFlag(Base):
+    __tablename__ = "product_flags"
+    product_id = Column(UUID(as_uuid=True), ForeignKey("products.id", ondelete="CASCADE"), primary_key=True)
+    is_enabled = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+
+    product = relationship("Product", backref="flag", uselist=False)
 
 
 class Address(Base):
