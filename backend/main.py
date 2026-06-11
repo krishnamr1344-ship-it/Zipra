@@ -55,9 +55,12 @@ PUBLIC_PATHS_C4 = {"/", "/docs", "/openapi.json", "/redoc", "/api/auth/register"
 Base.metadata.create_all(bind=engine)
 
 # Auto-migrate: add is_enabled column if not exists (deployed DB may lack it)
-with engine.connect() as conn:
-    conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS is_enabled BOOLEAN NOT NULL DEFAULT TRUE"))
-    conn.commit()
+try:
+    with engine.connect() as conn:
+        conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS is_enabled BOOLEAN NOT NULL DEFAULT TRUE"))
+        conn.commit()
+except Exception:
+    pass  # Column may already exist or migration not needed
 
 app = FastAPI(
     title="Delivery App API",
