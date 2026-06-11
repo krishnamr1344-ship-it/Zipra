@@ -522,16 +522,16 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         ),
         child: SafeArea(
           top: false,
-          child: SizedBox(
+            child: SizedBox(
             height: 52,
             child: ElevatedButton.icon(
-              onPressed: widget.onAdd,
+              onPressed: widget.isEnabled ? widget.onAdd : null,
               icon: Icon(
                 widget.inCart ? Icons.check : Icons.add_shopping_cart,
                 size: 20,
               ),
               label: Text(
-                widget.inCart ? 'Added to Cart' : 'Add to Cart — ₹$totalPrice',
+                !widget.isEnabled ? 'Unavailable' : (widget.inCart ? 'Added to Cart' : 'Add to Cart — ₹$totalPrice'),
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,

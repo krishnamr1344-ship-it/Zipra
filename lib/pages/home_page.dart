@@ -188,8 +188,9 @@ class _HomePageState extends State<HomePage> {
       p['images'] is List ? (p['images'] as List).cast<String>() : [],
       isEnabled: p['is_enabled'] != false,
     );
-    if (_selectedCategory == 'All') return _allProducts.map((p) => fromMap(p)).toList();
-    return _allProducts.where((p) => p['category_name'] == _selectedCategory).map((p) => fromMap(p)).toList();
+    final enabled = _allProducts.where((p) => p['is_enabled'] != false);
+    if (_selectedCategory == 'All') return enabled.map((p) => fromMap(p)).toList();
+    return enabled.where((p) => p['category_name'] == _selectedCategory).map((p) => fromMap(p)).toList();
   }
 
   Future<void> _loadData() async {

@@ -16,7 +16,7 @@ from sqlalchemy import (
     ForeignKey, UniqueConstraint, Index,
 )
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 
 from database import Base
 
@@ -99,7 +99,7 @@ class ProductFlag(Base):
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
 
-    product = relationship("Product", backref="flag", uselist=False)
+    product = relationship("Product", backref=backref("flag", uselist=False), uselist=False)
 
 
 class Address(Base):

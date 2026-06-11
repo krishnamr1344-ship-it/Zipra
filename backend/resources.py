@@ -356,6 +356,8 @@ def _get_product_or_404(prod_id: str, db: Session, for_update: bool = False) -> 
     prod = query.first()
     if not prod:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+    if prod.flag is not None and not prod.flag.is_enabled:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
     return prod
 
 
@@ -454,6 +456,7 @@ def list_products(category_id: Optional[str] = None, db: Session = Depends(get_d
         _validate_uuid(category_id)
         query = query.filter(Product.category_id == category_id)
     products = query.order_by(Product.name).all()
+    products = [p for p in products if p.flag is None or p.flag.is_enabled]
     result = []
     for p in products:
         enabled = p.flag.is_enabled if p.flag else True
@@ -475,7 +478,7 @@ def list_products(category_id: Optional[str] = None, db: Session = Depends(get_d
 def get_product(product_id: str, db: Session = Depends(get_db)):
     _validate_uuid(product_id)
     p = db.query(Product).filter(Product.id == product_id, Product.is_deleted == False).first()
-    if not p:
+    if not p or (p.flag is not None and not p.flag.is_enabled):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
     return ProductResponse(
         id=str(p.id),
