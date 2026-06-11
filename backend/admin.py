@@ -110,6 +110,7 @@ def create_product(body: ProductCreate, request: Request, db: Session = Depends(
         price=round(float(product.price), 2), unit=product.unit,
         images=[img.image_url for img in product.images if not img.is_deleted],
         stock=product.stock, is_enabled=product.flag.is_enabled if product.flag else True,
+    )
 
 @router.put("/products/{product_id}", response_model=ProductResponse)
 def update_product(product_id: str, body: ProductCreate, request: Request, db: Session = Depends(get_db)):
