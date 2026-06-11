@@ -100,7 +100,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                 ),
                 const SizedBox(height: 24),
                 DropdownButtonFormField<String>(
-                  value: catId,
+                  initialValue: catId,
                   decoration: InputDecoration(
                     labelText: 'Category',
                     errorText: catError,

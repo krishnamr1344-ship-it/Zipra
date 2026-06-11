@@ -28,7 +28,6 @@ class CartItem {
 class CartNotifier extends ChangeNotifier {
   final ApiService _api = ApiService();
   final List<CartItem> _items = [];
-  bool _loaded = false;
 
   List<CartItem> get items => List.unmodifiable(_items);
   int get itemCount => _items.fold(0, (sum, item) => sum + item.count);
@@ -38,7 +37,7 @@ class CartNotifier extends ChangeNotifier {
     try {
       final data = await _api.getCart();
       _items.clear();
-      for (final item in data as List<dynamic>) {
+      for (final item in data) {
         final map = item as Map<String, dynamic>;
         _items.add(CartItem(
           id: map['id'] ?? '',
@@ -50,10 +49,8 @@ class CartNotifier extends ChangeNotifier {
           count: map['quantity'] ?? 1,
         ));
       }
-      _loaded = true;
       notifyListeners();
     } catch (_) {
-      _loaded = true;
       notifyListeners();
     }
   }
@@ -146,7 +143,6 @@ final cartNotifier = CartNotifier();
 class WishlistNotifier extends ChangeNotifier {
   final ApiService _api = ApiService();
   final Set<String> _items = {};
-  bool _loaded = false;
 
   Set<String> get items => Set.unmodifiable(_items);
   int get itemCount => _items.length;
@@ -155,11 +151,10 @@ class WishlistNotifier extends ChangeNotifier {
     try {
       final data = await _api.getWishlist();
       _items.clear();
-      for (final item in data as List<dynamic>) {
+      for (final item in data) {
         final map = item as Map<String, dynamic>;
         _items.add(map['product_id'] as String);
       }
-      _loaded = true;
       notifyListeners();
     } catch (_) {}
   }

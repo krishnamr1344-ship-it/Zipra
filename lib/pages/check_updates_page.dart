@@ -15,7 +15,6 @@ class CheckUpdatesPage extends StatefulWidget {
 class _CheckUpdatesPageState extends State<CheckUpdatesPage> {
   final _api = ApiService();
   bool _checking = true;
-  bool _checked = false;
   bool _hasUpdate = false;
   String? _error;
   String _latestVersion = '';
@@ -29,7 +28,7 @@ class _CheckUpdatesPageState extends State<CheckUpdatesPage> {
   }
 
   Future<void> _performCheck() async {
-    setState(() { _checking = true; _checked = false; _error = null; });
+    setState(() { _checking = true; _error = null; });
     try {
       final data = await _api.getAppVersion();
       if (!mounted) return;
@@ -42,14 +41,12 @@ class _CheckUpdatesPageState extends State<CheckUpdatesPage> {
 
       setState(() {
         _checking = false;
-        _checked = true;
         _hasUpdate = _compareVersions(installed, latest) < 0;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _checking = false;
-        _checked = true;
         _error = 'Failed to check for updates.\nPlease try again later.';
       });
     }
