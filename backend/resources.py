@@ -291,7 +291,12 @@ def _extract_area(addr_data: dict) -> str:
                 if not stripped_primary or stripped_primary not in val.lower():
                     return _ZONE_RE.sub("", val).strip()
 
-        # Try ward/division number mapping from neighbourhood field
+        # Prefer zone-stripped suburb name over ward mapping
+        # e.g. "Zone 8 Anna Nagar" → "Anna Nagar"
+        if stripped_primary:
+            return _ZONE_RE.sub("", primary).strip()
+
+        # Last resort: try ward/division number mapping from neighbourhood field
         neighbourhood = addr_data.get("neighbourhood") or ""
         ward_match = _re.search(r"(?:Division|Ward)\s*(\d+)", neighbourhood, _re.IGNORECASE)
         if ward_match:
