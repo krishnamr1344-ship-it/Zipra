@@ -9,7 +9,9 @@ Security:
   - SQLAlchemy ORM only — no raw SQL.
   - Soft-delete used everywhere (is_deleted flag).
 """
+import logging
 import json
+logger = logging.getLogger(__name__)
 import uuid
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -280,8 +282,8 @@ def _extract_area(addr_data: dict) -> str:
     if "zone" in primary.lower():
         stripped_primary = _ZONE_RE.sub("", primary).strip().lower()
 
-        # Try locality-specific fields (railway, station, metro, locality, hamlet)
-        for key in ("railway", "station", "metro", "locality", "hamlet"):
+        # Try locality-specific fields (railway, station, metro, locality, hamlet, neighbourhood)
+        for key in ("railway", "station", "metro", "locality", "hamlet", "neighbourhood"):
             val = addr_data.get(key)
             if val and "zone" not in val.lower():
                 # Skip if the specific value is just a POI named after the primary area
@@ -639,8 +641,8 @@ def create_address_from_gps(body: GpsAddressCreate, request: Request, db: Sessio
                 address_line2 = f"{area}, {city}" if area and city else area or None
                 state = addr_data.get("state") or "Unknown"
                 pincode = addr_data.get("postcode") or "000000"
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Nominatim reverse geocode failed: %s", e)
 
     # If user already has a GPS auto-created address, update it
     existing_gps = db.query(Address).filter(
@@ -742,7 +744,7 @@ def reverse_geocode(lat: float, lng: float, db: Session = Depends(get_db)):
         return {
             "display_name": data.get("display_name", ""),
             "address_line1": ", ".join(parts) if parts else data.get("display_name", ""),
-            "address_line2": f"{area}, {city}" if area and city else (area or ""),
+            "address_line2": area or city or "",
             "city": city,
             "state": addr_data.get("state") or "",
             "pincode": addr_data.get("postcode") or "",
@@ -752,7 +754,7 @@ def reverse_geocode(lat: float, lng: float, db: Session = Depends(get_db)):
 
 
 @router.get("/places/search")
-def search_places(q: str, request: Request, db: Session = Depends(get_db)):
+def search_places(q: str, db: Session = Depends(get_db)):
     try:
         import httpx
         with httpx.Client(timeout=httpx.Timeout(10.0, connect=5, read=8, write=5, pool=5)) as client:
@@ -1212,7 +1214,7 @@ def process_payment(body: PaymentProcessRequest, request: Request, db: Session =
         user_id=user_id,
         amount=order.total_amount,
         method=body.method,
-        status="completed",
+        status="success",
         transaction_id="COD" + datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S") + str(uuid.uuid4()).split("-")[0],
     )
     order.status = "Confirmed"
@@ -1405,8 +1407,10 @@ def get_latest_app_version(db: Session = Depends(get_db)):
 @router.get("/notifications", response_model=list[NotificationResponse])
 def list_notifications(request: Request, db: Session = Depends(get_db)):
     _get_user_id(request)
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
     notifications = db.query(Notification).filter(
         Notification.is_deleted == False,
+        Notification.created_at >= cutoff,
     ).order_by(Notification.created_at.desc()).limit(50).all()
     return [
         NotificationResponse(
