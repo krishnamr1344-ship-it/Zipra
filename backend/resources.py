@@ -268,9 +268,11 @@ def _extract_area(addr_data: dict) -> str:
        Only use them if the zone-stripped primary is NOT a substring of the
        specific value (avoids picking POI names like "Anna Nagar Tower Exit"
        over the correct "Anna Nagar").
-    2. If no suitable specific field found, try to extract a ward/division
-       number from the neighbourhood field and look it up in _WARD_TO_LOCALITY.
-    3. Fall back to zone-stripped primary name.
+    2. If no suitable specific field found, prefer the zone-stripped suburb
+       name (e.g. "Zone 8 Anna Nagar" → "Anna Nagar") over ward mapping,
+       since the zone name is generally more accurate.
+    3. Last resort: extract ward/division number from neighbourhood field
+       and look it up in _WARD_TO_LOCALITY.
     """
     primary = ""
     for key in ("suburb", "neighbourhood", "city_district", "city"):
@@ -643,7 +645,7 @@ def create_address_from_gps(body: GpsAddressCreate, request: Request, db: Sessio
                     parts.append(house)
                 city = addr_data.get("city") or addr_data.get("town") or addr_data.get("village") or addr_data.get("county") or "Unknown"
                 address_line1 = ", ".join(parts) if parts else data.get("display_name", address_line1)
-                address_line2 = f"{area}, {city}" if area and city else area or None
+                address_line2 = area or city or None
                 state = addr_data.get("state") or "Unknown"
                 pincode = addr_data.get("postcode") or "000000"
     except Exception as e:

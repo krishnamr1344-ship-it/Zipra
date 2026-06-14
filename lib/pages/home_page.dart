@@ -33,13 +33,15 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   final _api = ApiService();
   int _selectedIndex = 0;
   String _locationArea = '';
   String _locationDetail = '';
   String _selectedCategory = 'All';
   Map<String, dynamic>? _user;
+  bool _firstResume = true;
+  bool _detecting = false;
 
   List<String> _categories = ['All'];
   List<Map<String, dynamic>> _allProducts = [];
@@ -99,6 +101,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadProfile();
     _loadData();
     _loadGpsAddress();
@@ -108,7 +111,19 @@ class _HomePageState extends State<HomePage> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      if (_firstResume) {
+        _firstResume = false;
+        return;
+      }
+      _detectCurrentLocation();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _searchController.dispose();
     super.dispose();
   }
@@ -130,7 +145,8 @@ class _HomePageState extends State<HomePage> {
           final result = await DeliveryZoneService().checkLocation(lat, lng);
           if (!mounted) return;
           setState(() { _serviceable = result.serviceable; _zoneChecked = true; });
-        } catch (_) {
+        } catch (e) {
+        debugPrint("pages.home_page: $e");
           if (!mounted) return;
           setState(() { _serviceable = true; _zoneChecked = true; });
         }
@@ -141,39 +157,47 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _detectCurrentLocation() async {
-    setState(() { _locationArea = 'Detecting...'; _locationDetail = ''; });
-    final loc = await LocationService().getCurrentLocation();
-    if (!mounted) return;
-    if (loc.error != null) {
-      setState(() { _locationArea = 'Set Location'; _locationDetail = 'Tap to set your area'; _zoneChecked = true; });
-      return;
-    }
+    if (_detecting) return;
+    _detecting = true;
     try {
-      final data = await _api.reverseGeocode(loc.latitude, loc.longitude);
+      setState(() { _locationArea = 'Detecting...'; _locationDetail = ''; });
+      final loc = await LocationService().getCurrentLocation();
       if (!mounted) return;
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('gps_address_line', data['address_line1'] ?? '');
-      await prefs.setString('gps_address_line2', data['address_line2'] ?? '');
-      await prefs.setString('gps_city', data['city'] ?? '');
-      await prefs.setString('gps_latitude', '${loc.latitude}');
-      await prefs.setString('gps_longitude', '${loc.longitude}');
-      final area = data['address_line2'] ?? '';
-      final city = data['city'] ?? '';
-      final line1 = data['address_line1'] ?? '';
-      if (mounted) setState(() {
-        _locationArea = area.isNotEmpty ? area : city.isNotEmpty ? city : 'Set Location';
-        _locationDetail = line1;
-      });
-    } catch (_) {
-      if (mounted) setState(() { _locationArea = 'Set Location'; _locationDetail = 'Tap to set your area'; });
-    }
-    try {
-      final zoneResult = await DeliveryZoneService().checkLocation(loc.latitude, loc.longitude);
-      if (!mounted) return;
-      setState(() { _serviceable = zoneResult.serviceable; _zoneChecked = true; });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() { _serviceable = true; _zoneChecked = true; });
+      if (loc.error != null) {
+        setState(() { _locationArea = 'Set Location'; _locationDetail = 'Tap to set your area'; _zoneChecked = true; });
+        return;
+      }
+      try {
+        final data = await _api.reverseGeocode(loc.latitude, loc.longitude);
+        if (!mounted) return;
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('gps_address_line', data['address_line1'] ?? '');
+        await prefs.setString('gps_address_line2', data['address_line2'] ?? '');
+        await prefs.setString('gps_city', data['city'] ?? '');
+        await prefs.setString('gps_latitude', '${loc.latitude}');
+        await prefs.setString('gps_longitude', '${loc.longitude}');
+        final area = data['address_line2'] ?? '';
+        final city = data['city'] ?? '';
+        final line1 = data['address_line1'] ?? '';
+        if (mounted) setState(() {
+          _locationArea = area.isNotEmpty ? area : city.isNotEmpty ? city : 'Set Location';
+          _locationDetail = line1;
+        });
+      } catch (e) {
+          debugPrint("pages.home_page: $e");
+        if (mounted) setState(() { _locationArea = 'Set Location'; _locationDetail = 'Tap to set your area'; });
+      }
+      try {
+        final zoneResult = await DeliveryZoneService().checkLocation(loc.latitude, loc.longitude);
+        if (!mounted) return;
+        setState(() { _serviceable = zoneResult.serviceable; _zoneChecked = true; });
+      } catch (e) {
+          debugPrint("pages.home_page: $e");
+        if (!mounted) return;
+        setState(() { _serviceable = true; _zoneChecked = true; });
+      }
+    } finally {
+      _detecting = false;
     }
   }
 
@@ -182,7 +206,7 @@ class _HomePageState extends State<HomePage> {
       p['id'] ?? '',
       _catIcon(p['category_name'] ?? ''),
       p['name'] ?? '',
-      (p['price'] ?? 0).toInt(),
+      ((p['price'] ?? 0) as num).toDouble().round(),
       p['unit'] ?? '',
       p['category_name'] ?? '',
       p['images'] is List ? (p['images'] as List).cast<String>() : [],
@@ -231,7 +255,8 @@ class _HomePageState extends State<HomePage> {
       final userData = await _api.getSavedUser();
       if (!mounted) return;
       setState(() => _user = userData);
-    } catch (_) {}
+    } catch (e) {
+        debugPrint("pages.home_page: $e");}
   }
 
   Future<bool> _requireLogin() async {
@@ -242,8 +267,23 @@ class _HomePageState extends State<HomePage> {
     return loggedIn == true;
   }
 
+  void _onTabSelected(int index) async {
+    if (index == 0) {
+      setState(() => _selectedIndex = 0);
+      return;
+    }
+    if (!await _requireLogin()) return;
+    _loadProfile();
+    setState(() => _selectedIndex = index);
+  }
+
   Future<void> _logout() async {
     await _api.logout();
+    final prefs = await SharedPreferences.getInstance();
+    final gpsKeys = ['gps_address_id', 'gps_address_line', 'gps_address_line2', 'gps_city', 'gps_landmark', 'gps_latitude', 'gps_longitude', 'gps_pincode', 'gps_address_type', 'gps_house_number', 'gps_floor_number'];
+    for (final key in gpsKeys) {
+      await prefs.remove(key);
+    }
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginPage()),
@@ -252,14 +292,16 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _showLocationPicker() async {
-    final openMap = await showModalBottomSheet<bool>(
+    final action = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (_) => const LocationPickerSheet(),
     );
     if (!mounted) return;
-    if (openMap == true) {
+    if (action == 'redetect') {
+      _detectCurrentLocation();
+    } else if (action == 'map') {
       final confirmed = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => const MapPickerPage()));
       if (confirmed == true) _loadGpsAddress();
     } else {
@@ -312,20 +354,7 @@ class _HomePageState extends State<HomePage> {
                 final isSelected = _selectedIndex == i;
                 return Expanded(
                   child: GestureDetector(
-                    onTap: () async {
-                      if (i >= 3) {
-                        final token = await _api.getToken();
-                        if (token == null) {
-                          if (!mounted) return;
-                          final loggedIn = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => const LoginPage()));
-                          if (loggedIn != true) return;
-                          if (!mounted) return;
-                          await _loadProfile();
-                        }
-                      }
-                      if (!mounted) return;
-                      setState(() => _selectedIndex = i);
-                    },
+                    onTap: () => _onTabSelected(i),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -902,7 +931,7 @@ class _HomePageState extends State<HomePage> {
               ProductGrid(
                 products: products.map((p) => _toGroceryProduct(p)).toList(),
                 cartMap: {for (final p in products) p.id.hashCode: cartNotifier.isInCart(p.id)},
-                favMap: {for (final p in products) p.name: wishlistNotifier.contains(p.id)},
+                favMap: {for (final p in products) p.id.hashCode: wishlistNotifier.contains(p.id)},
                 getImages: (gp) {
                   final p = products.firstWhere((e) => e.name == gp.name);
                   return p.images;
