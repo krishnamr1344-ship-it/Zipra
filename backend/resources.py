@@ -282,8 +282,8 @@ def _extract_area(addr_data: dict) -> str:
     if "zone" in primary.lower():
         stripped_primary = _ZONE_RE.sub("", primary).strip().lower()
 
-        # Try locality-specific fields (railway, station, metro, locality, hamlet, neighbourhood)
-        for key in ("railway", "station", "metro", "locality", "hamlet", "neighbourhood"):
+        # Try locality-specific fields (railway, station, metro, locality, hamlet)
+        for key in ("railway", "station", "metro", "locality", "hamlet"):
             val = addr_data.get(key)
             if val and "zone" not in val.lower():
                 # Skip if the specific value is just a POI named after the primary area
