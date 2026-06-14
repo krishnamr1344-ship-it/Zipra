@@ -552,6 +552,10 @@ class ApiService {
     final headers = await _authHeaders();
     if (headers['Authorization'] == null) return [];
     final res = await http.get(Uri.parse('$_baseUrl/api/orders'), headers: headers).timeout(const Duration(seconds: 60));
+    if (res.statusCode == 401) {
+      await _clearToken();
+      return [];
+    }
     return _handleListResponse(res);
   }
 

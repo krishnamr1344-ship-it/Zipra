@@ -7,6 +7,7 @@ class ProductDetailPage extends StatefulWidget {
   final IconData icon;
   final Color color;
   final String name;
+  final String productId;
   final int price;
   final String qty;
   final List<String> images;
@@ -20,6 +21,7 @@ class ProductDetailPage extends StatefulWidget {
     required this.icon,
     required this.color,
     required this.name,
+    required this.productId,
     required this.price,
     required this.qty,
     this.images = const [],
@@ -89,7 +91,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isFav = wishlistNotifier.contains(widget.name);
+    final isFav = wishlistNotifier.contains(widget.productId);
     final displayImages = widget.images.where((i) => i.isNotEmpty).toList();
     final totalPrice = widget.price * _qty;
     final originalPrice = widget.discountPercent > 0
@@ -285,7 +287,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () => wishlistNotifier.toggle(widget.name),
+                        onTap: () => wishlistNotifier.toggle(widget.productId),
                         child: Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(

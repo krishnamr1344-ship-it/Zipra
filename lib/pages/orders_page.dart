@@ -3,6 +3,7 @@ import '../constants/theme.dart';
 import '../models/cart_model.dart';
 import '../services/api_service.dart';
 import '../widgets/state_widgets.dart';
+import 'login_page.dart';
 import 'order_detail_page.dart';
 
 class OrdersPage extends StatefulWidget {
@@ -26,8 +27,15 @@ class _OrdersPageState extends State<OrdersPage> {
   Future<void> _refresh() async {
     setState(() { _loading = true; _error = false; });
     try {
-      final orders = await ApiService().getOrders();
+      final api = ApiService();
+      final hadToken = await api.getToken() != null;
+      final orders = await api.getOrders();
       if (!mounted) return;
+      if (hadToken && await api.getToken() == null) {
+        if (!mounted) return;
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginPage()));
+        return;
+      }
       setState(() { _apiOrders = orders.cast<Map<String, dynamic>>(); _loading = false; });
     } catch (_) {
       if (!mounted) return;

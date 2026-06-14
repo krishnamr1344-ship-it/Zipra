@@ -915,8 +915,9 @@ class _HomePageState extends State<HomePage> {
                   if (!mounted) return;
                   AppSnackbar.show(context, '${p.name} added to cart');
                 },
-                onFav: (gp) {
+                onFav: (gp) async {
                   final p = products.firstWhere((e) => e.name == gp.name);
+                  if (!await _requireLogin()) return;
                   wishlistNotifier.toggle(p.id);
                 },
                 onTap: (gp) {
@@ -924,7 +925,7 @@ class _HomePageState extends State<HomePage> {
                   final count = cartNotifier.itemCountFor(p.id);
                   Navigator.push(context, MaterialPageRoute(
                     builder: (_) => ProductDetailPage(
-                      icon: p.icon, color: _orange, name: p.name, price: p.price, qty: p.qty, images: p.images,
+                      icon: p.icon, color: _orange, name: p.name, productId: p.id, price: p.price, qty: p.qty, images: p.images,
                       inCart: count > 0, isEnabled: p.isEnabled, discountPercent: p.discountPercent,
                       onAdd: () async {
                         if (!await _requireLogin()) return;
