@@ -104,7 +104,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _loadProfile();
     _loadData();
-    _loadGpsAddress();
+    _checkAndDetectLocation();
     cartNotifier.load();
     wishlistNotifier.load();
     notificationService.load();
@@ -117,7 +117,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         _firstResume = false;
         return;
       }
-      _detectCurrentLocation();
+      _checkAndDetectLocation();
     }
   }
 
@@ -128,77 +128,69 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  Future<void> _loadGpsAddress() async {
-    final addr = await LocationService.getSavedGpsAddress();
-    if (addr['address_line1'] != null && addr['address_line1']!.isNotEmpty) {
-      final line1 = addr['address_line1']!;
-      final line2 = addr['address_line2'] ?? '';
-      final city = addr['city'] ?? '';
-      setState(() {
-        _locationArea = line2.isNotEmpty ? line2 : city.isNotEmpty ? city : 'Set Location';
-        _locationDetail = line1;
-      });
-      final lat = double.tryParse(addr['latitude'] ?? '');
-      final lng = double.tryParse(addr['longitude'] ?? '');
-      if (lat != null && lng != null) {
-        try {
-          final result = await DeliveryZoneService().checkLocation(lat, lng);
-          if (!mounted) return;
-          setState(() { _serviceable = result.serviceable; _zoneChecked = true; });
-        } catch (e) {
-        debugPrint("pages.home_page: $e");
-          if (!mounted) return;
-          setState(() { _serviceable = true; _zoneChecked = true; });
-        }
-      }
-    } else {
-      _detectCurrentLocation();
-    }
-  }
 
-  Future<void> _detectCurrentLocation() async {
+  Future<void> _checkAndDetectLocation() async {
     if (_detecting) return;
     _detecting = true;
     try {
-      setState(() { _locationArea = 'Detecting...'; _locationDetail = ''; });
+      setState(() { _locationArea = 'Checking GPS...'; _locationDetail = ''; });
       final loc = await LocationService().getCurrentLocation();
       if (!mounted) return;
+
       if (loc.error != null) {
-        setState(() { _locationArea = 'Set Location'; _locationDetail = 'Tap to set your area'; _zoneChecked = true; });
+        debugPrint('GPS check failed: ${loc.error}');
+        String msg;
+        if (loc.error!.contains('disabled')) {
+          msg = 'Please enable GPS';
+        } else if (loc.error!.contains('deniedForever')) {
+          msg = 'Location blocked';
+        } else {
+          msg = 'Set Location';
+        }
+        if (mounted) setState(() { _locationArea = msg; _locationDetail = ''; _zoneChecked = true; });
         return;
       }
-      try {
-        final data = await _api.reverseGeocode(loc.latitude, loc.longitude);
-        if (!mounted) return;
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('gps_address_line', data['address_line1'] ?? '');
-        await prefs.setString('gps_address_line2', data['address_line2'] ?? '');
-        await prefs.setString('gps_city', data['city'] ?? '');
-        await prefs.setString('gps_latitude', '${loc.latitude}');
-        await prefs.setString('gps_longitude', '${loc.longitude}');
-        final area = data['address_line2'] ?? '';
-        final city = data['city'] ?? '';
-        final line1 = data['address_line1'] ?? '';
-        if (mounted) setState(() {
-          _locationArea = area.isNotEmpty ? area : city.isNotEmpty ? city : 'Set Location';
-          _locationDetail = line1;
-        });
-      } catch (e) {
-          debugPrint("pages.home_page: $e");
-        if (mounted) setState(() { _locationArea = 'Set Location'; _locationDetail = 'Tap to set your area'; });
+
+      debugPrint('GPS coords: ${loc.latitude}, ${loc.longitude}');
+      final data = await _api.reverseGeocode(loc.latitude, loc.longitude);
+      debugPrint('Reverse geocode result: ${data['address_line2']}, ${data['address_line1']}');
+
+      if (loc.latitude == 0 && loc.longitude == 0 && mounted) {
+        setState(() { _locationArea = 'Set Location'; _locationDetail = ''; });
+        return;
       }
+
+      final area = data['address_line2'] ?? '';
+      final line1 = data['address_line1'] ?? '';
+      debugPrint('Final displayed area: $area');
+
+      if (mounted) setState(() {
+        _locationArea = area.isNotEmpty ? area : 'Set Location';
+        _locationDetail = line1;
+      });
+
       try {
         final zoneResult = await DeliveryZoneService().checkLocation(loc.latitude, loc.longitude);
         if (!mounted) return;
         setState(() { _serviceable = zoneResult.serviceable; _zoneChecked = true; });
       } catch (e) {
-          debugPrint("pages.home_page: $e");
+        debugPrint("pages.home_page zone: $e");
         if (!mounted) return;
         setState(() { _serviceable = true; _zoneChecked = true; });
       }
     } finally {
       _detecting = false;
     }
+  }
+
+  Future<void> _readSavedLocation() async {
+    final prefs = await SharedPreferences.getInstance();
+    final line2 = prefs.getString('gps_address_line2') ?? '';
+    final line1 = prefs.getString('gps_address_line') ?? '';
+    if (mounted) setState(() {
+      _locationArea = line2.isNotEmpty ? line2 : 'Set Location';
+      _locationDetail = line1;
+    });
   }
 
   List<_ProductData> get _filteredProducts {
@@ -246,7 +238,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Future<void> _retryLoad() async {
-    await _loadGpsAddress();
+    _checkAndDetectLocation();
     await _loadData();
   }
 
@@ -292,6 +284,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Future<void> _showLocationPicker() async {
+    await _checkAndDetectLocation();
+    if (!mounted) return;
+
     final action = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -300,12 +295,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     );
     if (!mounted) return;
     if (action == 'redetect') {
-      _detectCurrentLocation();
+      _checkAndDetectLocation();
     } else if (action == 'map') {
       final confirmed = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => const MapPickerPage()));
-      if (confirmed == true) _loadGpsAddress();
-    } else {
-      _loadGpsAddress();
+      if (confirmed == true) _readSavedLocation();
     }
   }
 
