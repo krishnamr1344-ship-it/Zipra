@@ -7,7 +7,9 @@ Security:
   - On /logout, token JTI saved to blacklist table.
   - Generic error messages only — never leak DB or stack details.
 """
+import logging
 import hashlib
+logger = logging.getLogger(__name__)
 import os
 import secrets
 import string
@@ -24,7 +26,7 @@ from models import User, TokenBlacklist, PasswordResetCode
 from schemas import RegisterRequest, LoginRequest, LogoutRequest, UpdateProfileRequest, ForgotPasswordRequest, ResetPasswordRequest
 
 JWT_SECRET = os.getenv("JWT_SECRET")
-JWT_EXPIRY_MINUTES = int(os.getenv("JWT_EXPIRY_MINUTES", "30"))
+JWT_EXPIRY_MINUTES = int(os.getenv("JWT_EXPIRY_MINUTES", "1440"))
 BCRYPT_ROUNDS = int(os.getenv("BCRYPT_ROUNDS", "12"))
 
 if not JWT_SECRET:
@@ -206,7 +208,11 @@ def update_profile(body: UpdateProfileRequest, request: Request, db: Session = D
     if body.name is not None:
         user.name = body.name.strip()
     if body.email is not None:
-        user.email = body.email.strip()
+        new_email = body.email.strip()
+        existing_user = db.query(User).filter(User.email == new_email, User.id != user_id, User.is_deleted == False).first()
+        if existing_user:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already in use")
+        user.email = new_email
     if body.phone is not None:
         user.phone = body.phone.strip()
     db.commit()
@@ -244,6 +250,8 @@ def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
     )
     db.add(reset_code)
     db.commit()
+    # TODO: Send code via email/SMS
+    # logger.info("Password reset code for %s: %s", body.email, code)
     return {
         "message": "If this email is registered, a reset code has been generated",
     }

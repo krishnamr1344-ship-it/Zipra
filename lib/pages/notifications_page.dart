@@ -11,18 +11,23 @@ class NotificationsPage extends StatefulWidget {
 }
 
 class _NotificationsPageState extends State<NotificationsPage> {
+  bool _listenerAdded = false;
+
   @override
   void initState() {
     super.initState();
     if (!notificationService.loaded) {
       notificationService.addListener(_onData);
+      _listenerAdded = true;
       notificationService.load();
     }
   }
 
   @override
   void dispose() {
-    notificationService.removeListener(_onData);
+    if (_listenerAdded) {
+      notificationService.removeListener(_onData);
+    }
     super.dispose();
   }
 

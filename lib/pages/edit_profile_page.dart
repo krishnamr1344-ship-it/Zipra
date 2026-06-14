@@ -34,7 +34,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
     setState(() => _saving = true);
     try {
       await _api.updateProfile(_nameCtl.text.trim(), _emailCtl.text.trim(), phone: _phoneCtl.text.trim());
-    } catch (_) {
+    } catch (e) {
+        debugPrint("pages.edit_profile_page: $e");
       // Fallback to local save if API fails
       await _api.saveUser(_nameCtl.text.trim(), _emailCtl.text.trim(), phone: _phoneCtl.text.trim());
     }

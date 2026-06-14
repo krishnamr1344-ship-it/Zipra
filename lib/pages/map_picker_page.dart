@@ -61,7 +61,8 @@ class _MapPickerPageState extends State<MapPickerPage> {
         _addressLine2 = data['address_line2'] ?? '';
         _city = data['city'] ?? '';
       });
-    } catch (_) {
+    } catch (e) {
+        debugPrint("pages.map_picker_page: $e");
       if (mounted) AppSnackbar.show(context, 'Could not fetch address', type: SnackbarType.error);
     }
     if (mounted) setState(() => _geocoding = false);
@@ -105,7 +106,8 @@ class _MapPickerPageState extends State<MapPickerPage> {
         await prefs.setString('gps_address_type', addr['address_type'] ?? '');
         await prefs.setString('gps_house_number', addr['house_number'] ?? '');
         await prefs.setString('gps_floor_number', addr['floor_number'] ?? '');
-      } catch (_) {}
+      } catch (e) {
+        debugPrint("pages.map_picker_page: $e");}
     }
 
     if (!mounted) return;
@@ -292,6 +294,7 @@ class _MapPickerPageState extends State<MapPickerPage> {
         });
         _reverseGeocode();
       }
-    } catch (_) {}
+    } catch (e) {
+        debugPrint("pages.map_picker_page: $e");}
   }
 }

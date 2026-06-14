@@ -105,14 +105,37 @@ class _AppEntry extends StatefulWidget {
   State<_AppEntry> createState() => _AppEntryState();
 }
 
-class _AppEntryState extends State<_AppEntry> {
+class _AppEntryState extends State<_AppEntry> with WidgetsBindingObserver {
   final _api = ApiService();
   Widget? _startPage;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _startup();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Refresh token validity check when app returns from background
+      _checkTokenOnResume();
+    }
+  }
+
+  Future<void> _checkTokenOnResume() async {
+    final token = await _api.getToken();
+    if (token != null && mounted) {
+      // Token exists - optionally validate it with a lightweight check
+      debugPrint('App resumed: token present');
+    }
   }
 
   Future<void> _startup() async {

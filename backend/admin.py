@@ -8,7 +8,9 @@ Security:
   - Soft-delete used everywhere.
   - No sensitive user data exposed (no password hashes).
 """
+import logging
 import uuid
+logger = logging.getLogger(__name__)
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -487,10 +489,11 @@ def create_combo_pack(body: ComboPackCreate, request: Request, db: Session = Dep
     db.add(pack)
     db.flush()
     for item in body.items:
-        prod = db.query(Product).filter(Product.id == item.product_id, Product.is_deleted == False).first()
-        if not prod:
+        product = db.query(Product).filter(Product.id == item.product_id, Product.is_deleted == False).first()
+        if not product:
+            db.rollback()
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Product {item.product_id} not found")
-        db.add(ComboPackItem(pack_id=pack.id, product_id=item.product_id, quantity=item.quantity))
+        db.add(ComboPackItem(pack_id=pack.id, product_id=product.id, quantity=item.quantity))
     db.commit()
     db.refresh(pack)
     return _pack_to_admin_response(pack)
@@ -521,10 +524,11 @@ def update_combo_pack(pack_id: str, body: ComboPackUpdate, request: Request, db:
         for old in pack.items:
             old.is_deleted = True
         for item in body.items:
-            prod = db.query(Product).filter(Product.id == item.product_id, Product.is_deleted == False).first()
-            if not prod:
+            product = db.query(Product).filter(Product.id == item.product_id, Product.is_deleted == False).first()
+            if not product:
+                db.rollback()
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Product {item.product_id} not found")
-            db.add(ComboPackItem(pack_id=pack.id, product_id=item.product_id, quantity=item.quantity))
+            db.add(ComboPackItem(pack_id=pack.id, product_id=product.id, quantity=item.quantity))
     db.commit()
     db.refresh(pack)
     return _pack_to_admin_response(pack)

@@ -5,7 +5,7 @@ import 'product_card.dart';
 class ProductGrid extends StatelessWidget {
   final List<GroceryProduct> products;
   final Map<int, bool> cartMap;
-  final Map<String, bool> favMap;
+  final Map<int, bool> favMap;
   final List<String> Function(GroceryProduct p) getImages;
   final void Function(GroceryProduct p) onAdd;
   final void Function(GroceryProduct p) onFav;
@@ -48,7 +48,7 @@ class ProductGrid extends StatelessWidget {
           product: p,
           images: getImages(p),
           inCart: cartMap[p.id] ?? false,
-          isFav: favMap[p.name] ?? false,
+          isFav: favMap[p.id] ?? false,
           onAdd: () => onAdd(p),
           onFav: () => onFav(p),
           onTap: () => onTap(p),

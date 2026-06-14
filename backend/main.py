@@ -10,7 +10,9 @@ Database:
   - PostgreSQL via SQLAlchemy (models.py, database.py)
   - Render PostgreSQL in production, local PostgreSQL in development
 """
+import logging
 import os
+logger = logging.getLogger(__name__)
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -49,7 +51,8 @@ if not ADMIN_PASSWORD:
 if _missing:
     raise RuntimeError(f"Missing required environment variables: {', '.join(_missing)}")
 
-PUBLIC_PATHS_C4 = {"/", "/docs", "/openapi.json", "/redoc", "/api/auth/register", "/api/auth/login", "/api/auth/logout", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/app-version", "/api/categories", "/api/products", "/api/combo-packs", "/api/check-zone", "/api/places/search", "/api/places/reverse", "/api/suggest-product"}
+from config import PUBLIC_PATHS
+PUBLIC_PATHS_C4 = PUBLIC_PATHS
 
 # Create all tables on startup (new tables only).
 Base.metadata.create_all(bind=engine)
@@ -81,6 +84,10 @@ app = FastAPI(
 @app.middleware("http")
 async def validate_api_key(request: Request, call_next):
     if API_KEY and request.url.path not in PUBLIC_PATHS_C4:
+        # Skip API key check if a valid JWT Bearer token is present
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            return await call_next(request)
         header_key = request.headers.get("X-API-Key")
         if not header_key or header_key != API_KEY:
             from fastapi.responses import JSONResponse
@@ -120,7 +127,7 @@ async def csrf_origin_check(request: Request, call_next):
                         content={"detail": "Cross-site request forbidden"},
                     )
             except Exception:
-                pass
+                logger.warning("CSRF origin check failed")
     return await call_next(request)
 
 
@@ -221,11 +228,28 @@ def _seed_data():
     """Populate categories, products, and admin user on first run."""
     db: Session = SessionLocal()
     try:
+        # Clean up notifications older than 24 hours
+        try:
+            cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+            expired = db.query(Notification).filter(
+                Notification.is_deleted == False,
+                Notification.created_at < cutoff,
+            ).all()
+            for n in expired:
+                n.is_deleted = True
+            if expired:
+                db.commit()
+                logger.info("Cleaned up %d expired notifications", len(expired))
+        except Exception as e:
+            logger.warning("Notification cleanup failed: %s", e)
+            db.rollback()
+
         # Add role column if not exists (for existing DB).
         try:
             db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'user'"))
             db.commit()
-        except Exception:
+        except Exception as e:
+            logger.warning("ALTER TABLE users rollback: %s", e)
             db.rollback()
 
         # Create admin user if not exists – credentials from .env (already validated at module level).

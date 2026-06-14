@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/theme.dart';
 import '../services/api_service.dart';
 import '../services/location_service.dart';
@@ -61,14 +62,20 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
               if (!zoneCheck.serviceable && mounted) {
                 AppSnackbar.show(context, zoneCheck.message ?? 'Sorry, delivery not available in your area', type: SnackbarType.error);
               }
-            } catch (_) {
+            } catch (e) {
+        debugPrint("pages.login_page: $e");
               if (mounted) {
                 AppSnackbar.show(context, 'Could not verify delivery area. Please try again.', type: SnackbarType.warning);
               }
             }
-            await LocationService().saveLocationToServer(locResult.latitude, locResult.longitude);
+            try {
+              await LocationService().saveLocationToServer(locResult.latitude, locResult.longitude);
+            } catch (e) {
+              debugPrint("pages.login_page - saveLocationToServer: $e");
+            }
           }
-        } catch (_) {}
+        } catch (e) {
+        debugPrint("pages.login_page: $e");}
       }
 
       if (!mounted) return;

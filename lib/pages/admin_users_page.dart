@@ -38,7 +38,8 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
         _loading = false;
       });
       _applyFilter();
-    } catch (_) {
+    } catch (e) {
+        debugPrint("pages.admin_users_page: $e");
       if (!mounted) return;
       setState(() {
         _loading = false;

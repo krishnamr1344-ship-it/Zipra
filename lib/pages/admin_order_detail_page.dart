@@ -28,7 +28,8 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
     final uri = Uri.parse(url);
     try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } catch (_) {}
+    } catch (e) {
+        debugPrint("pages.admin_order_detail_page: $e");}
   }
 
   void _callPhone(String? phone) async {
@@ -36,7 +37,8 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
     final uri = Uri.parse('tel:$phone');
     try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } catch (_) {}
+    } catch (e) {
+        debugPrint("pages.admin_order_detail_page: $e");}
   }
 
   Color _statusColor(String status) {

@@ -32,7 +32,8 @@ class _OffersPageState extends State<OffersPage> {
         _packs = data.map((e) => ComboPack.fromJson(e as Map<String, dynamic>)).toList();
         _loading = false;
       });
-    } catch (_) {
+    } catch (e) {
+        debugPrint("pages.offers_page: $e");
       if (mounted) setState(() { _loading = false; _error = true; });
     }
   }

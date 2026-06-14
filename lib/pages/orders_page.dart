@@ -37,7 +37,8 @@ class _OrdersPageState extends State<OrdersPage> {
         return;
       }
       setState(() { _apiOrders = orders.cast<Map<String, dynamic>>(); _loading = false; });
-    } catch (_) {
+    } catch (e) {
+        debugPrint("pages.orders_page: $e");
       if (!mounted) return;
       setState(() { _loading = false; _error = true; });
     }
@@ -81,10 +82,10 @@ class _OrdersPageState extends State<OrdersPage> {
                         ..._apiOrders.map((o) => _OrderCard(
                           id: o['id']?.toString() ?? '',
                           status: o['status'] ?? 'Pending',
-                          total: (o['total_amount'] ?? 0).toInt(),
+                          total: ((o['total_amount'] ?? 0) as num).toDouble().round(),
                           itemCount: (o['items'] as List?)?.length ?? 0,
-                          date: o['created_at'] != null ? DateTime.parse(o['created_at']) : DateTime.now(),
-                          items: ((o['items'] as List?)?.cast<Map<String, dynamic>>() ?? []).map((i) => _OrderItemPreview(name: i['product_name'] ?? '', qty: i['quantity'] ?? 1, price: (i['product_price'] ?? 0).toInt())).toList(),
+                          date: DateTime.tryParse(o['created_at'] ?? '') ?? DateTime.now(),
+                          items: ((o['items'] as List?)?.cast<Map<String, dynamic>>() ?? []).map((i) => _OrderItemPreview(name: i['product_name'] ?? '', qty: i['quantity'] ?? 1, price: ((i['product_price'] ?? 0) as num).toDouble().round())).toList(),
                           onTap: () => _openApiDetail(context, o),
                         )),
                       ],
@@ -104,16 +105,16 @@ class _OrdersPageState extends State<OrdersPage> {
     }
     final orderData = OrderData(
       id: o['id']?.toString() ?? '',
-      total: (o['total_amount'] ?? 0).toInt(),
+      total: ((o['total_amount'] ?? 0) as num).toDouble().round(),
       status: o['status'] ?? 'Pending',
-      date: o['created_at'] != null ? DateTime.parse(o['created_at']) : DateTime.now(),
+      date: DateTime.tryParse(o['created_at'] ?? '') ?? DateTime.now(),
       deliveryAddress: addr,
       items: items.map((i) => CartItem(
         id: i['product_id'] ?? '',
         productId: i['product_id'] ?? '',
         name: i['product_name'] ?? '',
         qty: '',
-        price: (i['product_price'] ?? 0).toInt(),
+        price: ((i['product_price'] ?? 0) as num).toDouble().round(),
         icon: Icons.shopping_bag,
         color: AppColors.success,
         count: i['quantity'] ?? 1,

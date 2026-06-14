@@ -39,7 +39,8 @@ class _AdminHomePageState extends State<AdminHomePage> {
       final stats = await _adminApi.getStats();
       if (!mounted) return;
       setState(() { _user = user; _stats = stats; _loading = false; });
-    } catch (_) {
+    } catch (e) {
+        debugPrint("pages.admin_home_page: $e");
       if (!mounted) return;
       setState(() { _loading = false; _error = true; });
     }

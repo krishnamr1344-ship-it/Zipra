@@ -1,5 +1,6 @@
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
 import 'api_service.dart';
 
 class LocationResult {
@@ -55,7 +56,8 @@ class LocationService {
           latitude: position.latitude,
           longitude: position.longitude,
         );
-      } catch (_) {
+      } catch (e) {
+        debugPrint("services.location_service: $e");
         Position position = await Geolocator.getCurrentPosition(
           locationSettings: const LocationSettings(
             accuracy: LocationAccuracy.low,
@@ -91,7 +93,10 @@ class LocationService {
       await prefs.setString('gps_address_type', addr['address_type'] ?? '');
       await prefs.setString('gps_house_number', addr['house_number'] ?? '');
       await prefs.setString('gps_floor_number', addr['floor_number'] ?? '');
-    } catch (_) {}
+    } catch (e) {
+      debugPrint("services.location_service: $e");
+      rethrow;
+    }
   }
 
   static Future<Map<String, String>> getSavedGpsAddress() async {

@@ -34,7 +34,7 @@ class _PackDetailSheetState extends State<PackDetailSheet> {
     try {
       final result = await _api.addPackToCart(widget.pack.id);
       if (!mounted) return;
-      for (final item in result['items'] as List<dynamic>) {
+      for (final item in (result['items'] as List<dynamic>?) ?? []) {
         await cartNotifier.add(
           item['product_id']?.toString() ?? '',
           name: item['product_name'] ?? '',

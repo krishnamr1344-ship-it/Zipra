@@ -59,6 +59,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
         'address_line2': _line2Ctl.text.trim(),
         'city': _cityCtl.text.trim(),
         'pincode': _pincodeCtl.text.trim(),
+        'state': 'Unknown',
         'address_type': _addressType,
         'label': _addressType,
         'house_number': _houseCtl.text.trim(),

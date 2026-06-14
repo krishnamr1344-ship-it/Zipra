@@ -35,7 +35,8 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
       if (!mounted) return;
       setState(() { _products = prods; _filtered = List.from(prods); _categories = cats; _loading = false; });
       _applyFilter();
-    } catch (_) {
+    } catch (e) {
+        debugPrint("pages.admin_products_page: $e");
       if (!mounted) return;
       setState(() { _loading = false; _error = true; });
     }

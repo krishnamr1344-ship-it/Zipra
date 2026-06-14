@@ -32,7 +32,8 @@ class _WishlistPageState extends State<WishlistPage> {
         _products = wishlist.cast<Map<String, dynamic>>();
         _loading = false;
       });
-    } catch (_) {
+    } catch (e) {
+        debugPrint("pages.wishlist_page: $e");
       if (!mounted) return;
       setState(() { _loading = false; _error = true; });
     }
@@ -47,7 +48,7 @@ class _WishlistPageState extends State<WishlistPage> {
     final pid = item['product_id'] as String;
     final name = item['product_name'] as String? ?? '';
     final unit = item['product_unit'] as String? ?? '';
-    final price = (item['product_price'] ?? 0).toInt();
+    final price = ((item['product_price'] ?? 0) as num).toDouble().round();
     final image = item['product_image'] as String?;
     await cartNotifier.add(pid, name: name, qty: unit, price: price, image: image);
     if (!mounted) return;
@@ -248,7 +249,7 @@ class _WishlistCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name = item['product_name'] as String? ?? '';
-    final price = (item['product_price'] ?? 0).toInt();
+    final price = ((item['product_price'] ?? 0) as num).toDouble().round();
     final unit = item['product_unit'] as String? ?? '';
     final imageUrl = item['product_image'] as String?;
 

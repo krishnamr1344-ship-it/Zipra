@@ -31,13 +31,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     if (email.isEmpty) return;
     setState(() => _sent = true);
     try {
-      final result = await ApiService().forgotPassword(email);
+      await ApiService().forgotPassword(email);
       if (!mounted) return;
-      final code = result['code'] as String?;
-      if (code != null) {
-        _codeCtl.text = code;
-        setState(() => _showResetForm = true);
-      }
+      // Code is sent to the user's email; DO NOT auto-fill from response.
+      AppSnackbar.show(context, 'Reset code sent to your email', type: SnackbarType.success);
+      setState(() => _showResetForm = true);
     } catch (e) {
       if (!mounted) return;
       AppSnackbar.show(context, 'Failed: $e', type: SnackbarType.error);

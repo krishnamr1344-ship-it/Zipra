@@ -67,7 +67,8 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
         )).toList();
         _loading = false;
       });
-    } catch (_) {
+    } catch (e) {
+        debugPrint("pages.admin_delivery_zone_page: $e");
       if (mounted) setState(() { _loading = false; _error = true; });
     }
   }
@@ -108,7 +109,8 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
       final geo = jsonDecode(geojson);
       final coords = geo['coordinates'][0] as List;
       return coords.map((c) => LatLng(c[1].toDouble(), c[0].toDouble())).toList();
-    } catch (_) {
+    } catch (e) {
+        debugPrint("pages.admin_delivery_zone_page: $e");
       return [];
     }
   }

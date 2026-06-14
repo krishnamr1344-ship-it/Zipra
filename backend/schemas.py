@@ -254,7 +254,7 @@ class AddressCreate(BaseModel):
     address_line1: str
     address_line2: Optional[str] = None
     city: str
-    state: str
+    state: str = "Unknown"
     pincode: str
     address_type: str = "Home"
     house_number: Optional[str] = None

@@ -44,13 +44,14 @@ class CartNotifier extends ChangeNotifier {
           productId: map['product_id'] ?? '',
           name: map['product_name'] ?? '',
           qty: map['product_unit'] ?? '',
-          price: (map['product_price'] ?? 0).toInt(),
+          price: ((map['product_price'] ?? 0) as num).toDouble().round(),
           image: map['product_image'],
           count: map['quantity'] ?? 1,
         ));
       }
       notifyListeners();
-    } catch (_) {
+    } catch (e) {
+      debugPrint('CartNotifier.load error: $e');
       notifyListeners();
     }
   }
@@ -73,7 +74,8 @@ class CartNotifier extends ChangeNotifier {
         ));
       }
       notifyListeners();
-    } catch (_) {
+    } catch (e) {
+      debugPrint('CartNotifier.add error: $e');
       // Fallback: add locally if API fails
       final existing = _items.where((i) => i.productId == productId).firstOrNull;
       if (existing != null) {
@@ -102,36 +104,66 @@ class CartNotifier extends ChangeNotifier {
       return;
     }
 
+    // Save previous count for rollback
+    final oldCount = item.count;
+    item.count = newCount;
+    notifyListeners();
+
     if (item.id.isNotEmpty) {
       try {
         await _api.updateCartItem(item.id, newCount);
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('CartNotifier.updateCount API error: $e');
+        // Rollback on failure
+        item.count = oldCount;
+        notifyListeners();
+      }
     }
-
-    item.count = newCount;
-    notifyListeners();
   }
 
   Future<void> removeAll(String productId) async {
     final item = _items.where((i) => i.productId == productId).firstOrNull;
     if (item == null) return;
 
-    if (item.id.isNotEmpty) {
-      try {
-        await _api.removeCartItem(item.id);
-      } catch (_) {}
-    }
-
+    // Save removed item for rollback
+    final removedItem = CartItem(
+      id: item.id,
+      productId: item.productId,
+      name: item.name,
+      qty: item.qty,
+      price: item.price,
+      image: item.image,
+      count: item.count,
+    );
     _items.removeWhere((i) => i.productId == productId);
     notifyListeners();
+
+    if (removedItem.id.isNotEmpty) {
+      try {
+        await _api.removeCartItem(removedItem.id);
+      } catch (e) {
+        debugPrint('CartNotifier.removeAll API error: $e');
+        // Rollback on failure
+        _items.add(removedItem);
+        notifyListeners();
+      }
+    }
   }
 
   Future<void> clear() async {
-    try {
-      await _api.clearCart();
-    } catch (_) {}
+    // Save items for rollback
+    final savedItems = List<CartItem>.from(_items);
     _items.clear();
     notifyListeners();
+
+    try {
+      await _api.clearCart();
+    } catch (e) {
+      debugPrint('CartNotifier.clear API error: $e');
+      // Rollback on failure
+      _items.addAll(savedItems);
+      notifyListeners();
+    }
   }
 
   bool isInCart(String productId) => _items.any((i) => i.productId == productId);
@@ -156,7 +188,9 @@ class WishlistNotifier extends ChangeNotifier {
         _items.add(map['product_id'] as String);
       }
       notifyListeners();
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('WishlistNotifier.load error: $e');
+    }
   }
 
   bool contains(String productId) => _items.contains(productId);
@@ -167,13 +201,23 @@ class WishlistNotifier extends ChangeNotifier {
       notifyListeners();
       try {
         await _api.removeFromWishlist(productId);
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('WishlistNotifier.toggle(remove) error: $e');
+        // Rollback on failure
+        _items.add(productId);
+        notifyListeners();
+      }
     } else {
       _items.add(productId);
       notifyListeners();
       try {
         await _api.addToWishlist(productId);
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('WishlistNotifier.toggle(add) error: $e');
+        // Rollback on failure
+        _items.remove(productId);
+        notifyListeners();
+      }
     }
   }
 
@@ -183,7 +227,12 @@ class WishlistNotifier extends ChangeNotifier {
       notifyListeners();
       try {
         await _api.removeFromWishlist(productId);
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('WishlistNotifier.remove error: $e');
+        // Rollback on failure
+        _items.add(productId);
+        notifyListeners();
+      }
     }
     return removed;
   }

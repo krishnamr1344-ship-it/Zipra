@@ -32,7 +32,8 @@ class _AdminComboPacksPageState extends State<AdminComboPacksPage> {
         _packs = data.cast<Map<String, dynamic>>();
         _loading = false;
       });
-    } catch (_) {
+    } catch (e) {
+        debugPrint("pages.admin_combo_packs_page: $e");
       if (mounted) setState(() { _loading = false; _error = true; });
     }
   }

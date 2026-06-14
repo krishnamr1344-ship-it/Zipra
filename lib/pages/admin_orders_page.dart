@@ -37,7 +37,8 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
         _loading = false;
       });
       _applyFilters();
-    } catch (_) {
+    } catch (e) {
+        debugPrint("pages.admin_orders_page: $e");
       if (!mounted) return;
       setState(() { _loading = false; _error = true; });
     }
@@ -104,7 +105,8 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
       if (diff.inHours > 0) return '${diff.inHours}h ago';
       if (diff.inMinutes > 0) return '${diff.inMinutes}m ago';
       return 'just now';
-    } catch (_) {
+    } catch (e) {
+        debugPrint("pages.admin_orders_page: $e");
       return dateStr.substring(0, 10);
     }
   }

@@ -9,21 +9,24 @@ class HelpSupportPage extends StatelessWidget {
     final uri = Uri.parse('tel:$phone');
     try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } catch (_) {}
+    } catch (e) {
+        debugPrint("pages.help_support_page: $e");}
   }
 
   void _email(String address) async {
     final uri = Uri.parse('mailto:$address');
     try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } catch (_) {}
+    } catch (e) {
+        debugPrint("pages.help_support_page: $e");}
   }
 
   void _openUrl(String url) async {
     final uri = Uri.parse(url);
     try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } catch (_) {}
+    } catch (e) {
+        debugPrint("pages.help_support_page: $e");}
   }
 
   @override

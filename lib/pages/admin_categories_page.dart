@@ -38,7 +38,8 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
         _loading = false;
       });
       _applyFilter();
-    } catch (_) {
+    } catch (e) {
+        debugPrint("pages.admin_categories_page: $e");
       if (!mounted) return;
       setState(() {
         _loading = false;

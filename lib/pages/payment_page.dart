@@ -49,7 +49,8 @@ class _PaymentPageState extends State<PaymentPage> {
           _deliveryLandmark = addr['landmark'] ?? '';
         });
       }
-    } catch (_) {}
+    } catch (e) {
+        debugPrint("pages.payment_page: $e");}
   }
 
   Future<void> _setDelivery() async {

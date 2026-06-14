@@ -33,7 +33,8 @@ class _AddressesPageState extends State<AddressesPage> {
         _addresses = data.cast<Map<String, dynamic>>();
         _loading = false;
       });
-    } catch (_) {
+    } catch (e) {
+        debugPrint("pages.addresses_page: $e");
       if (mounted) setState(() { _loading = false; _error = true; });
     }
   }
