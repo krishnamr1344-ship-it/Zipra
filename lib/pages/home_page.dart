@@ -294,9 +294,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       builder: (_) => const LocationPickerSheet(),
     );
     if (!mounted) return;
-    if (action == 'redetect') {
-      _checkAndDetectLocation();
-    } else if (action == 'map') {
+    if (action == 'map') {
       final confirmed = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => const MapPickerPage()));
       if (confirmed == true) _readSavedLocation();
     }

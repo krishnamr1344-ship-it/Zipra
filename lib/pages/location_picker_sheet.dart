@@ -112,30 +112,6 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
               onTap: () => Navigator.pop(context, 'map'),
             ),
           ),
-          const SizedBox(height: 12),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.green.withAlpha(10),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.green.withAlpha(40)),
-            ),
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              leading: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: Colors.green.withAlpha(20), borderRadius: BorderRadius.circular(12)),
-                child: const Icon(Icons.my_location, color: Colors.green, size: 22),
-              ),
-              title: const Text('Re-detect Location', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-              subtitle: Text('Refresh GPS location', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-              trailing: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(color: Colors.green.withAlpha(15), borderRadius: BorderRadius.circular(8)),
-                child: const Icon(Icons.refresh, size: 16, color: Colors.green),
-              ),
-              onTap: () => Navigator.pop(context, 'redetect'),
-            ),
-          ),
           const SizedBox(height: 16),
           Row(
             children: [
