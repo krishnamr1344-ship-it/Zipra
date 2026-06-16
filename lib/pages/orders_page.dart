@@ -96,19 +96,27 @@ class _OrdersPageState extends State<OrdersPage> {
     );
   }
 
-  void _openApiDetail(BuildContext context, Map<String, dynamic> o) {
+  Future<void> _openApiDetail(BuildContext context, Map<String, dynamic> o) async {
     final items = (o['items'] as List?)?.cast<Map<String, dynamic>>() ?? [];
     String? addr;
     if (o['delivery_address'] != null) {
       final da = o['delivery_address'] as Map<String, dynamic>;
       addr = '${da['address_line1'] ?? ''}, ${da['city'] ?? ''}';
     }
+    final orderId = o['id']?.toString() ?? '';
+    String? deliveryOtp;
+    try {
+      final detail = await ApiService().getOrderById(orderId);
+      deliveryOtp = detail['delivery_otp'] as String?;
+    } catch (_) {}
+    if (!context.mounted) return;
     final orderData = OrderData(
-      id: o['id']?.toString() ?? '',
+      id: orderId,
       total: ((o['total_amount'] ?? 0) as num).toDouble().round(),
       status: o['status'] ?? 'Pending',
       date: DateTime.tryParse(o['created_at'] ?? '') ?? DateTime.now(),
       deliveryAddress: addr,
+      deliveryOtp: deliveryOtp,
       items: items.map((i) => CartItem(
         id: i['product_id'] ?? '',
         productId: i['product_id'] ?? '',

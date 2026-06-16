@@ -79,7 +79,7 @@ class _ProductCardState extends State<ProductCard> {
                   child: Stack(
                     children: [
                       widget.images.isNotEmpty && widget.images[0].startsWith('http')
-                          ? Image.network(widget.images[0], fit: BoxFit.cover, width: double.infinity, height: imgH, errorBuilder: (_, __, ___) => Center(child: Text(p.emoji, style: TextStyle(fontSize: cardW * 0.38))))
+                          ? Image.network(widget.images[0], fit: BoxFit.cover, width: double.infinity, height: imgH, errorBuilder: (_, _, _) => Center(child: Text(p.emoji, style: TextStyle(fontSize: cardW * 0.38))))
                           : Center(child: Text(p.emoji, style: TextStyle(fontSize: cardW * 0.38))),
                   if (p.discountPercent != null)
                     Positioned(

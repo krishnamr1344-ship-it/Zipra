@@ -11,6 +11,8 @@ Security:
 """
 import logging
 import json
+import secrets
+import string as _string
 logger = logging.getLogger(__name__)
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -395,7 +397,7 @@ def _cart_item_to_response(item: CartItem) -> CartItemResponse:
     )
 
 
-def _order_to_response(order: Order) -> OrderResponse:
+def _order_to_response(order: Order, include_otp: bool = False) -> OrderResponse:
     items = []
     for oi in order.items:
         if not oi.is_deleted:
@@ -432,6 +434,7 @@ def _order_to_response(order: Order) -> OrderResponse:
         payment_method=order.payment_method,
         items=items,
         delivery_address=delivery_address,
+        delivery_otp=order.delivery_otp if include_otp else None,
         created_at=order.created_at,
     )
 
@@ -1000,7 +1003,7 @@ def get_order(order_id: str, request: Request, db: Session = Depends(get_db)):
     user_id = _get_user_id(request)
     _validate_uuid(order_id)
     order = _get_order_or_404(order_id, user_id, db)
-    return _order_to_response(order)
+    return _order_to_response(order, include_otp=True)
 
 
 @router.post("/orders", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
@@ -1056,13 +1059,15 @@ def create_order(body: OrderCreateRequest, request: Request, db: Session = Depen
         for ci in cart_items:
             ci.is_deleted = True
 
+        otp = ''.join(secrets.choice(_string.digits) for _ in range(6))
+        order.delivery_otp = otp
         db.commit()
     except Exception:
         db.rollback()
         raise
 
     db.refresh(order)
-    return _order_to_response(order)
+    return _order_to_response(order, include_otp=True)
 
 
 @router.post("/orders/direct", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
@@ -1151,13 +1156,15 @@ def create_order_direct(body: OrderDirectCreateRequest, request: Request, db: Se
         payment.transaction_id = str(uuid.uuid4()).replace("-", "")[:16].upper()
         db.add(payment)
 
+        otp = ''.join(secrets.choice(_string.digits) for _ in range(6))
+        order.delivery_otp = otp
         db.commit()
     except Exception:
         db.rollback()
         raise
 
     db.refresh(order)
-    return _order_to_response(order)
+    return _order_to_response(order, include_otp=True)
 
 
 # ─── PAYMENTS ─────────────────────────────────────────────────────

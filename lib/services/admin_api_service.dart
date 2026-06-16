@@ -97,6 +97,11 @@ class AdminApiService {
     if (res.statusCode != 200) throw ApiException(_decodeJson(res.body)['detail'] ?? 'Failed to update order');
   }
 
+  Future<void> deliverOrder(String orderId, String otp) async {
+    final res = await http.post(Uri.parse('$_baseUrl/api/admin/orders/$orderId/deliver'), headers: await _authHeader(), body: jsonEncode({'otp': otp})).timeout(_timeout);
+    if (res.statusCode != 200) throw ApiException(_decodeJson(res.body)['detail'] ?? 'Failed to deliver order');
+  }
+
   Future<void> deleteOrder(String orderId) async {
     final res = await http.delete(Uri.parse('$_baseUrl/api/admin/orders/$orderId'), headers: await _authHeader()).timeout(_timeout);
     if (res.statusCode != 200) {

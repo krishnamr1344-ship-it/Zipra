@@ -154,6 +154,7 @@ class Order(Base):
     status = Column(String(20), default="Pending", nullable=False, index=True)
     total_amount = Column(Numeric(10, 2), nullable=False)
     payment_method = Column(String(20), nullable=False)
+    delivery_otp = Column(String(6), nullable=True)
     is_deleted = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)

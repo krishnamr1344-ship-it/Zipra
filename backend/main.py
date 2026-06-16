@@ -72,6 +72,13 @@ if 'is_deleted' not in user_cols:
         conn.execute(text("ALTER TABLE users ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT FALSE"))
         conn.commit()
 
+# Migrate existing orders table: add delivery_otp column if missing.
+order_cols = {c['name'] for c in inspector.get_columns('orders')}
+if 'delivery_otp' not in order_cols:
+    with engine.connect() as conn:
+        conn.execute(text("ALTER TABLE orders ADD COLUMN delivery_otp VARCHAR(6)"))
+        conn.commit()
+
 app = FastAPI(
     title="Delivery App API",
     description="Secure backend for delivery application",

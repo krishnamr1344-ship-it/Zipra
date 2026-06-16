@@ -307,6 +307,13 @@ class ApiService {
     return _handleListResponse(res);
   }
 
+  Future<Map<String, dynamic>> getOrderById(String orderId) async {
+    final headers = await _authHeaders(required: true);
+    final res = await http.get(Uri.parse('$_baseUrl/api/orders/$orderId'), headers: headers).timeout(const Duration(seconds: 60));
+    if (_checkAndHandleUnauthorized(res.statusCode)) return {};
+    return _handleResponse(res);
+  }
+
   // ─── Combo Packs ──────────────────────────────────────────────────
 
   Future<List<dynamic>> getComboPacks() async {

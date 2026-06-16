@@ -102,7 +102,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
   }
 
   void _changeStatus() {
-    final statuses = ['Confirmed', 'Shipped', 'Delivered', 'Cancelled'];
+    final statuses = ['Confirmed', 'Shipped', 'Cancelled'];
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -223,6 +223,162 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                         },
                       ),
                     )),
+            if (_order['status'] == 'Shipped') ...[
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Divider(),
+              ),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _showDeliveryOtpDialog();
+                  },
+                  icon: const Icon(Icons.inventory_2, size: 20),
+                  label: const Text('Confirm Delivery',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF10B981),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                    elevation: 0,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDeliveryOtpDialog() {
+    final otpController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    bool loading = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withAlpha(20),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.inventory_2, color: Color(0xFF10B981), size: 24),
+              ),
+              const SizedBox(width: 12),
+              const Text('Confirm Delivery',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Ask the customer for their delivery code and enter it below.',
+                  style: TextStyle(fontSize: 13, color: Colors.grey),
+                ),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: otpController,
+                  keyboardType: TextInputType.number,
+                  textAlign: TextAlign.center,
+                  maxLength: 6,
+                  style: const TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 8,
+                  ),
+                  decoration: InputDecoration(
+                    counterText: '',
+                    hintText: '------',
+                    hintStyle: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 8,
+                      color: Colors.grey.shade300,
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey.withAlpha(8),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(color: Colors.grey.shade200),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: Color(0xFF10B981), width: 2),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: loading ? null : () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: loading
+                  ? null
+                  : () async {
+                      final otp = otpController.text.trim();
+                      if (otp.length != 6) return;
+                      setDialogState(() => loading = true);
+                      try {
+                        await _api.deliverOrder(_order['id'], otp);
+                        if (!ctx.mounted) return;
+                        Navigator.pop(ctx);
+                        if (!context.mounted) return;
+                        setState(() {
+                          _order['status'] = 'Delivered';
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Order delivered successfully'),
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: Color(0xFF10B981),
+                          ),
+                        );
+                      } catch (e) {
+                        if (!ctx.mounted) return;
+                        setDialogState(() => loading = false);
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          SnackBar(
+                            content: Text('$e'),
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF10B981),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              ),
+              child: loading
+                  ? const SizedBox(
+                      width: 20, height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Verify & Deliver'),
+            ),
           ],
         ),
       ),
@@ -235,8 +391,6 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
         return 'Accept the order and confirm stock availability';
       case 'Shipped':
         return 'Order is out for delivery';
-      case 'Delivered':
-        return 'Mark as successfully delivered';
       case 'Cancelled':
         return 'Cancel this order';
       default:
@@ -1062,24 +1216,48 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-              child: SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: ElevatedButton.icon(
-                  onPressed: _changeStatus,
-                  icon: const Icon(Icons.swap_horiz, size: 20),
-                  label: const Text('Change Status',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16)),
-                    elevation: 0,
-                  ),
-                ),
-              ),
+              child: _order['status'] == 'Delivered'
+                  ? Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withAlpha(15),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                            color: const Color(0xFF10B981).withAlpha(40)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.check_circle,
+                              color: Color(0xFF10B981), size: 22),
+                          const SizedBox(width: 10),
+                          const Text('Delivered',
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF10B981))),
+                        ],
+                      ),
+                    )
+                  : SizedBox(
+                      width: double.infinity,
+                      height: 54,
+                      child: ElevatedButton.icon(
+                        onPressed: _changeStatus,
+                        icon: const Icon(Icons.swap_horiz, size: 20),
+                        label: const Text('Change Status',
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w700)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16)),
+                          elevation: 0,
+                        ),
+                      ),
+                    ),
             ),
           ),
         ],

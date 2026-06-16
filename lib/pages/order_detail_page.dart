@@ -25,6 +25,10 @@ class OrderDetailPage extends StatelessWidget {
         child: Column(
           children: [
             _StatusBox(order: order),
+            if (order.deliveryOtp != null && order.status != 'Delivered') ...[
+              const SizedBox(height: 16),
+              _DeliveryOtpBox(order: order),
+            ],
             const SizedBox(height: 16),
             _InfoBox(order: order),
             const SizedBox(height: 16),
@@ -154,6 +158,82 @@ class _StatusBox extends StatelessWidget {
               ),
             );
           }),
+        ],
+      ),
+    );
+  }
+}
+
+class _DeliveryOtpBox extends StatelessWidget {
+  final OrderData order;
+  const _DeliveryOtpBox({required this.order});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.primary.withAlpha(40)),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 3))],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: AppColors.primary.withAlpha(20), borderRadius: BorderRadius.circular(12)),
+                child: const Icon(Icons.lock_outline, size: 20, color: AppColors.primary),
+              ),
+              const SizedBox(width: 12),
+              const Text('Delivery Code', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withAlpha(8),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                for (var i = 0; i < order.deliveryOtp!.length; i++) ...[
+                  if (i == 3) const SizedBox(width: 12),
+                  Container(
+                    width: 36,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.primary.withAlpha(60)),
+                    ),
+                    child: Center(
+                      child: Text(
+                        order.deliveryOtp![i],
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Share this code with the delivery person when your order arrives.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          ),
         ],
       ),
     );

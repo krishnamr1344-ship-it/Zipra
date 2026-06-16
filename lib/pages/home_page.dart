@@ -164,10 +164,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       final line1 = data['address_line1'] ?? '';
       debugPrint('Final displayed area: $area');
 
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         _locationArea = area.isNotEmpty ? area : 'Set Location';
         _locationDetail = line1;
       });
+      }
 
       try {
         final zoneResult = await DeliveryZoneService().checkLocation(loc.latitude, loc.longitude);
@@ -187,10 +189,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     final prefs = await SharedPreferences.getInstance();
     final line2 = prefs.getString('gps_address_line2') ?? '';
     final line1 = prefs.getString('gps_address_line') ?? '';
-    if (mounted) setState(() {
+    if (mounted) {
+      setState(() {
       _locationArea = line2.isNotEmpty ? line2 : 'Set Location';
       _locationDetail = line1;
     });
+    }
   }
 
   List<_ProductData> get _filteredProducts {
@@ -664,7 +668,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
         itemCount: _smartChips.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (_, i) {
           final chip = _smartChips[i];
           final isSelected = _selectedChip == i;
@@ -708,8 +712,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 16),
           itemCount: 6,
-          separatorBuilder: (_, __) => const SizedBox(width: 10),
-          itemBuilder: (_, __) => Container(
+          separatorBuilder: (_, _) => const SizedBox(width: 10),
+          itemBuilder: (_, _) => Container(
             width: 80,
             decoration: BoxDecoration(
               color: const Color(0xFFF0F0F0),
@@ -727,7 +731,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: cats.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        separatorBuilder: (_, _) => const SizedBox(width: 10),
         itemBuilder: (_, i) {
           final cat = cats[i];
           final isSelected = _selectedCategory == cat;
@@ -769,7 +773,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: _offerBanners.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        separatorBuilder: (_, _) => const SizedBox(width: 10),
         itemBuilder: (_, i) {
           final banner = _offerBanners[i];
           return Container(
@@ -1197,8 +1201,9 @@ class _ProductData {
 String _emojiFor(String name) {
   final n = name.toLowerCase();
   if (n.contains('rice')) return '\u{1F35A}';
-  if (n.contains('milk') || n.contains('curd') || n.contains('paneer') || n.contains('cheese') || n.contains('butter') || n.contains('ghee'))
+  if (n.contains('milk') || n.contains('curd') || n.contains('paneer') || n.contains('cheese') || n.contains('butter') || n.contains('ghee')) {
     return '\u{1F95B}';
+  }
   if (n.contains('coffee') || n.contains('boost') || n.contains('horlicks') || n.contains('tea')) return '\u2615';
   if (n.contains('biscuit') || n.contains('cookie')) return '\u{1F36A}';
   if (n.contains('chip') || n.contains('popcorn') || n.contains('noodle')) return '\u{1F37F}';

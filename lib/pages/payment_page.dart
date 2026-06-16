@@ -165,7 +165,7 @@ class _PaymentPageState extends State<PaymentPage> {
                                 if (_deliveryDetail.isNotEmpty)
                                   Text(_deliveryDetail, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
                                 if (_deliveryLandmark.isNotEmpty)
-                                  Text('📍 ${_deliveryLandmark}', style: TextStyle(fontSize: 11, color: Colors.blue.shade600)),
+                                  Text('📍 $_deliveryLandmark', style: TextStyle(fontSize: 11, color: Colors.blue.shade600)),
                               ] else
                                 Text('Tap to add delivery address', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                             ],

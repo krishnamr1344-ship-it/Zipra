@@ -540,6 +540,7 @@ class OrderResponse(BaseModel):
     payment_method: str
     items: list[OrderItemResponse] = []
     delivery_address: Optional[DeliveryAddress] = None
+    delivery_otp: Optional[str] = None
     created_at: datetime
 
     class Config:
@@ -829,6 +830,17 @@ class StatusUpdateRequest(BaseModel):
     def valid_status(cls, v):
         if v not in VALID_ORDER_STATUSES:
             raise ValueError(f"Status must be one of: {', '.join(sorted(VALID_ORDER_STATUSES))}")
+        return v
+
+
+class DeliveryVerifyRequest(BaseModel):
+    otp: str
+
+    @field_validator("otp")
+    @classmethod
+    def valid_otp(cls, v):
+        if not re.match(r"^\d{6}$", v):
+            raise ValueError("OTP must be exactly 6 digits")
         return v
 
 

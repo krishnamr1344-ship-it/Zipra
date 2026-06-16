@@ -247,6 +247,7 @@ class OrderData {
   final String status;
   final DateTime date;
   final String? deliveryAddress;
+  final String? deliveryOtp;
 
   OrderData({
     required this.id,
@@ -255,5 +256,6 @@ class OrderData {
     required this.status,
     DateTime? date,
     this.deliveryAddress,
+    this.deliveryOtp,
   }) : date = date ?? DateTime.now();
 }

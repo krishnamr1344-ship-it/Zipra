@@ -196,7 +196,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                                   padding: const EdgeInsets.all(6),
                                   child: ClipRRect(
                                     borderRadius: BorderRadius.circular(8),
-                                    child: Image.network(images[i].text.trim(), width: 36, height: 36, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox()),
+                                    child: Image.network(images[i].text.trim(), width: 36, height: 36, fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox()),
                                   ),
                                 )
                               : null,
@@ -400,7 +400,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                                   child: thumb != null && thumb.startsWith('http')
                                       ? ClipRRect(
                                           borderRadius: BorderRadius.circular(14),
-                                          child: Image.network(thumb, width: 56, height: 56, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Center(child: Text(p['name'][0].toString().toUpperCase(), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: primary)))),
+                                          child: Image.network(thumb, width: 56, height: 56, fit: BoxFit.cover, errorBuilder: (_, _, _) => Center(child: Text(p['name'][0].toString().toUpperCase(), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: primary)))),
                                         )
                                       : Center(child: Text(p['name'][0].toString().toUpperCase(), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: primary))),
                                 ),
@@ -571,7 +571,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                                   child: thumb != null && thumb.startsWith('http')
                                       ? ClipRRect(
                                           borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-                                          child: Image.network(thumb, width: double.infinity, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Center(child: Icon(Icons.image, size: 36, color: Colors.grey.shade300))),
+                                          child: Image.network(thumb, width: double.infinity, fit: BoxFit.cover, errorBuilder: (_, _, _) => Center(child: Icon(Icons.image, size: 36, color: Colors.grey.shade300))),
                                         )
                                       : Center(child: Icon(Icons.image, size: 36, color: Colors.grey.shade300)),
                                 ),

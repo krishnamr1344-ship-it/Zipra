@@ -22,7 +22,7 @@ from models import User, Category, Product, ProductImage, ProductFlag, Address, 
 from schemas import (
     CategoryCreate, CategoryResponse,
     ProductCreate, ProductResponse,
-    StatusUpdateRequest, MessageResponse,
+    StatusUpdateRequest, MessageResponse, DeliveryVerifyRequest,
     DeliveryZoneCreate,
     ComboPackCreate, ComboPackUpdate, ComboPackResponse, ComboPackItemResponse, ComboPackItemInput,
     NotificationCreate, NotificationResponse,
@@ -316,6 +316,10 @@ def update_order_status(order_id: str, body: StatusUpdateRequest, request: Reque
     order = db.query(Order).filter(Order.id == order_id, Order.is_deleted == False).first()
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+    if order.status == "Delivered":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order is already delivered and cannot be modified")
+    if body.status == "Delivered":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Use the delivery verification endpoint to mark orders as delivered")
     order.status = body.status
     db.commit()
     return MessageResponse(message=f"Order status updated to {body.status}")
@@ -331,6 +335,25 @@ def delete_order(order_id: str, request: Request, db: Session = Depends(get_db))
     order.is_deleted = True
     db.commit()
     return MessageResponse(message="Order deleted")
+
+
+@router.post("/orders/{order_id}/deliver", response_model=MessageResponse)
+def deliver_order(order_id: str, body: DeliveryVerifyRequest, request: Request, db: Session = Depends(get_db)):
+    _require_admin(request, db)
+    _validate_uuid(order_id)
+    order = db.query(Order).filter(Order.id == order_id, Order.is_deleted == False).first()
+    if not order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+    if order.status == "Delivered":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order is already delivered")
+    if not order.delivery_otp:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No delivery code assigned to this order")
+    if order.delivery_otp != body.otp:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid delivery code")
+    order.status = "Delivered"
+    order.delivery_otp = None
+    db.commit()
+    return MessageResponse(message="Order delivered successfully")
 
 
 @router.delete("/orders/{order_id}/hard", response_model=MessageResponse)

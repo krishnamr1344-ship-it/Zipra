@@ -143,7 +143,7 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
                       child: ListView.separated(
                         shrinkWrap: true,
                         itemCount: _savedAddresses.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1, indent: 56),
+                        separatorBuilder: (_, _) => const Divider(height: 1, indent: 56),
                         itemBuilder: (_, i) {
                           final addr = _savedAddresses[i];
                           final line2 = addr['address_line2'] ?? '';
