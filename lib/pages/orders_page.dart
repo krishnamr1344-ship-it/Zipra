@@ -105,15 +105,19 @@ class _OrdersPageState extends State<OrdersPage> {
     }
     final orderId = o['id']?.toString() ?? '';
     String? deliveryOtp;
+    String? detailStatus;
     try {
       final detail = await ApiService().getOrderById(orderId);
       deliveryOtp = detail['delivery_otp'] as String?;
-    } catch (_) {}
+      detailStatus = detail['status'] as String?;
+    } catch (e) {
+      debugPrint("pages.orders_page: getOrderById failed: $e");
+    }
     if (!context.mounted) return;
     final orderData = OrderData(
       id: orderId,
       total: ((o['total_amount'] ?? 0) as num).toDouble().round(),
-      status: o['status'] ?? 'Pending',
+      status: detailStatus ?? o['status'] ?? 'Pending',
       date: DateTime.tryParse(o['created_at'] ?? '') ?? DateTime.now(),
       deliveryAddress: addr,
       deliveryOtp: deliveryOtp,

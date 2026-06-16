@@ -18,7 +18,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, Category, Product, ProductImage, ProductFlag, Address, Order, Payment, DeliveryZone, ComboPack, ComboPackItem, Notification
+from models import User, Category, Product, ProductImage, ProductFlag, Address, Order, OrderItem, Payment, DeliveryZone, ComboPack, ComboPackItem, Notification
 from schemas import (
     CategoryCreate, CategoryResponse,
     ProductCreate, ProductResponse,
@@ -622,6 +622,16 @@ def delete_delivery_zone(zone_id: str, request: Request, db: Session = Depends(g
 
 
 # ─── NOTIFICATIONS ────────────────────────────────────────────────
+
+
+@router.post("/truncate-orders")
+def truncate_orders(request: Request, db: Session = Depends(get_db)):
+    _require_admin(request, db)
+    db.query(Payment).delete()
+    db.query(OrderItem).delete()
+    db.query(Order).delete()
+    db.commit()
+    return {"message": "All orders deleted"}
 
 
 @router.post("/notifications", response_model=NotificationResponse, status_code=status.HTTP_201_CREATED)

@@ -39,20 +39,20 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
   Future<void> _loadSaved() async {
     setState(() => _loadingGps = true);
     final saved = await LocationService.getSavedGpsAddress();
-    if (saved['address_line1']!.isNotEmpty) {
-      final line1 = saved['address_line1']!;
-      final line2 = saved['address_line2']!;
-      final city = saved['city']!;
-      _gpsAddressId = saved['id']!;
+    final line1 = saved['address_line1'] ?? '';
+    if (line1.isNotEmpty) {
+      final line2 = saved['address_line2'] ?? '';
+      final city = saved['city'] ?? '';
+      _gpsAddressId = saved['id'] ?? '';
       _locationArea = line2.isNotEmpty ? line2 : city.isNotEmpty ? city : 'Your Area';
       _locationDetail = line1;
       _line1Ctl.text = line1;
       _line2Ctl.text = line2;
       _cityCtl.text = city;
-      _landmarkCtl.text = saved['landmark']!;
-      _pincodeCtl.text = saved['pincode']!;
-      _latitude = double.tryParse(saved['latitude']!) ?? 0;
-      _longitude = double.tryParse(saved['longitude']!) ?? 0;
+      _landmarkCtl.text = saved['landmark'] ?? '';
+      _pincodeCtl.text = saved['pincode'] ?? '';
+      _latitude = double.tryParse(saved['latitude'] ?? '') ?? 0;
+      _longitude = double.tryParse(saved['longitude'] ?? '') ?? 0;
     }
     setState(() => _loadingGps = false);
   }
