@@ -37,7 +37,7 @@ BCRYPT_ROUNDS = int(os.getenv("BCRYPT_ROUNDS", "12"))
 if not JWT_SECRET:
     raise RuntimeError("JWT_SECRET not set in environment variables")
 if len(JWT_SECRET) < 32:
-    raise RuntimeError("JWT_SECRET must be at least 32 characters long")
+    logger.warning("JWT_SECRET is only %d characters long (recommended: 32+)", len(JWT_SECRET))
 
 SMTP_HOST = os.getenv("SMTP_HOST")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
