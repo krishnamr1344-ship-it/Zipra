@@ -37,11 +37,8 @@ class _PaymentPageState extends State<PaymentPage> {
       if (!mounted) return;
       if (addresses.isNotEmpty) {
         final addr = addresses.firstWhere(
-          (a) => a['label'] == 'GPS Location',
-          orElse: () => addresses.firstWhere(
-            (a) => (a['latitude'] != null && a['longitude'] != null),
-            orElse: () => addresses.first,
-          ),
+          (a) => (a['latitude'] != null && a['longitude'] != null),
+          orElse: () => addresses.first,
         );
         setState(() {
           _addressId = addr['id'] ?? '';

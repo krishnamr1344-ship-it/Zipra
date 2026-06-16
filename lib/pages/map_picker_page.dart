@@ -94,7 +94,6 @@ class _MapPickerPageState extends State<MapPickerPage> {
     await prefs.setString('gps_address_line', _addressLine1);
     await prefs.setString('gps_address_line2', _addressLine2);
     await prefs.setString('gps_city', _city);
-    await prefs.setString('gps_landmark', '');
     await prefs.setString('gps_latitude', '${_selected.latitude}');
     await prefs.setString('gps_longitude', '${_selected.longitude}');
 

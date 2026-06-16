@@ -190,7 +190,7 @@ class ApiService {
   Future<Map<String, dynamic>> createGpsAddress(double latitude, double longitude, {String? landmark, String? addressType, String? houseNumber, String? floorNumber}) async {
     final headers = await _authHeaders();
     if (headers['Authorization'] == null) {
-      throw Exception('Authentication required to save GPS address');
+      return {'id': '', 'address_line1': '', 'address_line2': '', 'city': '', 'latitude': latitude.toString(), 'longitude': longitude.toString()};
     }
     final bodyMap = <String, dynamic>{'latitude': latitude, 'longitude': longitude};
     if (landmark != null && landmark.isNotEmpty) bodyMap['landmark'] = landmark;
@@ -205,7 +205,7 @@ class ApiService {
   Future<Map<String, dynamic>> createAddress(Map<String, dynamic> data) async {
     final headers = await _authHeaders();
     if (headers['Authorization'] == null) {
-      throw Exception('Authentication required to create address');
+      return {'id': '', 'address_line1': data['address_line1'] ?? ''};
     }
     final res = await http.post(Uri.parse('$_baseUrl/api/addresses'), headers: headers, body: jsonEncode(data)).timeout(const Duration(seconds: 60));
     if (_checkAndHandleUnauthorized(res.statusCode)) return {};
