@@ -711,6 +711,20 @@ class DeliveryZoneCreate(BaseModel):
     zone_name: str = Field(..., max_length=100)
     geojson_data: str = Field(..., min_length=1)
 
+    @field_validator("geojson_data")
+    @classmethod
+    def valid_geojson(cls, v):
+        try:
+            import json
+            data = json.loads(v)
+        except json.JSONDecodeError:
+            raise ValueError("Invalid GeoJSON: not valid JSON")
+        if not isinstance(data, dict) or "type" not in data:
+            raise ValueError("Invalid GeoJSON: must be a JSON object with 'type' property")
+        if data["type"] not in ("Polygon", "MultiPolygon"):
+            raise ValueError("GeoJSON type must be Polygon or MultiPolygon")
+        return v
+
 
 class ZoneCheckRequest(BaseModel):
     lat: float

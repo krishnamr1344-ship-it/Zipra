@@ -364,10 +364,14 @@ def hard_delete_order(order_id: str, request: Request, db: Session = Depends(get
     order = db.query(Order).filter(Order.id == oid).first()
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
-    db.execute(text("DELETE FROM payments WHERE order_id = :oid"), {"oid": oid})
-    db.execute(text("DELETE FROM order_items WHERE order_id = :oid"), {"oid": oid})
-    db.execute(text("DELETE FROM orders WHERE id = :oid"), {"oid": oid})
-    db.commit()
+    try:
+        db.execute(text("DELETE FROM payments WHERE order_id = :oid"), {"oid": oid})
+        db.execute(text("DELETE FROM order_items WHERE order_id = :oid"), {"oid": oid})
+        db.execute(text("DELETE FROM orders WHERE id = :oid"), {"oid": oid})
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     return MessageResponse(message="Order permanently deleted")
 
 
@@ -395,16 +399,20 @@ def hard_delete_user(user_id: str, request: Request, db: Session = Depends(get_d
     user = db.query(User).filter(User.id == uid).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    db.execute(text("DELETE FROM addresses WHERE user_id = :uid"), {"uid": uid})
-    db.execute(text("DELETE FROM cart_items WHERE user_id = :uid"), {"uid": uid})
-    for order in db.query(Order).filter(Order.user_id == uid).all():
-        db.execute(text("DELETE FROM payments WHERE order_id = :oid"), {"oid": order.id})
-        db.execute(text("DELETE FROM order_items WHERE order_id = :oid"), {"oid": order.id})
-    db.execute(text("DELETE FROM orders WHERE user_id = :uid"), {"uid": uid})
-    db.execute(text("DELETE FROM wishlist_items WHERE user_id = :uid"), {"uid": uid})
-    db.execute(text("UPDATE product_suggestions SET user_id = NULL WHERE user_id = :uid"), {"uid": uid})
-    db.execute(text("DELETE FROM users WHERE id = :uid"), {"uid": uid})
-    db.commit()
+    try:
+        db.execute(text("DELETE FROM addresses WHERE user_id = :uid"), {"uid": uid})
+        db.execute(text("DELETE FROM cart_items WHERE user_id = :uid"), {"uid": uid})
+        for order in db.query(Order).filter(Order.user_id == uid).all():
+            db.execute(text("DELETE FROM payments WHERE order_id = :oid"), {"oid": order.id})
+            db.execute(text("DELETE FROM order_items WHERE order_id = :oid"), {"oid": order.id})
+        db.execute(text("DELETE FROM orders WHERE user_id = :uid"), {"uid": uid})
+        db.execute(text("DELETE FROM wishlist_items WHERE user_id = :uid"), {"uid": uid})
+        db.execute(text("UPDATE product_suggestions SET user_id = NULL WHERE user_id = :uid"), {"uid": uid})
+        db.execute(text("DELETE FROM users WHERE id = :uid"), {"uid": uid})
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     return MessageResponse(message="User permanently deleted")
 
 

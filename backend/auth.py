@@ -3,12 +3,17 @@ auth.py
 Purpose: /register, /login, /logout endpoints.
 Security:
   - Passwords hashed with bcrypt (12 rounds) before storage.
-  - JWT tokens with 30-minute expiry.
+  - JWT tokens with configurable expiry (default 1440 min).
   - On /logout, token JTI saved to blacklist table.
   - Generic error messages only — never leak DB or stack details.
+  - Password reset codes sent via SMTP email (configurable via env).
 """
 import logging
 import hashlib
+import hmac
+import smtplib
+import ssl
+from email.message import EmailMessage
 logger = logging.getLogger(__name__)
 import os
 import secrets
@@ -31,10 +36,43 @@ BCRYPT_ROUNDS = int(os.getenv("BCRYPT_ROUNDS", "12"))
 
 if not JWT_SECRET:
     raise RuntimeError("JWT_SECRET not set in environment variables")
+if len(JWT_SECRET) < 32:
+    raise RuntimeError("JWT_SECRET must be at least 32 characters long")
+
+SMTP_HOST = os.getenv("SMTP_HOST")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USERNAME = os.getenv("SMTP_USERNAME")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", SMTP_USERNAME)
 
 RESET_CODE_EXPIRY_MINUTES = 15
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+
+def _send_reset_email(recipient: str, code: str):
+    """Send password reset code via SMTP. Silently skips if SMTP not configured."""
+    if not SMTP_HOST or not SMTP_USERNAME or not SMTP_PASSWORD:
+        logger.warning("SMTP not configured — reset code for %s: %s", recipient, code)
+        return
+    try:
+        msg = EmailMessage()
+        msg["Subject"] = "Your Password Reset Code"
+        msg["From"] = SMTP_FROM_EMAIL
+        msg["To"] = recipient
+        msg.set_content(
+            f"Your password reset code is: {code}\n\n"
+            f"This code expires in {RESET_CODE_EXPIRY_MINUTES} minutes.\n"
+            f"If you did not request this, please ignore this email."
+        )
+        context = ssl.create_default_context()
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.starttls(context=context)
+            server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            server.send_message(msg)
+        logger.info("Reset code sent to %s", recipient)
+    except Exception as e:
+        logger.warning("Failed to send reset email to %s: %s", recipient, e)
 
 
 def _generic_error():
@@ -250,8 +288,7 @@ def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
     )
     db.add(reset_code)
     db.commit()
-    # TODO: Send code via email/SMS
-    # logger.info("Password reset code for %s: %s", body.email, code)
+    _send_reset_email(body.email, code)
     return {
         "message": "If this email is registered, a reset code has been generated",
     }

@@ -12,6 +12,7 @@ Database:
 """
 import logging
 import os
+import hmac
 logger = logging.getLogger(__name__)
 from pathlib import Path
 from dotenv import load_dotenv
@@ -24,6 +25,7 @@ from datetime import datetime, timezone
 import bcrypt
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -87,6 +89,16 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+# ─── Security Headers ────────────────────────────────────────────
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
+
 # ─── API Key Validation ──────────────────────────────────────────
 @app.middleware("http")
 async def validate_api_key(request: Request, call_next):
@@ -96,8 +108,7 @@ async def validate_api_key(request: Request, call_next):
         if auth_header.startswith("Bearer "):
             return await call_next(request)
         header_key = request.headers.get("X-API-Key")
-        if not header_key or header_key != API_KEY:
-            from fastapi.responses import JSONResponse
+        if not header_key or not hmac.compare_digest(header_key, API_KEY):
             return JSONResponse(
                 status_code=403,
                 content={"detail": "Invalid or missing API key"},
@@ -107,8 +118,8 @@ async def validate_api_key(request: Request, call_next):
 
 # ─── CSRF Protection (Origin / Referer check) ──────────────────────
 # This API uses JWT Bearer tokens (not cookies) so CSRF via cookie-
-# stealing is not a vector.  We still validate Origin/Referer on
-# mutating requests as defense-in-depth.
+# stealing is not a vector.  Requests with Bearer tokens (mobile app)
+# skip the origin check entirely.
 import re
 from urllib.parse import urlparse
 
@@ -118,23 +129,30 @@ MUTATING_METHODS = {"POST", "PUT", "DELETE", "PATCH"}
 @app.middleware("http")
 async def csrf_origin_check(request: Request, call_next):
     if request.method in MUTATING_METHODS and request.url.path not in PUBLIC_PATHS_C4:
-        origin = request.headers.get("Origin") or request.headers.get("Referer") or ""
-        if origin:
-            try:
-                parsed = urlparse(origin)
-                allowed = {urlparse(FRONTEND_URL).netloc}
-                if request.url.hostname:
-                    allowed.add(request.url.hostname)
-                    if request.url.port:
-                        allowed.add(f"{request.url.hostname}:{request.url.port}")
-                if parsed.netloc and parsed.netloc not in allowed:
-                    from fastapi.responses import JSONResponse
-                    return JSONResponse(
-                        status_code=403,
-                        content={"detail": "Cross-site request forbidden"},
-                    )
-            except Exception:
-                logger.warning("CSRF origin check failed")
+        # Skip CSRF for requests with Bearer token (mobile app / API client)
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            return await call_next(request)
+        origin = request.headers.get("Origin") or request.headers.get("Referer")
+        if not origin:
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "Origin header required"},
+            )
+        try:
+            parsed = urlparse(origin)
+            allowed = {urlparse(FRONTEND_URL).netloc}
+            if request.url.hostname:
+                allowed.add(request.url.hostname)
+                if request.url.port:
+                    allowed.add(f"{request.url.hostname}:{request.url.port}")
+            if parsed.netloc and parsed.netloc not in allowed:
+                return JSONResponse(
+                    status_code=403,
+                    content={"detail": "Cross-site request forbidden"},
+                )
+        except Exception:
+            logger.warning("CSRF origin check failed")
     return await call_next(request)
 
 

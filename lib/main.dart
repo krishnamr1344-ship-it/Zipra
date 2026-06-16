@@ -11,7 +11,7 @@ void main() async {
 
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
-    debugPrint('FATAL: ${details.exception}\n${details.stack}');
+    debugPrint('FATAL: ${details.exception}');
   };
 
     await AppInfo.load();
