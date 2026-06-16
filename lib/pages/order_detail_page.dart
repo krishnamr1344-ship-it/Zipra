@@ -86,7 +86,10 @@ class _StatusBox extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: _accent.withAlpha(20), borderRadius: BorderRadius.circular(12)),
+                decoration: BoxDecoration(
+                  color: _accent.withAlpha(20),
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: Icon(Icons.checklist, size: 22, color: _accent),
               ),
               const SizedBox(width: 12),
@@ -94,70 +97,117 @@ class _StatusBox extends StatelessWidget {
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                decoration: BoxDecoration(color: _accent.withAlpha(20), borderRadius: BorderRadius.circular(20)),
+                decoration: BoxDecoration(
+                  color: _accent.withAlpha(20),
+                  borderRadius: BorderRadius.circular(20),
+                ),
                 child: Text(order.status, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _accent)),
               ),
             ],
           ),
           const SizedBox(height: 24),
-          ...List.generate(steps.length, (i) {
-            final isDone = i < active;
-            final isCurrent = i == active;
-            final isLast = i == steps.length - 1;
-            final done = cancelled ? i == 0 : isDone;
-            final curr = cancelled ? false : isCurrent;
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [_accent.withAlpha(8), _accent.withAlpha(3)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: _accent.withAlpha(18)),
+            ),
+            child: Column(
+              children: List.generate(steps.length, (i) {
+                final isDone = i < active;
+                final isCurrent = i == active;
+                final isLast = i == steps.length - 1;
+                final done = cancelled ? i == 0 : isDone;
+                final curr = cancelled ? false : isCurrent;
 
-            return IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Column(
+                return IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 28, height: 28,
-                        decoration: BoxDecoration(
-                          color: done ? _accent : (curr ? _accent.withAlpha(30) : Colors.grey.shade200),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: cancelled && i > 0
-                              ? Icon(Icons.close, size: 14, color: Colors.red.withAlpha(150))
-                              : done
-                                  ? const Icon(Icons.check, size: 16, color: Colors.white)
-                                  : curr
-                                      ? const Icon(Icons.more_horiz, size: 16, color: AppColors.primary)
-                                      : Icon(Icons.circle, size: 8, color: Colors.grey.shade300),
+                      Column(
+                        children: [
+                          Container(
+                            width: 30,
+                            height: 30,
+                            decoration: BoxDecoration(
+                              gradient: done || curr
+                                  ? LinearGradient(
+                                      colors: [_accent, _accent.withAlpha(200)],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    )
+                                  : null,
+                              color: done || curr ? null : Colors.grey.shade200,
+                              shape: BoxShape.circle,
+                              boxShadow: curr
+                                  ? [BoxShadow(color: _accent.withAlpha(80), blurRadius: 10, spreadRadius: 1)]
+                                  : done
+                                      ? [BoxShadow(color: _accent.withAlpha(40), blurRadius: 6)]
+                                      : null,
+                            ),
+                            child: Center(
+                              child: cancelled && i > 0
+                                  ? Icon(Icons.close, size: 14, color: Colors.red.withAlpha(150))
+                                  : done
+                                      ? const Icon(Icons.check, size: 16, color: Colors.white)
+                                      : curr
+                                          ? Container(
+                                              width: 10,
+                                              height: 10,
+                                              decoration: const BoxDecoration(
+                                                color: Colors.white,
+                                                shape: BoxShape.circle,
+                                              ),
+                                            )
+                                          : Icon(Icons.circle, size: 8, color: Colors.grey.shade400),
+                            ),
+                          ),
+                          if (!isLast)
+                            Container(
+                              width: 2,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                gradient: done
+                                    ? LinearGradient(
+                                        colors: [_accent.withAlpha(120), _accent.withAlpha(60)],
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                      )
+                                    : null,
+                                color: done ? null : Colors.grey.shade200,
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(width: 14),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4, bottom: 18),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(steps[i], style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: done || curr ? FontWeight.w600 : FontWeight.normal,
+                              color: done || curr ? AppColors.textPrimary : AppColors.textHint,
+                            )),
+                            if (curr && !cancelled)
+                              Text('In progress', style: TextStyle(fontSize: 11, color: _accent)),
+                            if (cancelled && i == 0)
+                              const Text('Cancelled', style: TextStyle(fontSize: 11, color: AppColors.error)),
+                          ],
                         ),
                       ),
-                      if (!isLast)
-                        Container(
-                          width: 2, height: 32,
-                          color: cancelled || done ? _accent.withAlpha(80) : Colors.grey.shade200,
-                        ),
                     ],
                   ),
-                  const SizedBox(width: 14),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4, bottom: 14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(steps[i], style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: done || curr ? FontWeight.w600 : FontWeight.normal,
-                          color: done || curr ? AppColors.textPrimary : AppColors.textHint,
-                        )),
-                        if (curr && !cancelled)
-                          Text('In progress', style: TextStyle(fontSize: 11, color: _accent)),
-                        if (cancelled && i == 0)
-                          const Text('Cancelled', style: TextStyle(fontSize: 11, color: AppColors.error)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
+                );
+              }),
+            ),
+          ),
         ],
       ),
     );
@@ -176,7 +226,6 @@ class _DeliveryOtpBox extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.primary.withAlpha(40)),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 3))],
       ),
       child: Column(
@@ -185,7 +234,10 @@ class _DeliveryOtpBox extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: AppColors.primary.withAlpha(20), borderRadius: BorderRadius.circular(12)),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withAlpha(20),
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: const Icon(Icons.lock_outline, size: 20, color: AppColors.primary),
               ),
               const SizedBox(width: 12),
@@ -194,10 +246,15 @@ class _DeliveryOtpBox extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
             decoration: BoxDecoration(
-              color: AppColors.primary.withAlpha(8),
+              gradient: LinearGradient(
+                colors: [AppColors.primary.withAlpha(10), AppColors.primaryLight.withAlpha(6)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.primary.withAlpha(20)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -205,12 +262,13 @@ class _DeliveryOtpBox extends StatelessWidget {
                 for (var i = 0; i < order.deliveryOtp!.length; i++) ...[
                   if (i == 3) const SizedBox(width: 12),
                   Container(
-                    width: 36,
-                    height: 48,
+                    width: 40,
+                    height: 50,
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: AppColors.primary.withAlpha(60)),
+                      boxShadow: [BoxShadow(color: AppColors.primary.withAlpha(15), blurRadius: 4, offset: const Offset(0, 2))],
                     ),
                     child: Center(
                       child: Text(
@@ -219,7 +277,6 @@ class _DeliveryOtpBox extends StatelessWidget {
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                           color: AppColors.primary,
-                          letterSpacing: 2,
                         ),
                       ),
                     ),
@@ -229,10 +286,16 @@ class _DeliveryOtpBox extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          Text(
-            'Share this code with the delivery person when your order arrives.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.info_outline, size: 12, color: AppColors.textSecondary),
+              const SizedBox(width: 6),
+              Text(
+                'Share this code with the delivery person.',
+                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+              ),
+            ],
           ),
         ],
       ),
@@ -261,7 +324,10 @@ class _InfoBox extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: AppColors.primary.withAlpha(15), borderRadius: BorderRadius.circular(12)),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withAlpha(15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: const Icon(Icons.receipt_outlined, size: 20, color: AppColors.primary),
               ),
               const SizedBox(width: 12),
@@ -269,17 +335,33 @@ class _InfoBox extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          _infoRow('Order ID', '#${order.id.length > 12 ? order.id.substring(0, 12).toUpperCase() : order.id.toUpperCase()}'),
-          _infoRow('Date', '${order.date.day}/${order.date.month}/${order.date.year}'),
-          _infoRow('Payment', 'Cash on Delivery'),
-          _infoRow('Items', '${order.items.length} item${order.items.length > 1 ? 's' : ''}'),
-          if (order.deliveryAddress != null) _infoRow('Delivery', order.deliveryAddress!),
-          const Divider(height: 24),
+          Row(
+            children: [
+              Expanded(child: _infoItem(Icons.tag, 'Order ID', '#${order.id.length > 8 ? order.id.substring(0, 8).toUpperCase() : order.id.toUpperCase()}')),
+              const SizedBox(width: 12),
+              Expanded(child: _infoItem(Icons.calendar_today, 'Date', '${order.date.day}/${order.date.month}/${order.date.year}')),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: _infoItem(Icons.payment, 'Payment', 'Cash on Delivery')),
+              const SizedBox(width: 12),
+              Expanded(child: _infoItem(Icons.shopping_bag, 'Items', '${order.items.length} item${order.items.length > 1 ? 's' : ''}')),
+            ],
+          ),
+          if (order.deliveryAddress != null) ...[
+            const SizedBox(height: 12),
+            _infoItem(Icons.location_on, 'Delivery', order.deliveryAddress!),
+          ],
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: AppColors.divider),
+          const SizedBox(height: 16),
           Row(
             children: [
               const Text('Total Amount', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               const Spacer(),
-              Text('₹${order.total}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.primary)),
+              Text('₹${order.total}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primary)),
             ],
           ),
         ],
@@ -287,14 +369,27 @@ class _InfoBox extends StatelessWidget {
     );
   }
 
-  Widget _infoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+  Widget _infoItem(IconData icon, String label, String value) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Row(
         children: [
-          Text(label, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-          const Spacer(),
-          Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+          Icon(icon, size: 16, color: AppColors.textSecondary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                const SizedBox(height: 2),
+                Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -322,36 +417,51 @@ class _ItemsBox extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: AppColors.success.withAlpha(15), borderRadius: BorderRadius.circular(12)),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withAlpha(15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: const Icon(Icons.shopping_bag_outlined, size: 20, color: AppColors.success),
               ),
               const SizedBox(width: 12),
               const Text('Items', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              const Spacer(),
+              Text('${order.items.length} item${order.items.length > 1 ? 's' : ''}',
+                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
             ],
           ),
           const SizedBox(height: 16),
-          ...order.items.map((item) => Container(
+          ...order.items.map((item) => Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Row(
               children: [
-                Container(
-                  width: 40, height: 40,
-                  decoration: BoxDecoration(color: item.color.withAlpha(15), borderRadius: BorderRadius.circular(12)),
-                  child: Center(child: Text(item.name.isNotEmpty ? item.name[0].toUpperCase() : '?',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: item.color))),
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: item.color.withAlpha(25),
+                  child: Text(
+                    item.name.isNotEmpty ? item.name[0].toUpperCase() : '?',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: item.color),
+                  ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary)),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 3),
                       Text('₹${item.price} × ${item.count}', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                     ],
                   ),
                 ),
-                Text('₹${item.price * item.count}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary)),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withAlpha(10),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text('₹${item.price * item.count}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primary)),
+                ),
               ],
             ),
           )),

@@ -270,8 +270,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final primary = theme.colorScheme.primary;
+    final primary = AppColors.primary;
 
     return Scaffold(
       body: CustomScrollView(
@@ -281,7 +280,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
             pinned: true,
             backgroundColor: primary,
             flexibleSpace: Container(
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 gradient: AppColors.adminHeaderGradient,
               ),
               child: SafeArea(
@@ -300,7 +299,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                           const SizedBox(width: 4),
                           Container(
                             width: 40, height: 40,
-                            decoration: BoxDecoration(color: Colors.white.withAlpha(25), borderRadius: BorderRadius.circular(12)),
+                            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
                             child: const Icon(Icons.inventory_2, color: Colors.white, size: 20),
                           ),
                           const SizedBox(width: 12),
@@ -313,7 +312,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                           ),
                           const Spacer(),
                           Container(
-                            decoration: BoxDecoration(color: Colors.white.withAlpha(25), borderRadius: BorderRadius.circular(10)),
+                            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
                             child: IconButton(
                               icon: Icon(_gridMode ? Icons.view_list : Icons.grid_view, color: Colors.white, size: 20),
                               onPressed: () => setState(() => _gridMode = !_gridMode),
@@ -321,7 +320,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                           ),
                           const SizedBox(width: 4),
                           Container(
-                            decoration: BoxDecoration(color: Colors.white.withAlpha(25), borderRadius: BorderRadius.circular(10)),
+                            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
                             child: IconButton(
                               icon: const Icon(Icons.add, color: Colors.white, size: 20),
                               onPressed: () => _showForm(),
@@ -342,10 +341,10 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                 onChanged: (v) { _search = v; _applyFilter(); },
                 decoration: InputDecoration(
                   hintText: 'Search products by name or price...',
-                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-                  prefixIcon: Icon(Icons.search, color: Colors.grey.shade400),
+                  hintStyle: TextStyle(color: AppColors.textHint, fontSize: 14),
+                  prefixIcon: Icon(Icons.search, color: AppColors.textHint),
                   filled: true,
-                  fillColor: Colors.grey.withAlpha(10),
+                  fillColor: AppColors.chipBg,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 ),
@@ -378,7 +377,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(18),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withAlpha(6), blurRadius: 10, offset: const Offset(0, 2)),
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 3)),
                         ],
                       ),
                       child: Material(
@@ -394,7 +393,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                                 Container(
                                   width: 56, height: 56,
                                   decoration: BoxDecoration(
-                                    color: Colors.grey.withAlpha(15),
+                                    color: AppColors.chipBg,
                                     borderRadius: BorderRadius.circular(14),
                                   ),
                                   child: thumb != null && thumb.startsWith('http')
@@ -410,22 +409,22 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(p['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                                      const SizedBox(height: 4),
+                                      const SizedBox(height: 6),
                                       Row(
                                         children: [
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                            decoration: BoxDecoration(color: Colors.green.withAlpha(20), borderRadius: BorderRadius.circular(8)),
-                                            child: Text('₹${p['price']} / ${p['unit']}', style: TextStyle(fontSize: 11, color: Colors.green.shade700, fontWeight: FontWeight.w500)),
+                                            decoration: BoxDecoration(color: AppColors.successLight, borderRadius: BorderRadius.circular(8)),
+                                            child: Text('₹${p['price']} / ${p['unit']}', style: TextStyle(fontSize: 11, color: AppColors.success, fontWeight: FontWeight.w500)),
                                           ),
                                           const SizedBox(width: 6),
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                             decoration: BoxDecoration(
-                                              color: Colors.grey.withAlpha(15),
+                                              color: AppColors.chipBg,
                                               borderRadius: BorderRadius.circular(8),
                                             ),
-                                            child: Text('Stock: ${p['stock']}', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                                            child: Text('Stock: ${p['stock']}', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                                           ),
                                         ],
                                       ),
@@ -437,15 +436,15 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                                   children: [
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                      decoration: BoxDecoration(color: primary.withAlpha(15), borderRadius: BorderRadius.circular(8)),
+                                      decoration: BoxDecoration(color: primary.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(8)),
                                       child: Text(_catName(p['category_id']), style: TextStyle(fontSize: 10, color: primary, fontWeight: FontWeight.w500)),
                                     ),
                                     const SizedBox(height: 6),
                                     if (p['is_enabled'] == false)
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                        decoration: BoxDecoration(color: Colors.red.withAlpha(20), borderRadius: BorderRadius.circular(8)),
-                                        child: const Text('Off', style: TextStyle(fontSize: 10, color: Colors.red, fontWeight: FontWeight.w600)),
+                                        decoration: BoxDecoration(color: AppColors.errorLight, borderRadius: BorderRadius.circular(8)),
+                                        child: Text('Off', style: TextStyle(fontSize: 10, color: AppColors.error, fontWeight: FontWeight.w600)),
                                       ),
                                     const SizedBox(height: 6),
                                     Row(
@@ -470,13 +469,13 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                                           child: Container(
                                             padding: const EdgeInsets.all(6),
                                             decoration: BoxDecoration(
-                                              color: (p['is_enabled'] != false ? Colors.orange : Colors.grey).withAlpha(15),
+                                              color: (p['is_enabled'] != false ? AppColors.warningLight : AppColors.chipBg).withValues(alpha: 0.6),
                                               borderRadius: BorderRadius.circular(8),
                                             ),
                                             child: Icon(
                                               p['is_enabled'] != false ? Icons.visibility : Icons.visibility_off,
                                               size: 18,
-                                              color: p['is_enabled'] != false ? Colors.orange : Colors.grey,
+                                              color: p['is_enabled'] != false ? AppColors.warning : AppColors.textSecondary,
                                             ),
                                           ),
                                         ),
@@ -509,7 +508,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                                           },
                                           child: Container(
                                             padding: const EdgeInsets.all(6),
-                                            decoration: BoxDecoration(color: Colors.red.withAlpha(15), borderRadius: BorderRadius.circular(8)),
+                                            decoration: BoxDecoration(color: AppColors.errorLight, borderRadius: BorderRadius.circular(8)),
                                             child: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
                                           ),
                                         ),
@@ -549,7 +548,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(18),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withAlpha(6), blurRadius: 10, offset: const Offset(0, 2)),
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 3)),
                         ],
                       ),
                       child: Material(
@@ -565,15 +564,15 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                                 child: Container(
                                   width: double.infinity,
                                   decoration: BoxDecoration(
-                                    color: Colors.grey.withAlpha(15),
+                                    color: AppColors.chipBg,
                                     borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
                                   ),
                                   child: thumb != null && thumb.startsWith('http')
                                       ? ClipRRect(
                                           borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-                                          child: Image.network(thumb, width: double.infinity, fit: BoxFit.cover, errorBuilder: (_, _, _) => Center(child: Icon(Icons.image, size: 36, color: Colors.grey.shade300))),
+                                          child: Image.network(thumb, width: double.infinity, fit: BoxFit.cover, errorBuilder: (_, _, _) => Center(child: Icon(Icons.image, size: 36, color: AppColors.textHint))),
                                         )
-                                      : Center(child: Icon(Icons.image, size: 36, color: Colors.grey.shade300)),
+                                      : Center(child: Icon(Icons.image, size: 36, color: AppColors.textHint)),
                                 ),
                               ),
                               Padding(
@@ -583,16 +582,16 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                                   children: [
                                     Text(p['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
                                     const SizedBox(height: 2),
-                                    Text('₹${p['price'] ?? '0'} / ${p['unit'] ?? ''}', style: TextStyle(fontSize: 12, color: Colors.green.shade700, fontWeight: FontWeight.w500)),
+                                    Text('₹${p['price'] ?? '0'} / ${p['unit'] ?? ''}', style: TextStyle(fontSize: 12, color: AppColors.success, fontWeight: FontWeight.w500)),
                                     Row(
                                       children: [
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                          decoration: BoxDecoration(color: primary.withAlpha(15), borderRadius: BorderRadius.circular(6)),
+                                          decoration: BoxDecoration(color: primary.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(6)),
                                           child: Text(_catName(p['category_id']), style: TextStyle(fontSize: 9, color: primary, fontWeight: FontWeight.w500)),
                                         ),
                                         const Spacer(),
-                                        Text('Stock: ${p['stock']}', style: TextStyle(fontSize: 10, color: Colors.grey.shade500)),
+                                        Text('Stock: ${p['stock']}', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                                       ],
                                     ),
                                   ],

@@ -123,8 +123,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final primary = theme.colorScheme.primary;
+    final primary = AppColors.primary;
     final statuses = [
       'All',
       'Pending',
@@ -151,7 +150,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
               pinned: true,
               backgroundColor: primary,
               flexibleSpace: Container(
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   gradient: AppColors.adminHeaderGradient,
                 ),
                 child: SafeArea(
@@ -173,7 +172,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                               width: 42,
                               height: 42,
                               decoration: BoxDecoration(
-                                color: Colors.white.withAlpha(25),
+                                color: Colors.white.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(14),
                               ),
                               child: const Icon(Icons.receipt_long,
@@ -203,7 +202,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                               label: 'Total',
                               value: '${_orders.length}',
                               color: Colors.white,
-                              bgColor: Colors.white.withAlpha(20),
+                              bgColor: Colors.white.withValues(alpha: 0.08),
                             ),
                             const SizedBox(width: 10),
                             _StatCard(
@@ -211,7 +210,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                               label: 'Pending',
                               value: '$pending',
                               color: const Color(0xFFFBBF24),
-                              bgColor: const Color(0xFFF59E0B).withAlpha(25),
+                              bgColor: const Color(0xFFF59E0B).withValues(alpha: 0.15),
                             ),
                             const SizedBox(width: 10),
                             _StatCard(
@@ -219,7 +218,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                               label: 'Revenue',
                               value: '₹${totalRev.toStringAsFixed(0)}',
                               color: const Color(0xFF34D399),
-                              bgColor: const Color(0xFF10B981).withAlpha(25),
+                              bgColor: const Color(0xFF10B981).withValues(alpha: 0.15),
                             ),
                           ],
                         ),
@@ -241,9 +240,9 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                   decoration: InputDecoration(
                     hintText: 'Search by ID, name, amount...',
                     hintStyle:
-                        TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                        TextStyle(color: AppColors.textHint, fontSize: 14),
                     prefixIcon:
-                        Icon(Icons.search_rounded, color: Colors.grey.shade400),
+                        Icon(Icons.search_rounded, color: AppColors.textHint),
                     suffixIcon: _search.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.clear, size: 18),
@@ -254,7 +253,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                           )
                         : null,
                     filled: true,
-                    fillColor: Colors.grey.withAlpha(8),
+                    fillColor: AppColors.chipBg,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
                       borderSide: BorderSide.none,
@@ -287,17 +286,17 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                           duration: const Duration(milliseconds: 200),
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           decoration: BoxDecoration(
-                            color: active ? tabColor : Colors.grey.withAlpha(12),
+                            color: active ? tabColor : AppColors.chipBg,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
                               color: active
                                   ? tabColor
-                                  : Colors.grey.withAlpha(30),
+                                  : AppColors.divider,
                             ),
                             boxShadow: active
                                 ? [
                                     BoxShadow(
-                                      color: tabColor.withAlpha(60),
+                                      color: tabColor.withValues(alpha: 0.25),
                                       blurRadius: 10,
                                       offset: const Offset(0, 3),
                                     ),
@@ -314,7 +313,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                                 size: 16,
                                 color: active
                                     ? Colors.white
-                                    : Colors.grey.shade500,
+                                    : AppColors.textSecondary,
                               ),
                               const SizedBox(width: 8),
                               Text(
@@ -325,7 +324,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                                       active ? FontWeight.w700 : FontWeight.w600,
                                   color: active
                                       ? Colors.white
-                                      : Colors.grey.shade600,
+                                      : AppColors.textSecondary,
                                 ),
                               ),
                               if (count > 0) ...[
@@ -335,8 +334,8 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                                       horizontal: 7, vertical: 2),
                                   decoration: BoxDecoration(
                                     color: active
-                                        ? Colors.white.withAlpha(30)
-                                        : tabColor.withAlpha(20),
+                                        ? Colors.white.withValues(alpha: 0.2)
+                                        : tabColor.withValues(alpha: 0.12),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Text(
@@ -411,7 +410,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                             borderRadius: BorderRadius.circular(18),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withAlpha(5),
+                                color: Colors.black.withValues(alpha: 0.04),
                                 blurRadius: 12,
                                 offset: const Offset(0, 3),
                               ),
@@ -455,7 +454,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                                                   height: 40,
                                                   decoration: BoxDecoration(
                                                     color:
-                                                        statusColor.withAlpha(15),
+                                                        statusColor.withValues(alpha: 0.1),
                                                     borderRadius:
                                                         BorderRadius.circular(12),
                                                   ),
@@ -488,9 +487,8 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                                                             timeAgo,
                                                             style: TextStyle(
                                                               fontSize: 11,
-                                                              color: Colors
-                                                                  .grey
-                                                                  .shade400,
+                                                              color: AppColors
+                                                                  .textHint,
                                                             ),
                                                           ),
                                                         ],
@@ -511,9 +509,8 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                                                             '${items.length} item${items.length != 1 ? 's' : ''}',
                                                             style: TextStyle(
                                                               fontSize: 11,
-                                                              color: Colors
-                                                                  .grey
-                                                                  .shade500,
+                                                              color: AppColors
+                                                                  .textSecondary,
                                                             ),
                                                           ),
                                                         ],
@@ -539,8 +536,8 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                                                       '${o['payment_method'] ?? ''}',
                                                       style: TextStyle(
                                                         fontSize: 10,
-                                                        color: Colors
-                                                            .grey.shade400,
+                                                        color: AppColors
+                                                            .textHint,
                                                       ),
                                                     ),
                                                   ],
@@ -558,7 +555,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                                                       colors: [
                                                         primary,
                                                         primary
-                                                            .withAlpha(180),
+                                                            .withValues(alpha: 0.7),
                                                       ],
                                                     ),
                                                     borderRadius:
@@ -584,8 +581,8 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                                                         'Unknown',
                                                     style: TextStyle(
                                                       fontSize: 13,
-                                                      color:
-                                                          Colors.grey.shade600,
+                                                      color: AppColors
+                                                          .textSecondary,
                                                       fontWeight:
                                                           FontWeight.w500,
                                                     ),
@@ -595,8 +592,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                                                 ),
                                                 Icon(Icons.chevron_right,
                                                     size: 18,
-                                                    color:
-                                                        Colors.grey.shade300),
+                                                    color: AppColors.divider),
                                               ],
                                             ),
                                           ],
@@ -662,7 +658,7 @@ class _StatCard extends StatelessWidget {
               label,
               style: TextStyle(
                 fontSize: 11,
-                color: color.withAlpha(180),
+                color: color.withValues(alpha: 0.7),
               ),
             ),
           ],
@@ -688,7 +684,7 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withAlpha(15),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(

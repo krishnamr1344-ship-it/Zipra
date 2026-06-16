@@ -72,7 +72,7 @@ class _AdminComboPacksPageState extends State<AdminComboPacksPage> {
                 children: [
                   Container(
                     width: 40, height: 40,
-                    decoration: BoxDecoration(color: AppColors.primary.withAlpha(25), borderRadius: BorderRadius.circular(12)),
+                    decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(12)),
                     child: const Icon(Icons.inventory_2, color: AppColors.primary),
                   ),
                   const SizedBox(width: 12),
@@ -256,7 +256,7 @@ class _AdminComboPacksPageState extends State<AdminComboPacksPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Combo Packs'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -284,10 +284,19 @@ class _AdminComboPacksPageState extends State<AdminComboPacksPage> {
                     itemBuilder: (_, i) {
                       final pack = _packs[i];
                       final isEnabled = pack['is_enabled'] == true;
-                      return Card(
+                      return Container(
                         margin: const EdgeInsets.only(bottom: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        elevation: 2,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.04),
+                              blurRadius: 12,
+                              offset: Offset(0, 3),
+                            ),
+                          ],
+                        ),
                         child: Padding(
                           padding: const EdgeInsets.all(16),
                           child: Column(
@@ -301,7 +310,7 @@ class _AdminComboPacksPageState extends State<AdminComboPacksPage> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: isEnabled ? Colors.green.withAlpha(20) : Colors.grey.withAlpha(20),
+                                      color: isEnabled ? Colors.green.withValues(alpha: 0.20) : Colors.grey.withValues(alpha: 0.20),
                                       borderRadius: BorderRadius.circular(20),
                                     ),
                                     child: Text(isEnabled ? 'Enabled' : 'Disabled', style: TextStyle(fontSize: 12, color: isEnabled ? Colors.green : Colors.grey, fontWeight: FontWeight.w600)),
@@ -310,17 +319,17 @@ class _AdminComboPacksPageState extends State<AdminComboPacksPage> {
                               ),
                               if (pack['description'] != null) ...[
                                 const SizedBox(height: 4),
-                                Text(pack['description'], style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+                                Text(pack['description'], style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                               ],
                               const SizedBox(height: 8),
                               Row(
                                 children: [
-                                  Text('₹${pack['total_price']?.toStringAsFixed(0) ?? '0'}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A))),
+                                  Text('₹${pack['total_price']?.toStringAsFixed(0) ?? '0'}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                                   if (pack['discount_label'] != null) ...[
                                     const SizedBox(width: 8),
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                      decoration: BoxDecoration(color: Colors.red.withAlpha(20), borderRadius: BorderRadius.circular(8)),
+                                      decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.20), borderRadius: BorderRadius.circular(8)),
                                       child: Text(pack['discount_label'], style: const TextStyle(fontSize: 11, color: Colors.red, fontWeight: FontWeight.bold)),
                                     ),
                                   ],

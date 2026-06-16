@@ -160,107 +160,6 @@ class _OrderCard extends StatelessWidget {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final accent = _color(status);
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 3))],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-              decoration: BoxDecoration(
-                border: Border(left: BorderSide(color: accent, width: 4)),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('#${id.length > 10 ? id.substring(0, 10).toUpperCase() : id.toUpperCase()}',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary)),
-                        const SizedBox(height: 2),
-                        Text('${date.day}/${date.month}/${date.year}', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(color: accent.withAlpha(20), borderRadius: BorderRadius.circular(20)),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(_statusIcon(status), size: 13, color: accent),
-                        const SizedBox(width: 4),
-                        Text(status, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: accent)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
-              child: Divider(height: 1, color: Colors.grey.shade100),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 10, 18, 0),
-              child: Row(
-                children: [
-                  ...items.take(3).map((item) => Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Container(
-                      width: 32, height: 32,
-                      decoration: BoxDecoration(color: AppColors.chipBg, borderRadius: BorderRadius.circular(8)),
-                      child: Center(
-                        child: Text(item.name.isNotEmpty ? item.name[0].toUpperCase() : '?',
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary)),
-                      ),
-                    ),
-                  )),
-                  if (items.length > 3)
-                    Container(
-                      width: 32, height: 32,
-                      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
-                      child: Center(
-                        child: Text('+${items.length - 3}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey.shade600)),
-                      ),
-                    ),
-                  const Spacer(),
-                      Text('$itemCount item${itemCount > 1 ? 's' : ''} · ₹$total',
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-              decoration: BoxDecoration(color: Colors.grey.shade50, border: Border(top: BorderSide(color: Colors.grey.shade100))),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text('Tap to view details', style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
-                  const SizedBox(width: 4),
-                  Icon(Icons.chevron_right, size: 14, color: Colors.grey.shade400),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   IconData _statusIcon(String s) {
     switch (s) {
       case 'Pending': return Icons.hourglass_empty;
@@ -270,5 +169,125 @@ class _OrderCard extends StatelessWidget {
       case 'Cancelled': return Icons.cancel_outlined;
       default: return Icons.help_outline;
     }
+  }
+
+  String _timeAgo(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    return '${dt.day}/${dt.month}/${dt.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = _color(status);
+    final shortId = '#${id.length > 8 ? id.substring(0, 8).toUpperCase() : id.toUpperCase()}';
+    final previewItems = items.take(3).toList();
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 3))],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(shortId, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary)),
+                  ),
+                  Text(_timeAgo(date), style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: accent.withAlpha(20),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(_statusIcon(status), size: 14, color: accent),
+                    const SizedBox(width: 4),
+                    Text(status, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: accent)),
+                  ],
+                ),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 18),
+              child: Divider(height: 20, color: AppColors.divider),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
+              child: Row(
+                children: [
+                  ...List.generate(previewItems.length, (i) {
+                    final item = previewItems[i];
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: CircleAvatar(
+                        radius: 16,
+                        backgroundColor: AppColors.chipBg,
+                        child: Text(
+                          item.name.isNotEmpty ? item.name[0].toUpperCase() : '?',
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary),
+                        ),
+                      ),
+                    );
+                  }),
+                  if (items.length > 3)
+                    Container(
+                      width: 32, height: 32,
+                      decoration: BoxDecoration(
+                        color: AppColors.chipBg,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Center(
+                        child: Text('+${items.length - 3}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                      ),
+                    ),
+                  const Spacer(),
+                  Text('₹$total', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: AppColors.divider.withAlpha(80))),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 12,
+                    backgroundColor: AppColors.primary.withAlpha(20),
+                    child: const Icon(Icons.person, size: 14, color: AppColors.primary),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text('View Details', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                  const Spacer(),
+                  Icon(Icons.chevron_right, size: 18, color: Colors.grey.shade400),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -108,7 +108,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
                                   Container(
                                     width: 46, height: 46,
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withAlpha(40),
+                                      color: Colors.white.withValues(alpha: 0.4),
                                       borderRadius: BorderRadius.circular(14),
                                     ),
                                     child: Center(
@@ -122,7 +122,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text('Welcome,', style: TextStyle(fontSize: 12, color: Colors.white.withAlpha(180))),
+                                      Text('Welcome,', style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.18))),
                                       Text(_user['name'] ?? 'Admin', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                                     ],
                                   ),
@@ -133,7 +133,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withAlpha(30),
+                                      color: Colors.white.withValues(alpha: 0.3),
                                       borderRadius: BorderRadius.circular(20),
                                     ),
                                     child: const Row(
@@ -148,7 +148,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
                                   const SizedBox(width: 8),
                                   Container(
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withAlpha(20),
+                                      color: Colors.white.withValues(alpha: 0.2),
                                       borderRadius: BorderRadius.circular(10),
                                     ),
                                     child: IconButton(
@@ -164,7 +164,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
                           ),
                           const Spacer(),
                           Text('Dashboard', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
-                          Text(_user['email'] ?? '', style: TextStyle(fontSize: 13, color: Colors.white.withAlpha(150))),
+                          Text(_user['email'] ?? '', style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.15))),
                           const SizedBox(height: 16),
                         ],
                       ),
@@ -192,7 +192,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-                child: Text('MANAGEMENT', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.grey.shade500, letterSpacing: 1)),
+                child: Text('MANAGEMENT', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textSecondary, letterSpacing: 1)),
               ),
             ),
             SliverPadding(
@@ -219,19 +219,19 @@ class _AdminHomePageState extends State<AdminHomePage> {
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
                 child: Card(
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: BorderSide(color: Colors.grey.withAlpha(30))),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: BorderSide(color: Colors.grey.withValues(alpha: 0.3))),
                   child: ListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                     leading: Container(
                       width: 44, height: 44,
-                      decoration: BoxDecoration(color: Colors.amber.withAlpha(25), borderRadius: BorderRadius.circular(14)),
+                      decoration: BoxDecoration(color: Colors.amber.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(14)),
                       child: const Icon(Icons.bar_chart, color: Colors.amber, size: 22),
                     ),
                     title: const Text('Reports', style: TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: const Text('Sales & revenue overview'),
                     trailing: Container(
                       padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: Colors.grey.withAlpha(15), borderRadius: BorderRadius.circular(10)),
+                      decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
                       child: const Icon(Icons.chevron_right, size: 18, color: Colors.grey),
                     ),
                     onTap: () {
@@ -248,7 +248,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
                                 children: [
                                   Container(
                                     width: 44, height: 44,
-                                    decoration: BoxDecoration(color: Colors.amber.withAlpha(25), borderRadius: BorderRadius.circular(14)),
+                                    decoration: BoxDecoration(color: Colors.amber.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(14)),
                                     child: const Icon(Icons.bar_chart, color: Colors.amber, size: 22),
                                   ),
                                   const SizedBox(width: 14),
@@ -286,7 +286,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: color.withAlpha(10),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -308,7 +308,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
-            BoxShadow(color: accent.withAlpha(20), blurRadius: 12, offset: const Offset(0, 4)),
+            BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 3)),
           ],
         ),
         child: Column(
@@ -316,12 +316,12 @@ class _AdminHomePageState extends State<AdminHomePage> {
           children: [
             Container(
               width: 36, height: 36,
-              decoration: BoxDecoration(color: accent.withAlpha(25), borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(color: accent.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(12)),
               child: Icon(icon, size: 18, color: accent),
             ),
             const SizedBox(height: 10),
             Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: accent)),
-            Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+            Text(label, style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
           ],
         ),
       ),
@@ -334,7 +334,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
-          BoxShadow(color: accent.withAlpha(15), blurRadius: 12, offset: const Offset(0, 4)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 3)),
         ],
       ),
       child: Material(
@@ -350,13 +350,13 @@ class _AdminHomePageState extends State<AdminHomePage> {
               children: [
                 Container(
                   padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: accent.withAlpha(25), borderRadius: BorderRadius.circular(14)),
+                  decoration: BoxDecoration(color: accent.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(14)),
                   child: Icon(icon, size: 26, color: accent),
                 ),
                 const Spacer(),
                 Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
                 const SizedBox(height: 4),
-                Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                Text(subtitle, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
               ],
             ),
           ),

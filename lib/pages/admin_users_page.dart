@@ -97,7 +97,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                             width: 40,
                             height: 40,
                             decoration: BoxDecoration(
-                              color: Colors.white.withAlpha(25),
+                              color: Colors.white.withValues(alpha: 0.25),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Icon(
@@ -146,12 +146,12 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                 decoration: InputDecoration(
                   hintText: 'Search by name or email...',
                   hintStyle: TextStyle(
-                    color: Colors.grey.shade400,
+                    color: AppColors.textHint,
                     fontSize: 14,
                   ),
-                  prefixIcon: Icon(Icons.search, color: Colors.grey.shade400),
+                  prefixIcon: Icon(Icons.search, color: AppColors.textHint),
                   filled: true,
-                  fillColor: Colors.grey.withAlpha(10),
+                  fillColor: Colors.grey.withValues(alpha: 0.10),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide.none,
@@ -203,9 +203,9 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                       borderRadius: BorderRadius.circular(18),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withAlpha(6),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 12,
+                          offset: const Offset(0, 3),
                         ),
                       ],
                     ),
@@ -234,7 +234,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                           height: 48,
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: [accent, accent.withAlpha(180)],
+                              colors: [accent, accent.withValues(alpha: 0.180)],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
@@ -268,7 +268,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                                 vertical: 3,
                               ),
                               decoration: BoxDecoration(
-                                color: accent.withAlpha(20),
+                                color: accent.withValues(alpha: 0.20),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Row(
@@ -297,7 +297,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                           u['email'] ?? '',
                           style: TextStyle(
                             fontSize: 13,
-                            color: Colors.grey.shade500,
+                            color: AppColors.textSecondary,
                           ),
                         ),
                         children: [
@@ -305,10 +305,10 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: Colors.green.withAlpha(10),
+                                color: AppColors.successLight,
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(
-                                  color: Colors.green.withAlpha(25),
+                                  color: AppColors.success.withValues(alpha: 0.25),
                                 ),
                               ),
                               child: Column(
@@ -319,7 +319,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                                       Icon(
                                         Icons.location_on,
                                         size: 16,
-                                        color: Colors.green.shade600,
+                                        color: AppColors.success,
                                       ),
                                       const SizedBox(width: 6),
                                       const Text(
@@ -336,14 +336,14 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                                     '${gps['address_line1'] ?? ''}',
                                     style: TextStyle(
                                       fontSize: 12,
-                                      color: Colors.grey.shade600,
+                                      color: AppColors.textSecondary,
                                     ),
                                   ),
                                   Text(
                                     '${gps['city'] ?? ''}',
                                     style: TextStyle(
                                       fontSize: 12,
-                                      color: Colors.grey.shade500,
+                                      color: AppColors.textSecondary,
                                     ),
                                   ),
                                 ],
@@ -358,14 +358,14 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                                 Icon(
                                   Icons.phone,
                                   size: 14,
-                                  color: Colors.grey.shade400,
+                                  color: AppColors.textHint,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
                                   '${u['phone']}',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: Colors.grey.shade500,
+                                    color: AppColors.textSecondary,
                                   ),
                                 ),
                                 const SizedBox(width: 16),
@@ -373,7 +373,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                               Icon(
                                 Icons.calendar_today,
                                 size: 14,
-                                color: Colors.grey.shade400,
+                                color: AppColors.textHint,
                               ),
                               const SizedBox(width: 4),
                               Text(
@@ -381,7 +381,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                                     '-',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.grey.shade500,
+                                  color: AppColors.textSecondary,
                                 ),
                               ),
                             ],

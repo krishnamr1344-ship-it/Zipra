@@ -276,7 +276,7 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
                                 polygons: [
                                   Polygon(
                                     points: pts,
-                                    color: color.withAlpha(30),
+                                    color: color.withValues(alpha: 0.12),
                                     borderColor: color,
                                     borderStrokeWidth: 2.5,
                                   ),
@@ -288,7 +288,7 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
                               polygons: [
                                 Polygon(
                                   points: List.from(_points),
-                                  color: Colors.deepPurple.withAlpha(50),
+                                  color: Colors.deepPurple.withValues(alpha: 0.20),
                                   borderColor: Colors.deepPurple,
                                   borderStrokeWidth: 2,
                                 ),
@@ -306,7 +306,7 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
                                     shape: BoxShape.circle,
                                     border: Border.all(color: Colors.white, width: 2.5),
                                     boxShadow: [
-                                      BoxShadow(color: Colors.black.withAlpha(60), blurRadius: 4, offset: const Offset(0, 2)),
+                                      BoxShadow(color: Colors.black.withValues(alpha: 0.24), blurRadius: 4, offset: const Offset(0, 2)),
                                     ],
                                   ),
                                   child: Center(
@@ -332,7 +332,7 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                       decoration: BoxDecoration(
-                                        color: _colorForIndex(_savedZones.indexOf(entry.value)).withAlpha(200),
+                                        color: _colorForIndex(_savedZones.indexOf(entry.value)).withValues(alpha: 0.78),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                       child: Text(
@@ -360,7 +360,7 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
-          BoxShadow(color: Colors.black.withAlpha(15), blurRadius: 12, offset: const Offset(0, -3)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, -3)),
         ],
       ),
       child: Column(
@@ -371,7 +371,7 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
             margin: const EdgeInsets.symmetric(vertical: 6),
             width: 36,
             height: 4,
-            decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+            decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2)),
           ),
           // Zone name + action buttons
           Padding(
@@ -383,10 +383,10 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
                     controller: _nameCtl,
                     decoration: InputDecoration(
                       hintText: _editingZoneId != null ? 'Edit zone name' : 'Zone name',
-                      hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                      hintStyle: TextStyle(color: AppColors.textHint, fontSize: 14),
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.divider)),
                       focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.primary)),
                       filled: true,
                       fillColor: Colors.grey.shade50,
@@ -410,7 +410,7 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _points.length >= 3 ? Colors.green.shade50 : Colors.grey.shade100,
+                    color: _points.length >= 3 ? AppColors.successLight : AppColors.chipBg,
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -418,7 +418,7 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: _points.length >= 3 ? Colors.green.shade700 : Colors.grey.shade600,
+                      color: _points.length >= 3 ? Colors.green.shade700 : AppColors.textSecondary,
                     ),
                   ),
                 ),
@@ -466,11 +466,11 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: Row(
                 children: [
-                  Icon(Icons.map_rounded, size: 16, color: Colors.grey.shade600),
+                  Icon(Icons.map_rounded, size: 16, color: AppColors.textSecondary),
                   const SizedBox(width: 6),
                   Text(
                     'Saved Zones (${_savedZones.length})',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.grey.shade700),
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
                   ),
                 ],
               ),
@@ -491,7 +491,7 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: color.withAlpha(25),
+                        color: color.withValues(alpha: 0.10),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(Icons.polyline_rounded, size: 18, color: color),
@@ -502,7 +502,7 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
                       children: [
                         _smallIconBtn(Icons.my_location, 'Zoom to zone', color, () => _zoomToPoints(_geoJsonToPoints(zone.geojson))),
                         const SizedBox(width: 2),
-                        _smallIconBtn(Icons.edit_rounded, 'Edit zone', Colors.grey.shade600, () => _editZone(zone)),
+                        _smallIconBtn(Icons.edit_rounded, 'Edit zone', AppColors.textSecondary, () => _editZone(zone)),
                         const SizedBox(width: 2),
                         _smallIconBtn(Icons.delete_rounded, 'Delete zone', Colors.red.shade400, () => _deleteZone(zone.id)),
                       ],
@@ -522,9 +522,9 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
   Widget _actionBtn(IconData icon, String tooltip, VoidCallback onTap) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey.withAlpha(20),
+        color: Colors.grey.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.withAlpha(30)),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.12)),
       ),
       child: IconButton(
         icon: Icon(icon, size: 18),

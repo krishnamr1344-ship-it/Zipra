@@ -102,7 +102,7 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: Colors.amber.withAlpha(25),
+                      color: Colors.amber.withValues(alpha: 0.25),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(Icons.category, color: Colors.amber),
@@ -259,7 +259,7 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
                             width: 40,
                             height: 40,
                             decoration: BoxDecoration(
-                              color: Colors.white.withAlpha(25),
+                              color: Colors.white.withValues(alpha: 0.25),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Icon(
@@ -292,7 +292,7 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
                           const Spacer(),
                           Container(
                             decoration: BoxDecoration(
-                              color: Colors.white.withAlpha(25),
+                              color: Colors.white.withValues(alpha: 0.25),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: IconButton(
@@ -323,12 +323,12 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
                 decoration: InputDecoration(
                   hintText: 'Search categories...',
                   hintStyle: TextStyle(
-                    color: Colors.grey.shade400,
+                    color: AppColors.textHint,
                     fontSize: 14,
                   ),
-                  prefixIcon: Icon(Icons.search, color: Colors.grey.shade400),
+                  prefixIcon: Icon(Icons.search, color: AppColors.textHint),
                   filled: true,
-                  fillColor: Colors.grey.withAlpha(10),
+                  fillColor: AppColors.chipBg,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide.none,
@@ -376,7 +376,7 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
                       borderRadius: BorderRadius.circular(18),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withAlpha(6),
+                          color: Colors.black.withValues(alpha: 0.04),
                           blurRadius: 10,
                           offset: const Offset(0, 2),
                         ),
@@ -397,7 +397,7 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
                                 height: 52,
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
-                                    colors: [accent, accent.withAlpha(180)],
+                                    colors: [accent, accent.withValues(alpha: 0.18)],
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                   ),
@@ -436,7 +436,7 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
                                         c['description'],
                                         style: TextStyle(
                                           fontSize: 13,
-                                          color: Colors.grey.shade500,
+                                          color: AppColors.textSecondary,
                                         ),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
@@ -494,7 +494,7 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
                                 child: Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: Colors.red.withAlpha(15),
+                                    color: Colors.red.withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: const Icon(

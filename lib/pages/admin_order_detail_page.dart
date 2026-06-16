@@ -131,7 +131,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: _statusColor(_order['status']).withAlpha(20),
+                    color: _statusColor(_order['status']).withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(_statusIcon(_order['status']),
@@ -157,10 +157,10 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                 .map((s) => Container(
                       margin: const EdgeInsets.only(bottom: 10),
                       decoration: BoxDecoration(
-                        color: _statusColor(s).withAlpha(10),
+                        color: _statusColor(s).withValues(alpha: 0.04),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                            color: _statusColor(s).withAlpha(40)),
+                            color: _statusColor(s).withValues(alpha: 0.16)),
                       ),
                       child: ListTile(
                         contentPadding: const EdgeInsets.symmetric(
@@ -168,7 +168,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                         leading: Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: _statusColor(s).withAlpha(20),
+                            color: _statusColor(s).withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Icon(_statusIcon(s),
@@ -186,7 +186,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                         trailing: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: _statusColor(s).withAlpha(15),
+                            color: _statusColor(s).withValues(alpha: 0.06),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(Icons.arrow_forward,
@@ -271,7 +271,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withAlpha(20),
+                  color: const Color(0xFF10B981).withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(Icons.inventory_2, color: Color(0xFF10B981), size: 24),
@@ -312,7 +312,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                       color: Colors.grey.shade300,
                     ),
                     filled: true,
-                    fillColor: Colors.grey.withAlpha(8),
+                    fillColor: Colors.grey.withValues(alpha: 0.03),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
                       borderSide: BorderSide(color: Colors.grey.shade200),
@@ -400,8 +400,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final primary = theme.colorScheme.primary;
+    final primary = AppColors.primary;
     final statusColor = _statusColor(_order['status']);
     final gps = _order['user_gps_address'] as Map<String, dynamic>?;
     final deliveryAddr =
@@ -412,242 +411,289 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
     final statusFlow = _statusFlow;
     final isCancelled = _order['status'] == 'Cancelled';
 
+    final labelStyle = TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w700,
+      color: Colors.grey.shade500,
+      letterSpacing: 1,
+    );
+
+    final cardShadow = BoxShadow(
+      color: Colors.black.withValues(alpha: 0.04),
+      blurRadius: 12,
+      offset: const Offset(0, 3),
+    );
+
+    Widget sectionLabel(String text) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
+        child: Text(text, style: labelStyle),
+      );
+    }
+
+    Widget card({required Widget child}) {
+      return Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [cardShadow],
+        ),
+        child: child,
+      );
+    }
+
+    Widget iconCircle({
+      required IconData icon,
+      required Color color,
+      double size = 44,
+      double iconSize = 20,
+    }) {
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(size / 2.5),
+        ),
+        child: Icon(icon, color: color, size: iconSize),
+      );
+    }
+
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverAppBar(
-            expandedHeight: 200,
+            expandedHeight: 220,
             pinned: true,
-            backgroundColor: primary,
-            flexibleSpace: Container(
-              decoration: BoxDecoration(
-                gradient: AppColors.adminHeaderGradient,
-              ),
-              child: SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.arrow_back,
-                                color: Colors.white),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                          const SizedBox(width: 4),
-                          Container(
-                            width: 42,
-                            height: 42,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withAlpha(25),
-                              borderRadius: BorderRadius.circular(14),
+            stretch: true,
+            backgroundColor: AppColors.primary,
+            flexibleSpace: FlexibleSpaceBar(
+              stretchModes: const [StretchMode.zoomBackground],
+              background: Container(
+                decoration: BoxDecoration(
+                  gradient: AppColors.adminHeaderGradient,
+                ),
+                child: SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 8, 20, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.arrow_back_rounded,
+                                  color: Colors.white),
+                              onPressed: () => Navigator.pop(context),
                             ),
-                            child: Icon(_statusIcon(_order['status']),
-                                color: Colors.white, size: 22),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Order #$shortId',
+                                      style: const TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white)),
+                                  const SizedBox(height: 2),
+                                  Text(_order['user_name'] ?? 'Unknown',
+                                      style: const TextStyle(
+                                          fontSize: 13, color: Colors.white70)),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 7),
+                              decoration: BoxDecoration(
+                                color: statusColor.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.3)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(_statusIcon(_order['status']),
+                                      size: 14, color: Colors.white),
+                                  const SizedBox(width: 5),
+                                  Text(_order['status'] ?? '',
+                                      style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Spacer(),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.calendar_today,
+                                      size: 14, color: Colors.white70),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    _order['created_at']
+                                            ?.toString()
+                                            .substring(0, 10) ??
+                                        '',
+                                    style: const TextStyle(
+                                        fontSize: 13, color: Colors.white70),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Spacer(),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                Text('Order #$shortId',
-                                    style: const TextStyle(
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white)),
-                                Text(_order['user_name'] ?? 'Unknown',
-                                    style: const TextStyle(
-                                        fontSize: 13, color: Colors.white70)),
+                                Text(
+                                  'Total Amount',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.white.withValues(alpha: 0.6),
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '₹${_order['total_amount']?.toStringAsFixed(2) ?? '0.00'}',
+                                  style: const TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    height: 1,
+                                  ),
+                                ),
                               ],
                             ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: statusColor.withAlpha(35),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                  color: statusColor.withAlpha(80)),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(_statusIcon(_order['status']),
-                                    size: 14, color: Colors.white),
-                                const SizedBox(width: 4),
-                                Text(_order['status'] ?? '',
-                                    style: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
-                                        color: Colors.white)),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Spacer(),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withAlpha(20),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(Icons.calendar_today,
-                                size: 14, color: Colors.white70),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            _order['created_at']
-                                    ?.toString()
-                                    .substring(0, 10) ??
-                                '',
-                            style: const TextStyle(
-                                fontSize: 13, color: Colors.white70),
-                          ),
-                          const Spacer(),
-                          Text(
-                            '₹${_order['total_amount']?.toStringAsFixed(2) ?? '0.00'}',
-                            style: const TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                    ],
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
           ),
           if (!isCancelled && statusFlow.isNotEmpty)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
-                child: Text('ORDER PROGRESS',
-                    style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.grey.shade500,
-                        letterSpacing: 1)),
-              ),
-            ),
+            sectionLabel('ORDER PROGRESS'),
           if (!isCancelled && statusFlow.isNotEmpty)
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.black.withAlpha(5),
-                          blurRadius: 12,
-                          offset: const Offset(0, 3))
-                    ],
-                  ),
-                  child: Row(
-                    children: statusFlow.asMap().entries.map((entry) {
-                      final i = entry.key;
-                      final step = entry.value;
-                      final isDone = step['done'] as bool;
-                      final isCurrent = step['current'] as bool;
-                      final label = step['status'] as String;
-                      final stepColor = isDone || isCurrent
-                          ? _statusColor(label)
-                          : Colors.grey.shade200;
+                child: card(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                    child: Row(
+                      children: statusFlow.asMap().entries.map((entry) {
+                        final i = entry.key;
+                        final step = entry.value;
+                        final isDone = step['done'] as bool;
+                        final isCurrent = step['current'] as bool;
+                        final label = step['status'] as String;
+                        final stepColor = isDone || isCurrent
+                            ? _statusColor(label)
+                            : Colors.grey.shade200;
+                        final dotSize = isCurrent ? 32.0 : 24.0;
 
-                      return Expanded(
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                if (i > 0)
-                                  Expanded(
-                                    child: Container(
-                                      height: 3,
-                                      color: isDone
-                                          ? _statusColor(label)
-                                          : Colors.grey.shade200,
-                                    ),
-                                  ),
-                                Container(
-                                  width: isCurrent ? 36 : 28,
-                                  height: isCurrent ? 36 : 28,
-                                  decoration: BoxDecoration(
-                                    color: isDone || isCurrent
-                                        ? stepColor
-                                        : Colors.grey.shade100,
-                                    shape: BoxShape.circle,
-                                    border: isCurrent
-                                        ? Border.all(
-                                            color: Colors.white,
-                                            width: 3)
-                                        : null,
-                                    boxShadow: isCurrent
-                                        ? [
-                                            BoxShadow(
-                                                color:
-                                                    stepColor.withAlpha(80),
-                                                blurRadius: 12,
-                                                offset:
-                                                    const Offset(0, 2))
-                                          ]
-                                        : null,
-                                  ),
-                                  child: isDone
-                                      ? const Icon(Icons.check,
-                                          size: 16, color: Colors.white)
-                                      : Icon(
-                                          _statusIcon(label),
-                                          size: isCurrent ? 18 : 14,
-                                          color: isCurrent
-                                              ? Colors.white
-                                              : Colors.grey.shade400,
+                        return Expanded(
+                          child: Column(
+                            children: [
+                              Row(
+                                children: [
+                                  if (i > 0)
+                                    Expanded(
+                                      child: Container(
+                                        height: 3,
+                                        decoration: BoxDecoration(
+                                          gradient: isDone
+                                              ? LinearGradient(
+                                                  colors: [
+                                                    _statusColor(statusFlow[i - 1]['status'] as String),
+                                                    _statusColor(label),
+                                                  ],
+                                                )
+                                              : null,
+                                          color: isDone ? null : Colors.grey.shade200,
                                         ),
-                                ),
-                                if (i < statusFlow.length - 1)
-                                  Expanded(
-                                    child: Container(
-                                      height: 3,
-                                      color: isDone
-                                          ? _statusColor(
-                                              statusFlow[i + 1]['status']
-                                                  as String)
-                                          : Colors.grey.shade200,
+                                      ),
                                     ),
+                                  Container(
+                                    width: dotSize,
+                                    height: dotSize,
+                                    decoration: BoxDecoration(
+                                      color: isDone || isCurrent ? stepColor : Colors.grey.shade100,
+                                      shape: BoxShape.circle,
+                                      border: isCurrent
+                                          ? Border.all(color: Colors.white, width: 3)
+                                          : null,
+                                      boxShadow: isCurrent
+                                          ? [
+                                              BoxShadow(
+                                                color: stepColor.withValues(alpha: 0.3),
+                                                blurRadius: 10,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ]
+                                          : null,
+                                    ),
+                                    child: isDone
+                                        ? const Icon(Icons.check,
+                                            size: 14, color: Colors.white)
+                                        : Icon(
+                                            _statusIcon(label),
+                                            size: isCurrent ? 16 : 12,
+                                            color: isCurrent
+                                                ? Colors.white
+                                                : Colors.grey.shade400,
+                                          ),
                                   ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              label,
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: isCurrent
-                                    ? FontWeight.w700
-                                    : FontWeight.w500,
-                                color: isCurrent
-                                    ? stepColor
-                                    : Colors.grey.shade400,
+                                  if (i < statusFlow.length - 1)
+                                    Expanded(
+                                      child: Container(
+                                        height: 3,
+                                        color: isDone
+                                            ? _statusColor(label)
+                                            : Colors.grey.shade200,
+                                      ),
+                                    ),
+                                ],
                               ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
+                              const SizedBox(height: 8),
+                              Text(
+                                label,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: isCurrent
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                  color: isCurrent
+                                      ? stepColor
+                                      : Colors.grey.shade400,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
                   ),
                 ),
               ),
@@ -659,20 +705,21 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.red.withAlpha(8),
+                    color: const Color(0xFFEF4444).withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: Colors.red.withAlpha(25)),
+                    border: Border.all(
+                        color: const Color(0xFFEF4444).withValues(alpha: 0.2)),
                   ),
                   child: Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.red.withAlpha(15),
-                          borderRadius: BorderRadius.circular(12),
+                          color: const Color(0xFFEF4444).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(14),
                         ),
-                        child: const Icon(Icons.cancel,
-                            color: Colors.red, size: 24),
+                        child: const Icon(Icons.cancel_rounded,
+                            color: Color(0xFFEF4444), size: 26),
                       ),
                       const SizedBox(width: 14),
                       const Expanded(
@@ -683,10 +730,12 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                                 style: TextStyle(
                                     fontWeight: FontWeight.w700,
                                     fontSize: 16,
-                                    color: Colors.red)),
+                                    color: Color(0xFFEF4444))),
+                            SizedBox(height: 2),
                             Text('This order has been cancelled',
                                 style: TextStyle(
-                                    fontSize: 13, color: Colors.red)),
+                                    fontSize: 13,
+                                    color: Color(0xFFEF4444))),
                           ],
                         ),
                       ),
@@ -695,31 +744,11 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                 ),
               ),
             ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
-              child: Text('ORDER ITEMS',
-                  style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.grey.shade500,
-                      letterSpacing: 1)),
-            ),
-          ),
+          sectionLabel('ORDER ITEMS'),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: [
-                    BoxShadow(
-                        color: Colors.black.withAlpha(5),
-                        blurRadius: 12,
-                        offset: const Offset(0, 3))
-                  ],
-                ),
+              child: card(
                 child: Column(
                   children: [
                     ...List.generate(_items.length, (i) {
@@ -731,23 +760,23 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                           border: i < _items.length - 1
                               ? Border(
                                   bottom: BorderSide(
-                                      color: Colors.grey.withAlpha(20)))
+                                      color: Colors.grey.withValues(alpha: 0.08)))
                               : null,
                         ),
                         child: Row(
                           children: [
                             Container(
-                              width: 42,
-                              height: 42,
+                              width: 36,
+                              height: 36,
                               decoration: BoxDecoration(
-                                color: primary.withAlpha(12),
-                                borderRadius: BorderRadius.circular(12),
+                                color: primary.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(10),
                               ),
                               child: Center(
                                 child: Text('${i + 1}',
                                     style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 14,
                                         color: primary)),
                               ),
                             ),
@@ -760,7 +789,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                                       style: const TextStyle(
                                           fontWeight: FontWeight.w600,
                                           fontSize: 15)),
-                                  const SizedBox(height: 2),
+                                  const SizedBox(height: 3),
                                   Text(
                                     'Qty: ${item['quantity']} × ₹${item['product_price']?.toStringAsFixed(0) ?? '0'}',
                                     style: TextStyle(
@@ -784,15 +813,17 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: primary.withAlpha(6),
+                        color: primary.withValues(alpha: 0.04),
                         borderRadius: const BorderRadius.vertical(
                             bottom: Radius.circular(18)),
                       ),
                       child: Row(
                         children: [
-                          const Text('Total',
+                          Text('Total',
                               style: TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.w600)),
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey.shade700)),
                           const Spacer(),
                           Text(
                             '₹${_order['total_amount']?.toStringAsFixed(2) ?? '0.00'}',
@@ -809,405 +840,347 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
               ),
             ),
           ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
-              child: Text('PAYMENT',
-                  style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.grey.shade500,
-                      letterSpacing: 1)),
-            ),
-          ),
+          sectionLabel('PAYMENT'),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: [
-                    BoxShadow(
-                        color: Colors.black.withAlpha(5),
-                        blurRadius: 12,
-                        offset: const Offset(0, 3))
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.withAlpha(20),
-                        borderRadius: BorderRadius.circular(14),
+              child: card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      iconCircle(
+                        icon: Icons.payment_rounded,
+                        color: const Color(0xFFF59E0B),
                       ),
-                      child: const Icon(Icons.payment,
-                          color: Colors.amber, size: 24),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Payment Method',
-                              style: TextStyle(
-                                  fontSize: 13, color: Colors.grey)),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${_order['payment_method']?.toUpperCase() ?? ''}',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w700, fontSize: 16),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withAlpha(15),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                            color: Colors.green.withAlpha(40)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.check_circle,
-                              size: 14, color: Colors.green.shade600),
-                          const SizedBox(width: 4),
-                          const Text('COD',
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.green)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
-              child: Text('CUSTOMER',
-                  style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.grey.shade500,
-                      letterSpacing: 1)),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: [
-                    BoxShadow(
-                        color: Colors.black.withAlpha(5),
-                        blurRadius: 12,
-                        offset: const Offset(0, 3))
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [primary, primary.withAlpha(180)],
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Center(
-                            child: Text(
-                              (_order['user_name']?.toString() ?? 'U')[0]
-                                  .toUpperCase(),
-                              style: const TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(_order['user_name'] ?? 'Unknown',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 16)),
-                              if (_order['user_email'] != null)
-                                Text(_order['user_email'],
-                                    style: TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.grey.shade500)),
-                            ],
-                          ),
-                        ),
-                        if (_order['user_phone'] != null &&
-                            _order['user_phone'].toString().isNotEmpty)
-                          GestureDetector(
-                            onTap: () =>
-                                _callPhone('${_order['user_phone']}'),
-                            child: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: Colors.green.withAlpha(15),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(Icons.phone,
-                                  size: 20, color: Colors.green.shade600),
-                            ),
-                          ),
-                      ],
-                    ),
-                    if (gps != null) ...[
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: Colors.green.withAlpha(8),
-                          borderRadius: BorderRadius.circular(14),
-                          border:
-                              Border.all(color: Colors.green.withAlpha(25)),
-                        ),
+                      const SizedBox(width: 16),
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.green.withAlpha(20),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: const Icon(Icons.my_location,
-                                      size: 18, color: Colors.green),
-                                ),
-                                const SizedBox(width: 12),
-                                const Text('GPS Location',
-                                    style: TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600)),
-                                const Spacer(),
-                                if (gps['maps_link'] != null)
-                                  GestureDetector(
-                                    onTap: () =>
-                                        _openMaps(gps['maps_link']),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 10, vertical: 6),
-                                      decoration: BoxDecoration(
-                                        color: Colors.blue.withAlpha(20),
-                                        borderRadius:
-                                            BorderRadius.circular(10),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.navigation,
-                                              size: 14,
-                                              color: Colors.blue.shade600),
-                                          const SizedBox(width: 4),
-                                          Text('Navigate',
-                                              style: TextStyle(
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.w600,
-                                                  color:
-                                                      Colors.blue.shade600)),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            if ((gps['address_line2'] ?? '').isNotEmpty)
-                              Text('${gps['address_line2']}',
-                                  style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.green.shade800)),
-                            Text('${gps['address_line1'] ?? ''}',
+                            const Text('Payment Method',
                                 style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.grey.shade600)),
-                            if ((gps['landmark'] ?? '').isNotEmpty) ...[
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Icon(Icons.flag,
-                                      size: 14,
-                                      color: Colors.amber.shade600),
-                                  const SizedBox(width: 4),
-                                  Text('${gps['landmark']}',
-                                      style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.amber.shade700)),
-                                ],
-                              ),
-                            ],
-                            if (gps['latitude'] != null &&
-                                gps['longitude'] != null) ...[
-                              const SizedBox(height: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.withAlpha(10),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.map,
-                                        size: 13,
-                                        color: Colors.grey.shade400),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '${gps['latitude']?.toStringAsFixed(4) ?? ''}, ${gps['longitude']?.toStringAsFixed(4) ?? ''}',
-                                      style: TextStyle(
-                                          fontSize: 11,
-                                          color: Colors.grey.shade500),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
+                                    fontSize: 13, color: Colors.grey)),
+                            const SizedBox(height: 3),
+                            Text(
+                              '${_order['payment_method']?.toUpperCase() ?? ''}',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w700, fontSize: 16),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                              color: const Color(0xFF10B981).withValues(alpha: 0.2)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check_circle_rounded,
+                                size: 14, color: Colors.green.shade600),
+                            const SizedBox(width: 4),
+                            const Text('COD',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF10B981))),
                           ],
                         ),
                       ),
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),
           ),
-          if (deliveryAddr != null) ...[
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
-                child: Text('DELIVERY ADDRESS',
-                    style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.grey.shade500,
-                        letterSpacing: 1)),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: Container(
+          sectionLabel('CUSTOMER'),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: card(
+                child: Padding(
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.black.withAlpha(5),
-                          blurRadius: 12,
-                          offset: const Offset(0, 3))
-                    ],
-                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(10),
+                            width: 50,
+                            height: 50,
                             decoration: BoxDecoration(
-                              color: Colors.blue.withAlpha(15),
-                              borderRadius: BorderRadius.circular(12),
+                              gradient: LinearGradient(
+                                colors: [primary, primary.withValues(alpha: 0.7)],
+                              ),
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                            child: const Icon(Icons.location_on,
-                                size: 22, color: Colors.blue),
+                            child: Center(
+                              child: Text(
+                                (_order['user_name']?.toString() ?? 'U')[0]
+                                    .toUpperCase(),
+                                style: const TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white),
+                              ),
+                            ),
                           ),
                           const SizedBox(width: 14),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Delivery Address',
-                                    style: TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600)),
-                                const SizedBox(height: 6),
-                                Text(
-                                    '${deliveryAddr['address_line1'] ?? ''}',
-                                    style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey.shade700)),
-                                Text(
-                                  '${deliveryAddr['city'] ?? ''}, ${deliveryAddr['state'] ?? ''} ${deliveryAddr['pincode'] ?? ''}',
-                                  style: TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.grey.shade500),
-                                ),
-                                if ((deliveryAddr['landmark'] ?? '')
-                                    .isNotEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 6),
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.flag,
-                                            size: 14,
-                                            color: Colors.amber.shade600),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                            '${deliveryAddr['landmark']}',
-                                            style: TextStyle(
-                                                fontSize: 13,
-                                                color:
-                                                    Colors.amber.shade700)),
-                                      ],
-                                    ),
-                                  ),
+                                Text(_order['user_name'] ?? 'Unknown',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 16)),
+                                if (_order['user_email'] != null)
+                                  const SizedBox(height: 1),
+                                if (_order['user_email'] != null)
+                                  Text(_order['user_email'],
+                                      style: TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.grey.shade500)),
                               ],
                             ),
                           ),
+                          if (_order['user_phone'] != null &&
+                              _order['user_phone'].toString().isNotEmpty)
+                            GestureDetector(
+                              onTap: () =>
+                                  _callPhone('${_order['user_phone']}'),
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF10B981).withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: Icon(Icons.phone_rounded,
+                                    size: 20, color: Colors.green.shade600),
+                              ),
+                            ),
                         ],
                       ),
-                      if (deliveryAddr['maps_link'] != null) ...[
-                        const SizedBox(height: 14),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: () =>
-                                _openMaps(deliveryAddr['maps_link']),
-                            icon: const Icon(Icons.map, size: 18),
-                            label: const Text('Open in Google Maps'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.blue,
-                              side: BorderSide(
-                                  color: Colors.blue.withAlpha(50)),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14)),
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 14),
-                            ),
+                      if (gps != null) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.04),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.12)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(9),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(11),
+                                    ),
+                                    child: const Icon(Icons.my_location_rounded,
+                                        size: 18, color: Color(0xFF10B981)),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  const Text('GPS Location',
+                                      style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600)),
+                                  const Spacer(),
+                                  if (gps['maps_link'] != null)
+                                    GestureDetector(
+                                      onTap: () =>
+                                          _openMaps(gps['maps_link']),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 7),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.navigation,
+                                                size: 14,
+                                                color: Colors.blue.shade600),
+                                            const SizedBox(width: 4),
+                                            Text('Navigate',
+                                                style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w600,
+                                                    color:
+                                                        Colors.blue.shade600)),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              if ((gps['address_line2'] ?? '').isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 4),
+                                  child: Text('${gps['address_line2']}',
+                                      style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.green.shade800)),
+                                ),
+                              Text('${gps['address_line1'] ?? ''}',
+                                  style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey.shade600)),
+                              if ((gps['landmark'] ?? '').isNotEmpty) ...[
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    Icon(Icons.flag_rounded,
+                                        size: 15,
+                                        color: Colors.amber.shade600),
+                                    const SizedBox(width: 5),
+                                    Text('${gps['landmark']}',
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.amber.shade700)),
+                                  ],
+                                ),
+                              ],
+                              if (gps['latitude'] != null &&
+                                  gps['longitude'] != null) ...[
+                                const SizedBox(height: 10),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.withValues(alpha: 0.06),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.map_rounded,
+                                          size: 13,
+                                          color: Colors.grey.shade400),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        '${gps['latitude']?.toStringAsFixed(4) ?? ''}, ${gps['longitude']?.toStringAsFixed(4) ?? ''}',
+                                        style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.grey.shade500),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
                       ],
                     ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          if (deliveryAddr != null) ...[
+            sectionLabel('DELIVERY ADDRESS'),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            iconCircle(
+                              icon: Icons.location_on_rounded,
+                              color: const Color(0xFF3B82F6),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Delivery Address',
+                                      style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600)),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                      '${deliveryAddr['address_line1'] ?? ''}',
+                                      style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey.shade700)),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${deliveryAddr['city'] ?? ''}, ${deliveryAddr['state'] ?? ''} ${deliveryAddr['pincode'] ?? ''}',
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.grey.shade500),
+                                  ),
+                                  if ((deliveryAddr['landmark'] ?? '')
+                                      .isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 6),
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.flag_rounded,
+                                              size: 14,
+                                              color: Colors.amber.shade600),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                              '${deliveryAddr['landmark']}',
+                                              style: TextStyle(
+                                                  fontSize: 13,
+                                                  color:
+                                                      Colors.amber.shade700)),
+                                        ],
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (deliveryAddr['maps_link'] != null) ...[
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: () =>
+                                  _openMaps(deliveryAddr['maps_link']),
+                              icon: const Icon(Icons.map_rounded, size: 18),
+                              label: const Text('Open in Google Maps'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF3B82F6),
+                                side: BorderSide(
+                                    color: const Color(0xFF3B82F6).withValues(alpha: 0.2)),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14)),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -1221,15 +1194,15 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withAlpha(15),
+                        color: const Color(0xFF10B981).withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                            color: const Color(0xFF10B981).withAlpha(40)),
+                            color: const Color(0xFF10B981).withValues(alpha: 0.2)),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.check_circle,
+                          const Icon(Icons.check_circle_rounded,
                               color: Color(0xFF10B981), size: 22),
                           const SizedBox(width: 10),
                           const Text('Delivered',
@@ -1245,7 +1218,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                       height: 54,
                       child: ElevatedButton.icon(
                         onPressed: _changeStatus,
-                        icon: const Icon(Icons.swap_horiz, size: 20),
+                        icon: const Icon(Icons.swap_horiz_rounded, size: 20),
                         label: const Text('Change Status',
                             style: TextStyle(
                                 fontSize: 16, fontWeight: FontWeight.w700)),
