@@ -180,6 +180,15 @@ def delete_product(product_id: str, request: Request, db: Session = Depends(get_
     return MessageResponse(message="Product deleted")
 
 
+@router.post("/products/delete-all", response_model=MessageResponse)
+def delete_all_products(request: Request, db: Session = Depends(get_db)):
+    _require_admin(request, db)
+    count = db.query(Product).filter(Product.is_deleted == False).count()
+    db.query(Product).filter(Product.is_deleted == False).update({"is_deleted": True})
+    db.commit()
+    return MessageResponse(message=f"{count} products deleted")
+
+
 @router.get("/categories", response_model=list[CategoryResponse])
 def list_categories(request: Request, db: Session = Depends(get_db)):
     _require_admin(request, db)
