@@ -617,19 +617,20 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Widget _buildCompactHeader(String initial, String name) {
-    return Container(
-      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 8),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [_orange, _orangeSecondary],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(28),
-          bottomRight: Radius.circular(28),
-        ),
+    return ClipRRect(
+      borderRadius: const BorderRadius.only(
+        bottomLeft: Radius.circular(28),
+        bottomRight: Radius.circular(28),
       ),
+      child: Container(
+        padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 8),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [_orange, _orangeSecondary],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -815,7 +816,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           ),
         ],
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildProductSection() {
@@ -1183,21 +1185,38 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   ),
                   const SizedBox(width: 8),
                   const Text('Flash Sale', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF222222))),
-                  const Spacer(),
-                  // Countdown timer
-                  ...hh.split('').map((d) => _timerDigit(d)),
-                  const SizedBox(width: 4),
-                  _timerSeparator(),
-                  const SizedBox(width: 4),
-                  ...mm.split('').map((d) => _timerDigit(d)),
-                  const SizedBox(width: 4),
-                  _timerSeparator(),
-                  const SizedBox(width: 4),
-                  ...ss.split('').map((d) => _timerDigit(d)),
                 ],
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 10),
+            // Timer in separate box
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1A1A1A),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _timerPair('HRS', hh),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 6),
+                      child: Text(':', style: TextStyle(color: Colors.white38, fontSize: 18, fontWeight: FontWeight.w800)),
+                    ),
+                    _timerPair('MIN', mm),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 6),
+                      child: Text(':', style: TextStyle(color: Colors.white38, fontSize: 18, fontWeight: FontWeight.w800)),
+                    ),
+                    _timerPair('SEC', ss),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text('Best deals. Limited time only!',
@@ -1236,21 +1255,30 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     );
   }
 
-  Widget _timerDigit(String d) {
-    return Container(
-      width: 24, height: 28,
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Center(
-        child: Text(d, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
-      ),
+  Widget _timerPair(String label, String value) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ...value.split('').map((d) => Container(
+              width: 24, height: 28,
+              margin: const EdgeInsets.symmetric(horizontal: 1),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Center(
+                child: Text(d, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+              ),
+            )),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(label, style: const TextStyle(color: Colors.white38, fontSize: 8, fontWeight: FontWeight.w600, letterSpacing: 0.5)),
+      ],
     );
-  }
-
-  Widget _timerSeparator() {
-    return const Text(':', style: TextStyle(color: Color(0xFF1A1A1A), fontSize: 13, fontWeight: FontWeight.w800));
   }
 
   Widget _buildFlashProductCard(GroceryProduct gp, String id) {
@@ -2063,12 +2091,12 @@ class _SearchHeaderDelegate extends SliverPersistentHeaderDelegate {
   });
 
   @override
-  double get maxExtent => safeTop + 8 + 36 + 8 + 44 + 12;
-  // safeTop + 8 top padding + 36 location row + 8 spacing + 44 search bar + 12 bottom padding
+  double get maxExtent => safeTop + 8 + 36 + 8 + 44 + 8;
+  // safeTop + 8 top padding + 36 location row + 8 spacing + 44 search bar + 8 bottom padding
 
   @override
-  double get minExtent => 44 + 16;
-  // 44 search bar + 16 padding (8 top + 8 bottom)
+  double get minExtent => safeTop + 8 + 44 + 8;
+  // safeTop + 8 top padding + 44 search bar + 8 bottom padding
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
