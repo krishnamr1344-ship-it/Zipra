@@ -32,6 +32,11 @@ class _ProductCardState extends State<ProductCard> {
   int _quantity = 0;
   bool _imageError = false;
 
+  static const _productAssets = <String, String>{
+    'Chilli Powder': 'assets/products img/IMG-20260617-WA0013.jpg.jpeg',
+    'Rice': 'assets/products img/file_000000007bc072079d6c76b86db9572c.png',
+  };
+
   @override
   void initState() {
     super.initState();
@@ -73,7 +78,8 @@ class _ProductCardState extends State<ProductCard> {
   }
 
   Widget _buildImageSection(GroceryProduct p) {
-    final hasImage = widget.images.isNotEmpty && widget.images[0].startsWith('http');
+    final assetPath = _productAssets[p.name];
+    final hasNetworkImage = widget.images.isNotEmpty && widget.images[0].startsWith('http');
     return LayoutBuilder(
       builder: (context, constraints) {
         final cardW = constraints.maxWidth;
@@ -89,7 +95,15 @@ class _ProductCardState extends State<ProductCard> {
           clipBehavior: Clip.antiAlias,
           child: Stack(
             children: [
-              if (hasImage && !_imageError)
+              if (assetPath != null)
+                Image.asset(
+                  assetPath,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: imgH,
+                  errorBuilder: (_, _, _) => Center(child: Text(p.emoji, style: TextStyle(fontSize: cardW * 0.38))),
+                )
+              else if (hasNetworkImage && !_imageError)
                 Image.network(
                   widget.images[0],
                   fit: BoxFit.cover,
@@ -187,13 +201,13 @@ class _ProductCardState extends State<ProductCard> {
         final sz = cardW * 0.04;
 
         return Padding(
-          padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+          padding: const EdgeInsets.fromLTRB(10, 8, 10, 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(p.unit, style: const TextStyle(fontSize: 10, color: Color(0xFF888888))),
               const SizedBox(height: 2),
-              Text(p.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1A1A1A)), maxLines: 1, overflow: TextOverflow.ellipsis),
+              Text(p.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF1A1A1A)), maxLines: 1, overflow: TextOverflow.ellipsis),
               const SizedBox(height: 6),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -205,7 +219,7 @@ class _ProductCardState extends State<ProductCard> {
                     children: [
                       Row(
                         children: [
-                          Text('\u20B9${p.sellingPrice.toStringAsFixed(0)}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A))),
+                          Text('\u20B9${p.sellingPrice.toStringAsFixed(0)}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A))),
                           if (p.discountPercent != null) ...[
                             const SizedBox(width: 4),
                             Text('\u20B9${p.mrp.toStringAsFixed(0)}', style: const TextStyle(fontSize: 10, color: Color(0xFF999999), decoration: TextDecoration.lineThrough)),

@@ -60,8 +60,8 @@ class ProductGrid extends StatelessWidget {
     final crossAxisCount = screenW > 600 ? 3 : 2;
     final cardW = (screenW - 16 * 2 - spacing) / crossAxisCount;
     final scale = MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 1.5);
-    final contentH = 81.0 * scale;
-    final aspectRatio = cardW / (cardW * 0.72 + contentH);
+    final contentH = 80.0 * scale;
+    final aspectRatio = cardW / (cardW * 0.75 + contentH);
 
     return GridView.builder(
       shrinkWrap: true,

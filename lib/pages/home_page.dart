@@ -11,7 +11,6 @@ import '../services/delivery_zone_service.dart';
 import '../models/cart_model.dart';
 import '../models/grocery_product.dart';
 import '../widgets/product_grid.dart';
-import '../widgets/product_card.dart';
 import '../widgets/state_widgets.dart';
 import '../widgets/app_snackbar.dart';
 import 'login_page.dart';
@@ -53,23 +52,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   bool _serviceable = true;
   bool _zoneChecked = false;
 
-  // Cache product lists for sections
-  List<Map<String, dynamic>> get _dairyProducts =>
-      _allProducts.where((p) => (p['category_name'] as String? ?? '').toLowerCase().contains('dairy')).take(6).toList();
-  List<Map<String, dynamic>> get _bestSellerProducts =>
-      _allProducts.where((p) => p['discount_percent'] != null && (p['discount_percent'] as int) > 0).take(8).toList();
-  List<Map<String, dynamic>> get _dailyEssentials =>
-      _allProducts.where((p) => ['Rice', 'Atta', 'Sugar', 'Salt', 'Sunflower Oil', 'Toor Dal'].contains(p['name'])).toList();
-
   final _searchController = TextEditingController();
   final _heroCarouselController = PageController();
   int _currentHeroPage = 0;
   Timer? _carouselTimer;
   final _catCarouselController = PageController();
   int _currentCatCarouselPage = 0;
-  Timer? _flashSaleTimer;
-  final _flashSaleEnd = DateTime.now().add(const Duration(hours: 8, minutes: 45, seconds: 30));
-  Duration _flashSaleRemaining = const Duration(hours: 8, minutes: 45, seconds: 30);
 
   static const _orange = Color(0xFFFF6B00);
   static const _orangeSecondary = Color(0xFFFF8F00);
@@ -82,19 +70,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     {'title': 'New Launch', 'subtitle': 'Premium dry fruits collection', 'color': 0xFFFF6B00, 'emoji': '\u{1F330}'},
   ];
 
-  String _catEmoji(String cat) {
-    final c = cat.toLowerCase();
-    if (c == 'all') return '\u{1F4CB}';
-    if (c.contains('dairy')) return '\u{1F95B}';
-    if (c.contains('beverage') || c.contains('tea') || c.contains('coffee')) return '\u2615';
-    if (c.contains('rice') || c.contains('grocery')) return '\u{1F35E}';
-    if (c.contains('dal')) return '\u{1F330}';
-    if (c.contains('oil')) return '\u{1F6ED}';
-    if (c.contains('masala')) return '\u{1F336}\uFE0F';
-    if (c.contains('bathroom') || c.contains('personal') || c.contains('care')) return '\u{1F9F4}';
-    return '\u{1F6D2}';
-  }
-
   @override
   void initState() {
     super.initState();
@@ -106,7 +81,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     wishlistNotifier.load();
     notificationService.load();
     _startCarouselTimer();
-    _startFlashSaleTimer();
   }
 
   @override
@@ -126,7 +100,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _searchController.dispose();
     _heroCarouselController.dispose();
     _carouselTimer?.cancel();
-    _flashSaleTimer?.cancel();
     super.dispose();
   }
 
@@ -142,18 +115,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       } catch (_) {}
     });
   }
-
-  void _startFlashSaleTimer() {
-    _flashSaleTimer?.cancel();
-    _flashSaleTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      setState(() {
-        _flashSaleRemaining = _flashSaleEnd.difference(DateTime.now());
-        if (_flashSaleRemaining.isNegative) _flashSaleRemaining = Duration.zero;
-      });
-    });
-  }
-
 
   Future<void> _checkAndDetectLocation() async {
     if (_detecting) return;
@@ -458,30 +419,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   children: [
                     _buildCompactHeader(initial, name),
                     _buildHeroBanner(),
-                    _buildCategoryGrid(),
-                    _buildFlashSale(),
-                    if (!_loadingProducts && !_error) ...[
-                      if (_bestSellerProducts.isNotEmpty) ...[
-                        _buildSectionHeader('Best Sellers', 'See All', () => setState(() => _selectedIndex = 1)),
-                        const SizedBox(height: 8),
-                        _buildHorizontalProductList(_bestSellerProducts),
-                        const SizedBox(height: 16),
-                      ],
-                      if (_dairyProducts.isNotEmpty) ...[
-                        _buildSectionHeader('Dairy Highlights', 'See All', () => setState(() => _selectedIndex = 1), icon: Icons.water_drop),
-                        const SizedBox(height: 8),
-                        _buildHorizontalProductList(_dairyProducts),
-                        const SizedBox(height: 16),
-                      ],
-                      if (_dailyEssentials.isNotEmpty) ...[
-                        _buildSectionHeader('Rice & Essentials', 'See All', () => setState(() => _selectedIndex = 1), icon: Icons.inventory_2_outlined),
-                        const SizedBox(height: 8),
-                        _buildHorizontalProductList(_dailyEssentials),
-                        const SizedBox(height: 16),
-                      ],
-                    ],
                     _buildProductSection(),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 80),
                   ],
                 ),
               ),
@@ -490,105 +429,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         ),
         _buildFloatingCartBar(),
       ],
-    );
-  }
-
-  Widget _buildSectionHeader(String title, String? actionLabel, VoidCallback? onAction, {IconData? icon}) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-      child: Row(
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 18, color: _orange),
-            const SizedBox(width: 6),
-          ],
-          Container(
-            width: 3, height: 18,
-            decoration: BoxDecoration(
-              color: _orange,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(title,
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFF222222))),
-          const Spacer(),
-          if (actionLabel != null && onAction != null)
-            GestureDetector(
-              onTap: onAction,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(actionLabel, style: TextStyle(fontSize: 11, color: _orange, fontWeight: FontWeight.w600)),
-                  const SizedBox(width: 2),
-                  Icon(Icons.chevron_right, size: 14, color: _orange),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHorizontalProductList(List<Map<String, dynamic>> products) {
-    final items = products.map((p) {
-      return GroceryProduct.fromMap({
-        ...p,
-        'name': p['name'] ?? '',
-        'price': ((p['price'] ?? 0) as num).toDouble(),
-        'mrp': ((p['mrp'] ?? p['original_price'] ?? p['price'] ?? 0) as num).toDouble(),
-        'unit': p['unit'] ?? '',
-        'images': p['images'] is List ? (p['images'] as List).cast<String>() : <String>[],
-        'stock': p['stock'] ?? 0,
-        'is_enabled': p['is_enabled'] != false,
-        'category_name': p['category_name'] ?? '',
-      });
-    }).toList();
-
-    return SizedBox(
-      height: 230,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: items.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 10),
-        itemBuilder: (_, i) {
-          final gp = items[i];
-          final id = products[i]['id']?.toString() ?? '';
-          return SizedBox(
-            width: 160,
-            child: ProductCard(
-              product: gp,
-              images: gp.images,
-              inCart: cartNotifier.isInCart(id),
-              isFav: wishlistNotifier.contains(id),
-              onAdd: () async {
-                if (!await _requireLogin()) return;
-                if (!mounted) return;
-                await cartNotifier.add(id, name: gp.name, qty: gp.unit, price: gp.sellingPrice.round());
-                if (!mounted) return;
-                AppSnackbar.show(context, '${gp.name} added to cart');
-              },
-              onFav: () => wishlistNotifier.toggle(id),
-              onTap: () {
-                final count = cartNotifier.itemCountFor(id);
-                Navigator.push(context, MaterialPageRoute(
-                  builder: (_) => ProductDetailPage(
-                    icon: Icons.shopping_bag, color: _orange, name: gp.name, productId: id,
-                    price: gp.sellingPrice.round(), qty: gp.unit, images: gp.images,
-                    inCart: count > 0, isEnabled: gp.isEnabled, discountPercent: gp.discountPercent ?? 0,
-                    onAdd: () async {
-                      if (!await _requireLogin()) return;
-                      if (!mounted) return;
-                      await cartNotifier.add(id, name: gp.name, qty: gp.unit, price: gp.sellingPrice.round());
-                    },
-                  ),
-                ));
-              },
-            ),
-          );
-        },
-      ),
     );
   }
 
@@ -644,7 +484,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   child: GestureDetector(
                     onTap: _showLocationPicker,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                       decoration: BoxDecoration(
                         color: Colors.white.withAlpha(30),
                         borderRadius: BorderRadius.circular(12),
@@ -942,6 +782,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Widget _buildSkeletonGrid() {
+    final screenW = MediaQuery.of(context).size.width;
+    final spacing = screenW * 0.03;
+    final cardW = (screenW - 32 - spacing) / 2;
+    final scale = MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 1.5);
+    final contentH = 80.0 * scale;
+    final skeletonAspectRatio = cardW / (cardW * 0.75 + contentH);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
@@ -949,11 +796,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              childAspectRatio: 0.75,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
+              childAspectRatio: skeletonAspectRatio,
+              crossAxisSpacing: spacing,
+              mainAxisSpacing: spacing,
             ),
             itemCount: 6,
             itemBuilder: (_, _) => const SkeletonProductCard(),
@@ -1065,311 +912,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   // ---------------------------------------------------------------------------
-  // CATEGORY GRID (2 rows x 5 cols)
-  // ---------------------------------------------------------------------------
-
-  Widget _buildCategoryGrid() {
-    final cats = [
-      {'name': 'Fresh Dairy', 'emoji': '\u{1F95B}', 'color': 0xFFFFF3E0},
-      {'name': 'Rice & Flour', 'emoji': '\u{1F35E}', 'color': 0xFFE8F5E9},
-      {'name': 'Beverages', 'emoji': '\u2615', 'color': 0xFFE3F2FD},
-      {'name': 'Vegetables', 'emoji': '\u{1F96C}', 'color': 0xFFE8F5E9},
-      {'name': 'Snacks', 'emoji': '\u{1F37F}', 'color': 0xFFFFF8E1},
-      {'name': 'Cooking Oil', 'emoji': '\u{1F6ED}', 'color': 0xFFFFF3E0},
-      {'name': 'Pulses', 'emoji': '\u{1F330}', 'color': 0xFFFFF8E1},
-      {'name': 'Masalas', 'emoji': '\u{1F336}\uFE0F', 'color': 0xFFFCE4EC},
-      {'name': 'Home Care', 'emoji': '\u{1F9F9}', 'color': 0xFFF3E5F5},
-      {'name': 'View All', 'emoji': '\u27A1\uFE0F', 'color': 0xFFF5F5F5},
-    ];
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(width: 3, height: 16, decoration: BoxDecoration(color: _orange, borderRadius: BorderRadius.circular(2))),
-              const SizedBox(width: 8),
-              const Text('Shop by Category', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF222222))),
-              const Spacer(),
-              GestureDetector(
-                onTap: () => setState(() => _selectedIndex = 1),
-                child: Row(
-                  children: [
-                    Text('See All', style: TextStyle(fontSize: 11, color: _orange, fontWeight: FontWeight.w600)),
-                    const SizedBox(width: 2),
-                    Icon(Icons.chevron_right, size: 14, color: _orange),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 5,
-              childAspectRatio: 0.72,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-            ),
-            itemCount: cats.length,
-            itemBuilder: (_, i) {
-              final c = cats[i];
-              return GestureDetector(
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  setState(() => _selectedIndex = 1);
-                },
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 58, height: 58,
-                      decoration: BoxDecoration(
-                        color: Color(c['color'] as int),
-                        borderRadius: BorderRadius.circular(18),
-                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
-                      ),
-                      child: Center(child: Text(c['emoji'] as String, style: const TextStyle(fontSize: 24))),
-                    ),
-                    const SizedBox(height: 6),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 2),
-                      child: Text(c['name'] as String, maxLines: 1, overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w500, color: Color(0xFF444444))),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ---------------------------------------------------------------------------
   // FLASH SALE
   // ---------------------------------------------------------------------------
-
-  Widget _buildFlashSale() {
-    final products = _bestSellerProducts.take(4).toList();
-    final items = _toGroceryProducts(products);
-    final hh = _flashSaleRemaining.inHours.toString().padLeft(2, '0');
-    final mm = _flashSaleRemaining.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final ss = _flashSaleRemaining.inSeconds.remainder(60).toString().padLeft(2, '0');
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 16, offset: const Offset(0, 4))],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Row(
-                children: [
-                  Container(
-                    width: 28, height: 28,
-                    decoration: BoxDecoration(color: _orange.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-                    child: const Icon(Icons.bolt, color: _orange, size: 18),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text('Flash Sale', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF222222))),
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
-            // Timer in separate box
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1A1A1A),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _timerPair('HRS', hh),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 6),
-                      child: Text(':', style: TextStyle(color: Colors.white38, fontSize: 18, fontWeight: FontWeight.w800)),
-                    ),
-                    _timerPair('MIN', mm),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 6),
-                      child: Text(':', style: TextStyle(color: Colors.white38, fontSize: 18, fontWeight: FontWeight.w800)),
-                    ),
-                    _timerPair('SEC', ss),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text('Best deals. Limited time only!',
-                style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-            ),
-            const SizedBox(height: 12),
-            // Products
-            if (items.isNotEmpty)
-              SizedBox(
-                height: 178,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                  itemCount: items.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: 8),
-                  itemBuilder: (_, i) {
-                    final gp = items[i];
-                    final id = products[i]['id']?.toString() ?? '';
-                    return SizedBox(
-                      width: 130,
-                      child: _buildFlashProductCard(gp, id),
-                    );
-                  },
-                ),
-              )
-            else
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Center(
-                  child: Text('No deals right now', style: TextStyle(fontSize: 13, color: Colors.grey.shade400)),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _timerPair(String label, String value) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ...value.split('').map((d) => Container(
-              width: 24, height: 28,
-              margin: const EdgeInsets.symmetric(horizontal: 1),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Center(
-                child: Text(d, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
-              ),
-            )),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(label, style: const TextStyle(color: Colors.white38, fontSize: 8, fontWeight: FontWeight.w600, letterSpacing: 0.5)),
-      ],
-    );
-  }
-
-  Widget _buildFlashProductCard(GroceryProduct gp, String id) {
-    final disc = gp.discountPercent ?? 0;
-    return GestureDetector(
-      onTap: () {
-        final count = cartNotifier.itemCountFor(id);
-        Navigator.push(context, MaterialPageRoute(
-          builder: (_) => ProductDetailPage(
-            icon: Icons.shopping_bag, color: _orange, name: gp.name,
-            productId: id, price: gp.sellingPrice.round(), qty: gp.unit,
-            images: gp.images,
-            inCart: count > 0, isEnabled: gp.isEnabled, discountPercent: disc,
-            onAdd: () async {
-              if (!await _requireLogin()) return;
-              if (!mounted) return;
-              await cartNotifier.add(id, name: gp.name, qty: gp.unit, price: gp.sellingPrice.round());
-            },
-          ),
-        ));
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image
-            Expanded(
-              child: Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-                    child: Container(
-                      width: double.infinity,
-                      color: const Color(0xFFFFF8F3),
-                      child: gp.images.isNotEmpty
-                          ? Image.network(gp.images.first, fit: BoxFit.cover,
-                              loadingBuilder: (_, child, chunk) => chunk == null ? child : const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                              errorBuilder: (_, __, ___) => Center(child: Text(_catEmoji(gp.category), style: const TextStyle(fontSize: 28))),
-                            )
-                          : Center(child: Text(_catEmoji(gp.category), style: const TextStyle(fontSize: 28))),
-                    ),
-                  ),
-                  if (disc > 0)
-                    Positioned(
-                      top: 6, left: 6,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFF3D00),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text('-$disc%', style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w800)),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            // Details
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(gp.name, maxLines: 2, overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF222222), height: 1.2)),
-                  const SizedBox(height: 2),
-                  Text(gp.unit, style: const TextStyle(fontSize: 8, color: Color(0xFF999999))),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Text('\u20B9${gp.sellingPrice.round()}',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF222222))),
-                      if (gp.mrp > gp.sellingPrice) ...[
-                        const SizedBox(width: 4),
-                        Text('\u20B9${gp.mrp.round()}', style: const TextStyle(fontSize: 9, color: Color(0xFFBBBBBB), decoration: TextDecoration.lineThrough)),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   // ---------------------------------------------------------------------------
   // FLOATING CART BAR
