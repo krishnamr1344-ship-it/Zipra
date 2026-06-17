@@ -1,5 +1,121 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import '../constants/theme.dart';
+
+class ShimmerWidget extends StatefulWidget {
+  final double width;
+  final double height;
+  final double borderRadius;
+
+  const ShimmerWidget({
+    super.key,
+    required this.width,
+    required this.height,
+    this.borderRadius = 8,
+  });
+
+  @override
+  State<ShimmerWidget> createState() => _ShimmerWidgetState();
+}
+
+class _ShimmerWidgetState extends State<ShimmerWidget>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat();
+    _animation = Tween<double>(begin: -2, end: 2).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOutSine),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (_, _) {
+        return Container(
+          width: widget.width,
+          height: widget.height,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(widget.borderRadius),
+            gradient: LinearGradient(
+              colors: const [
+                Color(0xFFEEEEEE),
+                Color(0xFFF5F5F5),
+                Color(0xFFEEEEEE),
+              ],
+              stops: [
+                max(0.0, _animation.value - 0.5).clamp(0.0, 1.0),
+                max(0.0, _animation.value).clamp(0.0, 1.0),
+                min(1.0, _animation.value + 0.5).clamp(0.0, 1.0),
+              ],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class SkeletonProductCard extends StatelessWidget {
+  const SkeletonProductCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 8, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            child: const ShimmerWidget(width: double.infinity, height: 130),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const ShimmerWidget(width: 40, height: 10),
+                const SizedBox(height: 6),
+                const ShimmerWidget(width: 90, height: 14),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const ShimmerWidget(width: 50, height: 16),
+                    ShimmerWidget(width: 40, height: 28, borderRadius: 8),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 /// Full-screen centered loading spinner with optional message.
 class LoadingWidget extends StatelessWidget {

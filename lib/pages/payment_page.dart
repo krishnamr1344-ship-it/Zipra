@@ -338,6 +338,7 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                 height: 52,
                 child: ElevatedButton(
                   onPressed: () {
+                    _timer?.cancel();
                     Navigator.of(context).pushAndRemoveUntil(
                       MaterialPageRoute(builder: (_) => const HomePage()),
                       (route) => false,
@@ -358,11 +359,11 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                 height: 48,
                 child: TextButton(
                   onPressed: () {
+                    _timer?.cancel();
                     Navigator.of(context).pushAndRemoveUntil(
-                      MaterialPageRoute(builder: (_) => const HomePage()),
+                      MaterialPageRoute(builder: (_) => const OrdersPage()),
                       (route) => false,
                     );
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const OrdersPage()));
                   },
                   child: const Text('View My Orders', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.primary)),
                 ),

@@ -30,6 +30,7 @@ class ProductCard extends StatefulWidget {
 
 class _ProductCardState extends State<ProductCard> {
   int _quantity = 0;
+  bool _imageError = false;
 
   @override
   void initState() {
@@ -47,116 +48,178 @@ class _ProductCardState extends State<ProductCard> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final p = widget.product;
-        final cardW = constraints.maxWidth;
-        final imgH = cardW * 0.72;
-        final sz = cardW * 0.04;
-
-        return GestureDetector(
-          onTap: widget.onTap,
-          child: Opacity(
-            opacity: widget.product.isEnabled ? 1.0 : 0.55,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: const [
-                  BoxShadow(color: Colors.black12, blurRadius: 5, offset: Offset(0, 2)),
-                ],
-              ),
-              child: Column(
-              children: [
-                Container(
-                  height: imgH,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: p.imageBg,
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: Stack(
-                    children: [
-                      widget.images.isNotEmpty && widget.images[0].startsWith('http')
-                          ? Image.network(widget.images[0], fit: BoxFit.cover, width: double.infinity, height: imgH, errorBuilder: (_, _, _) => Center(child: Text(p.emoji, style: TextStyle(fontSize: cardW * 0.38))))
-                          : Center(child: Text(p.emoji, style: TextStyle(fontSize: cardW * 0.38))),
-                  if (p.discountPercent != null)
-                    Positioned(
-                      top: 0, left: 0,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFF6B00),
-                          borderRadius: const BorderRadius.only(topLeft: Radius.circular(14), bottomRight: Radius.circular(6)),
-                        ),
-                        child: Text('${p.discountPercent}% off', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                      ),
-                    ),
-                  if (!p.isEnabled)
-                    Positioned(
-                      top: 0, right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.black54,
-                          borderRadius: const BorderRadius.only(topRight: Radius.circular(14), bottomLeft: Radius.circular(6)),
-                        ),
-                        child: const Text('Off', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                      ),
-                    ),
-                  Positioned(
-                    top: 4, right: 4,
-                    child: GestureDetector(
-                      onTap: widget.onFav,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withValues(alpha: 0.9),
-                          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
-                        ),
-                        child: Icon(widget.isFav ? Icons.favorite : Icons.favorite_border, size: 14, color: widget.isFav ? Colors.red : Colors.grey.shade500),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(7, 5, 7, 6),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(p.weight, style: const TextStyle(fontSize: 10, color: Color(0xFF888888))),
-                  const SizedBox(height: 1),
-                  Text(p.name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF1A1A1A)), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('₹${p.price.toStringAsFixed(0)}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A))),
-                          if (p.originalPrice != null)
-                            Text('₹${p.originalPrice!.toStringAsFixed(0)}', style: const TextStyle(fontSize: 10, color: Color(0xFF999999), decoration: TextDecoration.lineThrough)),
-                        ],
-                      ),
-                      _quantity == 0 ? _buildAddBtn(sz) : _buildStepper(sz),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
+    final p = widget.product;
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: Opacity(
+        opacity: p.isEnabled ? 1.0 : 0.55,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: const [
+              BoxShadow(color: Colors.black12, blurRadius: 5, offset: Offset(0, 2)),
+            ],
+          ),
+          child: Column(
+            children: [
+              _buildImageSection(p),
+              _buildInfoSection(p),
+            ],
+          ),
         ),
       ),
-      ),
-      );
+    );
+  }
+
+  Widget _buildImageSection(GroceryProduct p) {
+    final hasImage = widget.images.isNotEmpty && widget.images[0].startsWith('http');
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cardW = constraints.maxWidth;
+        final imgH = cardW * 0.75;
+
+        return Container(
+          height: imgH,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: p.imageBg,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            children: [
+              if (hasImage && !_imageError)
+                Image.network(
+                  widget.images[0],
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: imgH,
+                  loadingBuilder: (_, child, progress) {
+                    if (progress == null) return child;
+                    return Center(
+                      child: Container(
+                        color: p.imageBg,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              width: 24, height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.primary.withValues(alpha: 0.3),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                  errorBuilder: (_, _, _) {
+                    _imageError = true;
+                    return Center(child: Text(p.emoji, style: TextStyle(fontSize: cardW * 0.38)));
+                  },
+                )
+              else
+                Center(child: Text(p.emoji, style: TextStyle(fontSize: cardW * 0.38))),
+              if (p.discountPercent != null && p.discountPercent! > 0)
+                Positioned(
+                  top: 0, left: 0,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFF6B00),
+                      borderRadius: BorderRadius.only(topLeft: Radius.circular(16), bottomRight: Radius.circular(8)),
+                    ),
+                    child: Text('${p.discountPercent}% OFF', style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 0.3)),
+                  ),
+                ),
+              if (p.stock > 0 && p.stock <= 5)
+                Positioned(
+                  top: 0, right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.orange,
+                      borderRadius: const BorderRadius.only(topRight: Radius.circular(16), bottomLeft: Radius.circular(8)),
+                    ),
+                    child: Text('Only ${p.stock} left', style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              if (!p.isEnabled)
+                Positioned.fill(
+                  child: Container(
+                    color: Colors.black38,
+                    child: const Center(
+                      child: Text('OUT OF STOCK', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                    ),
+                  ),
+                ),
+              Positioned(
+                top: 4, right: 4,
+                child: GestureDetector(
+                  onTap: widget.onFav,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.9),
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 4)],
+                    ),
+                    child: Icon(
+                      widget.isFav ? Icons.favorite : Icons.favorite_border,
+                      size: 14, color: widget.isFav ? Colors.red : Colors.grey.shade500,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildInfoSection(GroceryProduct p) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cardW = constraints.maxWidth;
+        final sz = cardW * 0.04;
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(p.unit, style: const TextStyle(fontSize: 10, color: Color(0xFF888888))),
+              const SizedBox(height: 2),
+              Text(p.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1A1A1A)), maxLines: 1, overflow: TextOverflow.ellipsis),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Text('\u20B9${p.sellingPrice.toStringAsFixed(0)}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A))),
+                          if (p.discountPercent != null) ...[
+                            const SizedBox(width: 4),
+                            Text('\u20B9${p.mrp.toStringAsFixed(0)}', style: const TextStyle(fontSize: 10, color: Color(0xFF999999), decoration: TextDecoration.lineThrough)),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                  _quantity == 0 ? _buildAddBtn(sz) : _buildStepper(sz),
+                ],
+              ),
+            ],
+          ),
+        );
       },
     );
   }
