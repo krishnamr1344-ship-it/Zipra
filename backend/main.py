@@ -156,13 +156,6 @@ async def csrf_origin_check(request: Request, call_next):
     return await call_next(request)
 
 
-# ─── Static Files (Uploads) ─────────────────────────────────────
-from fastapi.staticfiles import StaticFiles
-import os as _os
-_uploads_dir = _os.path.join(_os.path.dirname(__file__), "uploads")
-_os.makedirs(_uploads_dir, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=_uploads_dir), name="uploads")
-
 # ─── CORS ───────────────────────────────────────────────────────
 if FRONTEND_URL == "*":
     import warnings

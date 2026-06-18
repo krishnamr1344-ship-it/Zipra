@@ -49,20 +49,30 @@ router = APIRouter(prefix="/api")
 import os as _os
 import uuid as _uuid
 from fastapi import UploadFile, File as FastAPIFile
-import shutil as _shutil
-
-_UPLOAD_DIR = _os.path.join(_os.path.dirname(__file__), "uploads")
-_os.makedirs(_UPLOAD_DIR, exist_ok=True)
+import httpx as _httpx
+from config import SUPABASE_URL, SUPABASE_SERVICE_KEY, SUPABASE_STORAGE_BUCKET
 
 
 @router.post("/upload")
 async def upload_image(file: UploadFile = FastAPIFile(...)):
     ext = _os.path.splitext(file.filename or "image.png")[1] or ".png"
     filename = f"{_uuid.uuid4().hex}{ext}"
-    filepath = _os.path.join(_UPLOAD_DIR, filename)
-    with open(filepath, "wb") as f:
-        _shutil.copyfileobj(file.file, f)
-    url = f"/uploads/{filename}"
+    content_type = file.content_type or "image/png"
+    data = await file.read()
+
+    async with _httpx.AsyncClient() as client:
+        res = await client.post(
+            f"{SUPABASE_URL}/storage/v1/object/{SUPABASE_STORAGE_BUCKET}/{filename}",
+            headers={
+                "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                "Content-Type": content_type,
+            },
+            content=data,
+        )
+        if res.status_code not in (200, 201):
+            raise HTTPException(status_code=res.status_code, detail=res.text)
+
+    url = f"{SUPABASE_URL}/storage/v1/object/public/{SUPABASE_STORAGE_BUCKET}/{filename}"
     return {"url": url}
 
 
