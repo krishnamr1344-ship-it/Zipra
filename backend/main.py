@@ -365,7 +365,7 @@ def _seed_data():
 
 @app.on_event("startup")
 def startup():
-    _seed_data()
+    # _seed_data()  # Disabled — production data already seeded in Neon
 
 
 @app.get("/")
