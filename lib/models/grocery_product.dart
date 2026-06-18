@@ -33,21 +33,21 @@ class GroceryProduct {
     final price = (map['price'] ?? 0).runtimeType == double
         ? (map['price'] as double)
         : ((map['price'] ?? 0) as num).toDouble();
-    final mrp = (map['mrp'] ?? map['original_price'] ?? price).runtimeType == double
-        ? (map['mrp'] ?? map['original_price'] ?? price) as double
-        : ((map['mrp'] ?? map['original_price'] ?? price) as num).toDouble();
+    final finalPrice = (map['final_price'] ?? price).runtimeType == double
+        ? (map['final_price'] as double)
+        : ((map['final_price'] ?? price) as num).toDouble();
     final images = map['images'] is List ? (map['images'] as List).cast<String>() : <String>[];
     final name = map['name'] as String? ?? '';
     final category = map['category_name'] as String? ?? '';
     final isEnabled = map['is_enabled'] != false;
     final stock = (map['stock'] ?? 0) as int;
-    final discount = mrp > price ? ((1 - price / mrp) * 100).round() : (map['discount_percent'] ?? 0) as int;
+    final discount = (map['discount_percent'] ?? 0) as int;
     return GroceryProduct(
       id: map['id']?.toString() ?? '',
       name: name,
       unit: map['unit'] as String? ?? '',
-      sellingPrice: price,
-      mrp: mrp,
+      sellingPrice: finalPrice,
+      mrp: price,
       discountPercent: discount > 0 ? discount : null,
       images: images,
       stock: stock,

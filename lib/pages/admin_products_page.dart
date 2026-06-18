@@ -76,6 +76,12 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
     String? nameError;
     String? priceError;
     String? catError;
+    double? displayFinalPrice;
+    void calcFinalPrice() {
+      final p = double.tryParse(priceCtl.text);
+      final d = int.tryParse(discountCtl.text) ?? 0;
+      displayFinalPrice = p != null ? p * (100 - d) / 100 : null;
+    }
 
     showModalBottomSheet(
       context: context,
@@ -142,7 +148,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                         ),
                         keyboardType: TextInputType.number,
-                        onChanged: (_) { if (priceError != null) setSheetState(() => priceError = null); },
+                        onChanged: (_) { setSheetState(() { priceError = null; calcFinalPrice(); }); },
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -179,9 +185,37 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   ),
                   keyboardType: TextInputType.number,
+                  onChanged: (_) => setSheetState(() => calcFinalPrice()),
                 ),
+                if (displayFinalPrice != null && int.tryParse(discountCtl.text) != 0)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.successLight,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Text('Original: ₹${double.tryParse(priceCtl.text)?.toStringAsFixed(0) ?? '0'}',
+                            style: TextStyle(fontSize: 12, color: AppColors.textHint, decoration: TextDecoration.lineThrough)),
+                          const SizedBox(width: 12),
+                          Text('Final: ₹${displayFinalPrice!.toStringAsFixed(0)}',
+                            style: TextStyle(fontSize: 14, color: AppColors.success, fontWeight: FontWeight.bold)),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(color: AppColors.errorLight, borderRadius: BorderRadius.circular(8)),
+                            child: Text('${discountCtl.text}% OFF', style: TextStyle(fontSize: 11, color: AppColors.error, fontWeight: FontWeight.w600)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 const SizedBox(height: 20),
-                const Text('Product Images (min 3)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF2D2D3A))),
+                const Text('Product Images (min 1)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF2D2D3A))),
                 const SizedBox(height: 8),
                 ...List.generate(3, (i) {
                   final hasUrl = images[i].text.trim().isNotEmpty && images[i].text.trim().startsWith('http');
@@ -300,8 +334,8 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                         catError = catId == null ? 'Select a category' : null;
                       });
                       if (nameError != null || priceError != null || catError != null) return;
-                      if (images.any((c) => c.text.trim().isEmpty)) {
-                        ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Please provide at least 3 images'), behavior: SnackBarBehavior.floating));
+                      if (images.every((c) => c.text.trim().isEmpty)) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Please provide at least 1 image'), behavior: SnackBarBehavior.floating));
                         return;
                       }
                       setSheetState(() => saving = true);
@@ -447,6 +481,9 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                     final p = _filtered[i] as Map<String, dynamic>;
                     final images = (p['images'] as List?) ?? [];
                     final thumb = images.isNotEmpty ? images[0]?.toString() : null;
+                    final origPrice = (p['price'] ?? 0).runtimeType == double ? p['price'] as double : ((p['price'] ?? 0) as num).toDouble();
+                    final discPct = (p['discount_percent'] ?? 0) as int;
+                    final finalPrice = (p['final_price'] ?? origPrice).runtimeType == double ? p['final_price'] as double : ((p['final_price'] ?? origPrice) as num).toDouble();
 
                     return Container(
                       margin: const EdgeInsets.only(bottom: 10),
@@ -492,7 +529,17 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                             decoration: BoxDecoration(color: AppColors.successLight, borderRadius: BorderRadius.circular(8)),
-                                            child: Text('₹${p['price']} / ${p['unit']}', style: TextStyle(fontSize: 11, color: AppColors.success, fontWeight: FontWeight.w500)),
+                                            child: discPct > 0
+                                              ? RichText(
+                                                  text: TextSpan(
+                                                    children: [
+                                                      TextSpan(text: '₹${finalPrice.toStringAsFixed(0)}', style: TextStyle(fontSize: 11, color: AppColors.success, fontWeight: FontWeight.w600)),
+                                                      TextSpan(text: '  ₹${origPrice.toStringAsFixed(0)}', style: TextStyle(fontSize: 9, color: AppColors.textHint, decoration: TextDecoration.lineThrough)),
+                                                      TextSpan(text: '  $discPct% off', style: TextStyle(fontSize: 9, color: AppColors.error, fontWeight: FontWeight.w500)),
+                                                    ],
+                                                  ),
+                                                )
+                                              : Text('₹${origPrice.toStringAsFixed(0)} / ${p['unit']}', style: TextStyle(fontSize: 11, color: AppColors.success, fontWeight: FontWeight.w500)),
                                           ),
                                           const SizedBox(width: 6),
                                           Container(

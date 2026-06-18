@@ -10,7 +10,7 @@ import re
 from decimal import Decimal
 from typing import Optional
 from datetime import datetime
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, computed_field
 
 NAME_REGEX = r"^.{2,50}$"
 
@@ -242,6 +242,11 @@ class ProductResponse(BaseModel):
     stock: int
     discount_percent: int = 0
     is_enabled: bool = True
+
+    @computed_field
+    @property
+    def final_price(self) -> float:
+        return round(self.price * (100 - self.discount_percent) / 100, 2)
 
     class Config:
         from_attributes = True
