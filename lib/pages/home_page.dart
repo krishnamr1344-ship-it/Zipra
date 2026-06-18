@@ -751,7 +751,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             else
               ProductGrid(
                 products: products,
-                cartMap: {for (final p in products) p.id: cartNotifier.isInCart(p.id)},
                 favMap: {for (final p in products) p.id: wishlistNotifier.contains(p.id)},
                 getImages: (gp) => gp.images,
                 onAdd: (gp) async {
@@ -761,20 +760,19 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   if (!mounted) return;
                   AppSnackbar.show(context, '${gp.name} added to cart');
                 },
+                onDecrement: (gp) async {
+                  if (!await _requireLogin()) return;
+                  if (!mounted) return;
+                  await cartNotifier.updateCount(gp.id, -1);
+                },
                 onFav: (gp) => wishlistNotifier.toggle(gp.id),
                 onTap: (gp) {
-                  final count = cartNotifier.itemCountFor(gp.id);
                   Navigator.push(context, MaterialPageRoute(
                     builder: (_) => ProductDetailPage(
                       icon: Icons.shopping_bag, color: _orange, name: gp.name,
                       productId: gp.id, price: gp.sellingPrice.round(), qty: gp.unit,
                       images: gp.images,
-                      inCart: count > 0, isEnabled: gp.isEnabled, discountPercent: gp.discountPercent ?? 0,
-                      onAdd: () async {
-                        if (!await _requireLogin()) return;
-                        if (!mounted) return;
-                        await cartNotifier.add(gp.id, name: gp.name, qty: gp.unit, price: gp.sellingPrice.round());
-                      },
+                      isEnabled: gp.isEnabled, discountPercent: gp.discountPercent ?? 0,
                     ),
                   ));
                 },

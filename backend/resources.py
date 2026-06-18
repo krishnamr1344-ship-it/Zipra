@@ -431,15 +431,17 @@ def _get_order_or_404(order_id: str, user_id: str, db: Session) -> Order:
 
 
 def _cart_item_to_response(item: CartItem) -> CartItemResponse:
+    product = item.product
+    selling_price = round(float(product.price) * (100 - product.discount_percent) / 100, 2) if product else 0
     return CartItemResponse(
         id=str(item.id),
         product_id=str(item.product_id),
-        product_name=item.product.name,
-        product_price=round(float(item.product.price), 2),
-        product_unit=item.product.unit,
-        product_image=item.product.images[0].image_url if item.product.images else None,
+        product_name=product.name if product else '',
+        product_price=selling_price,
+        product_unit=product.unit if product else '',
+        product_image=product.images[0].image_url if product and product.images else None,
         quantity=item.quantity,
-        subtotal=round(float(item.product.price) * item.quantity, 2),
+        subtotal=round(selling_price * item.quantity, 2),
     )
 
 
@@ -965,7 +967,7 @@ def add_to_cart(body: CartAddRequest, request: Request, db: Session = Depends(ge
     ).first()
 
     if existing:
-        existing.quantity = body.quantity
+        existing.quantity += body.quantity
         db.commit()
         db.refresh(existing)
         return _cart_item_to_response(existing)

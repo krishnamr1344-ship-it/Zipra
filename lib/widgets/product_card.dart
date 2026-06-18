@@ -1,27 +1,26 @@
 import 'package:flutter/material.dart';
 import '../constants/theme.dart';
+import '../models/cart_model.dart';
 import '../models/grocery_product.dart';
 
 class ProductCard extends StatefulWidget {
   final GroceryProduct product;
-  final bool inCart;
   final List<String> images;
   final VoidCallback onAdd;
+  final VoidCallback? onDecrement;
   final VoidCallback onFav;
   final bool isFav;
   final VoidCallback onTap;
-  final int initialQuantity;
 
   const ProductCard({
     super.key,
     required this.product,
-    this.inCart = false,
     this.images = const [],
     required this.onAdd,
+    this.onDecrement,
     required this.onFav,
     this.isFav = false,
     required this.onTap,
-    this.initialQuantity = 0,
   });
 
   @override
@@ -29,21 +28,22 @@ class ProductCard extends StatefulWidget {
 }
 
 class _ProductCardState extends State<ProductCard> {
-  int _quantity = 0;
   bool _imageError = false;
 
   @override
   void initState() {
     super.initState();
-    _quantity = widget.initialQuantity;
+    cartNotifier.addListener(_onCartChanged);
   }
 
   @override
-  void didUpdateWidget(ProductCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.inCart != oldWidget.inCart) {
-      _quantity = widget.inCart ? (_quantity == 0 ? 1 : _quantity) : 0;
-    }
+  void dispose() {
+    cartNotifier.removeListener(_onCartChanged);
+    super.dispose();
+  }
+
+  void _onCartChanged() {
+    setState(() {});
   }
 
   @override
@@ -168,6 +168,7 @@ class _ProductCardState extends State<ProductCard> {
       builder: (context, constraints) {
         final cardW = constraints.maxWidth;
         final sz = cardW * 0.04;
+        final qty = cartNotifier.itemCountFor(p.id);
 
         return Padding(
           padding: const EdgeInsets.fromLTRB(10, 8, 10, 12),
@@ -197,7 +198,7 @@ class _ProductCardState extends State<ProductCard> {
                       ),
                     ],
                   ),
-                  _quantity == 0 ? _buildAddBtn(sz) : _buildStepper(sz),
+                  qty == 0 ? _buildAddBtn(sz) : _buildStepper(sz),
                 ],
               ),
             ],
@@ -222,6 +223,7 @@ class _ProductCardState extends State<ProductCard> {
   }
 
   Widget _buildStepper(double sz) {
+    final qty = cartNotifier.itemCountFor(widget.product.id);
     final btnW = sz * 3;
     final btnH = sz * 3.2;
     return Container(
@@ -234,15 +236,13 @@ class _ProductCardState extends State<ProductCard> {
         children: [
           GestureDetector(
             onTap: () {
-              setState(() {
-                if (_quantity > 1) { _quantity--; } else { _quantity = 0; }
-              });
+              if (qty > 0) widget.onDecrement?.call();
             },
             child: Container(width: btnW, height: btnH, color: AppColors.success, child: Icon(Icons.remove, color: Colors.white, size: sz * 1.5)),
           ),
-          Container(width: btnW, height: btnH, color: Colors.white, child: Center(child: Text(_quantity.toString(), style: TextStyle(color: AppColors.success, fontSize: sz * 1.6, fontWeight: FontWeight.bold)))),
+          Container(width: btnW, height: btnH, color: Colors.white, child: Center(child: Text(qty.toString(), style: TextStyle(color: AppColors.success, fontSize: sz * 1.6, fontWeight: FontWeight.bold)))),
           GestureDetector(
-            onTap: () => setState(() => _quantity++),
+            onTap: () => widget.onAdd(),
             child: Container(width: btnW, height: btnH, color: AppColors.success, child: Icon(Icons.add, color: Colors.white, size: sz * 1.5)),
           ),
         ],

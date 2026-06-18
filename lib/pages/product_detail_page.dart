@@ -13,8 +13,6 @@ class ProductDetailPage extends StatefulWidget {
   final int price;
   final String qty;
   final List<String> images;
-  final bool inCart;
-  final VoidCallback onAdd;
   final bool isEnabled;
   final int discountPercent;
 
@@ -27,8 +25,6 @@ class ProductDetailPage extends StatefulWidget {
     required this.price,
     required this.qty,
     this.images = const [],
-    required this.inCart,
-    required this.onAdd,
     this.isEnabled = true,
     this.discountPercent = 0,
   });
@@ -42,12 +38,24 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   final _pageController = PageController();
   int _currentImage = 0;
   Timer? _timer;
-  int _qty = 1;
 
   @override
   void initState() {
     super.initState();
+    cartNotifier.addListener(_onCartChanged);
     _startAutoPlay();
+  }
+
+  @override
+  void dispose() {
+    cartNotifier.removeListener(_onCartChanged);
+    _timer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _onCartChanged() {
+    setState(() {});
   }
 
   Future<bool> _requireLogin() async {
@@ -56,6 +64,21 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     if (!mounted) return false;
     final loggedIn = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => const LoginPage()));
     return loggedIn == true;
+  }
+
+  Future<void> _addToCart() async {
+    if (!await _requireLogin()) return;
+    if (!mounted) return;
+    await cartNotifier.add(widget.productId, name: widget.name, qty: widget.qty, price: widget.price);
+  }
+
+  Future<void> _decrementFromCart() async {
+    if (!await _requireLogin()) return;
+    if (!mounted) return;
+    final qty = cartNotifier.itemCountFor(widget.productId);
+    if (qty > 0) {
+      await cartNotifier.updateCount(widget.productId, -1);
+    }
   }
 
   void _startAutoPlay() {
@@ -85,17 +108,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   }
 
   @override
-  void dispose() {
-    _timer?.cancel();
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final isFav = wishlistNotifier.contains(widget.productId);
     final displayImages = widget.images.where((i) => i.isNotEmpty).toList();
-    final totalPrice = widget.price * _qty;
+    final cartQty = cartNotifier.itemCountFor(widget.productId);
+    final totalPrice = widget.price * cartQty;
     final originalPrice = widget.discountPercent > 0
         ? (widget.price / (1 - widget.discountPercent / 100)).round()
         : null;
@@ -104,6 +121,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.black87),
+              onPressed: () => Navigator.pop(context),
+            ),
             expandedHeight: 300,
             pinned: true,
             backgroundColor: Colors.white,
@@ -246,7 +267,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                   const SizedBox(width: 8),
                                 ],
                                 Text(
-                                  '₹$totalPrice',
+                                  '₹${widget.price}',
                                   style: const TextStyle(
                                     fontSize: 28,
                                     fontWeight: FontWeight.bold,
@@ -429,11 +450,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         child: Row(
                           children: [
                             GestureDetector(
-                              onTap: () async {
-                                if (!await _requireLogin()) return;
-                                if (!mounted) return;
-                                if (_qty > 1) setState(() => _qty--);
-                              },
+                              onTap: _decrementFromCart,
                               child: Container(
                                 width: 32,
                                 height: 32,
@@ -452,7 +469,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                               width: 48,
                               child: Center(
                                 child: Text(
-                                  '$_qty',
+                                  '$cartQty',
                                   style: const TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
@@ -461,11 +478,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                               ),
                             ),
                             GestureDetector(
-                              onTap: () async {
-                                if (!await _requireLogin()) return;
-                                if (!mounted) return;
-                                setState(() => _qty++);
-                              },
+                              onTap: _addToCart,
                               child: Container(
                                 width: 32,
                                 height: 32,
@@ -535,23 +548,23 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
             child: SizedBox(
             height: 52,
             child: ElevatedButton.icon(
-              onPressed: widget.isEnabled ? widget.onAdd : null,
+              onPressed: widget.isEnabled ? _addToCart : null,
               icon: Icon(
-                widget.inCart ? Icons.check : Icons.add_shopping_cart,
+                cartQty > 0 ? Icons.check : Icons.add_shopping_cart,
                 size: 20,
               ),
               label: Text(
-                !widget.isEnabled ? 'Unavailable' : (widget.inCart ? 'Added to Cart' : 'Add to Cart — ₹$totalPrice'),
+                !widget.isEnabled ? 'Unavailable' : (cartQty > 0 ? 'Added to Cart' : 'Add to Cart — ₹$totalPrice'),
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                 ),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: widget.inCart
+                backgroundColor: cartQty > 0
                     ? Colors.green.shade100
                     : widget.color,
-                foregroundColor: widget.inCart ? widget.color : Colors.white,
+                foregroundColor: cartQty > 0 ? widget.color : Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),

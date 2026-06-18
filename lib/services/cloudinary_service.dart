@@ -14,7 +14,7 @@ class CloudinaryService {
     final body = await response.stream.bytesToString();
     debugPrint('Backend upload response ($response.statusCode): $body');
     if (response.statusCode != 200) {
-      throw Exception('Upload failed: HTTP ${response.statusCode}');
+      throw Exception('Upload failed: HTTP ${response.statusCode} — $body');
     }
     final json = jsonDecode(body) as Map<String, dynamic>;
     final relative = json['url'] as String;

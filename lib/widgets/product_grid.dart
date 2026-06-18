@@ -4,10 +4,10 @@ import 'product_card.dart';
 
 class ProductGrid extends StatelessWidget {
   final List<GroceryProduct> products;
-  final Map<String, bool> cartMap;
   final Map<String, bool> favMap;
   final List<String> Function(GroceryProduct p) getImages;
   final void Function(GroceryProduct p) onAdd;
+  final void Function(GroceryProduct p)? onDecrement;
   final void Function(GroceryProduct p) onFav;
   final void Function(GroceryProduct p) onTap;
   final EdgeInsets? padding;
@@ -16,10 +16,10 @@ class ProductGrid extends StatelessWidget {
   const ProductGrid({
     super.key,
     required this.products,
-    required this.cartMap,
     required this.favMap,
     required this.getImages,
     required this.onAdd,
+    this.onDecrement,
     required this.onFav,
     required this.onTap,
     this.padding,
@@ -43,9 +43,9 @@ class ProductGrid extends StatelessWidget {
               child: ProductCard(
                 product: p,
                 images: getImages(p),
-                inCart: cartMap[p.id] ?? false,
                 isFav: favMap[p.id] ?? false,
                 onAdd: () => onAdd(p),
+                onDecrement: () => onDecrement?.call(p),
                 onFav: () => onFav(p),
                 onTap: () => onTap(p),
               ),
@@ -79,9 +79,9 @@ class ProductGrid extends StatelessWidget {
         return ProductCard(
           product: p,
           images: getImages(p),
-          inCart: cartMap[p.id] ?? false,
           isFav: favMap[p.id] ?? false,
           onAdd: () => onAdd(p),
+          onDecrement: () => onDecrement?.call(p),
           onFav: () => onFav(p),
           onTap: () => onTap(p),
         );
