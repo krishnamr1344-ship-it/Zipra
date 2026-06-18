@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../constants/theme.dart';
 import '../models/cart_model.dart';
+import '../services/api_service.dart';
+import 'login_page.dart';
 
 class ProductDetailPage extends StatefulWidget {
   final IconData icon;
@@ -36,6 +38,7 @@ class ProductDetailPage extends StatefulWidget {
 }
 
 class _ProductDetailPageState extends State<ProductDetailPage> {
+  final _api = ApiService();
   final _pageController = PageController();
   int _currentImage = 0;
   Timer? _timer;
@@ -45,6 +48,14 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   void initState() {
     super.initState();
     _startAutoPlay();
+  }
+
+  Future<bool> _requireLogin() async {
+    final token = await _api.getToken();
+    if (token != null) return true;
+    if (!mounted) return false;
+    final loggedIn = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => const LoginPage()));
+    return loggedIn == true;
   }
 
   void _startAutoPlay() {
@@ -418,7 +429,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         child: Row(
                           children: [
                             GestureDetector(
-                              onTap: () {
+                              onTap: () async {
+                                if (!await _requireLogin()) return;
+                                if (!mounted) return;
                                 if (_qty > 1) setState(() => _qty--);
                               },
                               child: Container(
@@ -448,7 +461,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                               ),
                             ),
                             GestureDetector(
-                              onTap: () => setState(() => _qty++),
+                              onTap: () async {
+                                if (!await _requireLogin()) return;
+                                if (!mounted) return;
+                                setState(() => _qty++);
+                              },
                               child: Container(
                                 width: 32,
                                 height: 32,
