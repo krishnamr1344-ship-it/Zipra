@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../constants/theme.dart';
 import '../services/admin_api_service.dart';
+import '../services/cloudinary_service.dart';
 import '../services/notification_service.dart';
 import '../widgets/state_widgets.dart';
 
@@ -67,6 +69,8 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
           ? (product['images'] as List)[i] ?? ''
           : '',
     ));
+    final uploading = List<bool>.filled(3, false);
+    final picker = ImagePicker();
     String? catId = product?['category_id'];
     bool saving = false;
     String? nameError;
@@ -179,32 +183,96 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                 const SizedBox(height: 20),
                 const Text('Product Images (min 3)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF2D2D3A))),
                 const SizedBox(height: 8),
-                ...List.generate(3, (i) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      TextField(
-                        controller: images[i],
-                        decoration: InputDecoration(
-                          labelText: 'Image URL ${i + 1}',
-                          hintText: 'https://example.com/image${i + 1}.jpg',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          suffixIcon: images[i].text.trim().isNotEmpty && images[i].text.trim().startsWith('http')
-                              ? Padding(
-                                  padding: const EdgeInsets.all(6),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: Image.network(images[i].text.trim(), width: 36, height: 36, fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox()),
-                                  ),
-                                )
-                              : null,
-                        ),
+                ...List.generate(3, (i) {
+                  final hasUrl = images[i].text.trim().isNotEmpty && images[i].text.trim().startsWith('http');
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.chipBg,
+                        borderRadius: BorderRadius.circular(14),
                       ),
-                    ],
-                  ),
-                )),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 56,
+                                height: 56,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                clipBehavior: Clip.antiAlias,
+                                child: uploading[i]
+                                    ? const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)))
+                                    : hasUrl
+                                        ? Image.network(images[i].text.trim(), width: 56, height: 56, fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.image_outlined, color: Color(0xFFBBBBBB)))
+                                        : const Icon(Icons.image_outlined, color: Color(0xFFBBBBBB)),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: TextField(
+                                  controller: images[i],
+                                  decoration: InputDecoration(
+                                    labelText: 'Image URL ${i + 1}',
+                                    hintText: 'https://...',
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                    isDense: true,
+                                  ),
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 6),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                side: BorderSide(color: Theme.of(ctx).colorScheme.primary.withValues(alpha: 0.3)),
+                              ),
+                              icon: uploading[i]
+                                  ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                                  : Icon(Icons.photo_library_outlined, size: 16, color: Theme.of(ctx).colorScheme.primary),
+                              label: Text(
+                                uploading[i] ? 'Uploading...' : 'Pick from Gallery',
+                                style: TextStyle(fontSize: 12, color: Theme.of(ctx).colorScheme.primary),
+                              ),
+                              onPressed: uploading[i]
+                                  ? null
+                                  : () async {
+                                      try {
+                                        final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+                                        if (picked == null) return;
+                                        setSheetState(() => uploading[i] = true);
+                                        final url = await CloudinaryService.uploadImage(picked.path);
+                                        setSheetState(() {
+                                          uploading[i] = false;
+                                          images[i].text = url;
+                                        });
+                                      } catch (e) {
+                                        setSheetState(() => uploading[i] = false);
+                                        if (ctx.mounted) {
+                                          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                                            content: Text('Upload failed: $e'),
+                                            behavior: SnackBarBehavior.floating,
+                                          ));
+                                        }
+                                      }
+                                    },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
