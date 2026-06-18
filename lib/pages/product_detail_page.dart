@@ -63,20 +63,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
 
   Widget _fallbackImage() {
     return Container(
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [widget.color.withAlpha(40), widget.color.withAlpha(10)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Text(
-        widget.name.isNotEmpty ? widget.name[0].toUpperCase() : '?',
-        style: TextStyle(
-          fontSize: 64,
-          fontWeight: FontWeight.bold,
-          color: widget.color.withAlpha(180),
+      color: Colors.white,
+      child: Center(
+        child: Text(
+          '\u{1F6D2}',
+          style: const TextStyle(fontSize: 48),
         ),
       ),
     );
@@ -104,115 +95,106 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           SliverAppBar(
             expandedHeight: 300,
             pinned: true,
-            backgroundColor: widget.color,
+            backgroundColor: Colors.white,
             flexibleSpace: FlexibleSpaceBar(
-              background: Stack(
-                fit: StackFit.expand,
-                children: [
-                  if (displayImages.isNotEmpty)
-                    PageView(
-                      controller: _pageController,
-                      onPageChanged: (i) {
-                        setState(() => _currentImage = i);
-                        _timer?.cancel();
-                        _startAutoPlay();
-                      },
-                      children: displayImages
-                          .map(
-                            (url) => url.startsWith('http')
-                                ? Image.network(
-                                    url,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, _, _) => _fallbackImage(),
-                                  )
-                                : _fallbackImage(),
-                          )
-                          .toList(),
-                    )
-                  else
-                    _fallbackImage(),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withAlpha(80),
-                        ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 16,
-                    left: 16,
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: widget.isEnabled
-                                ? Colors.green.withAlpha(200)
-                                : Colors.red.withAlpha(200),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            widget.isEnabled ? 'In Stock' : 'Off',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
+              background: Container(
+                color: Colors.white,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (displayImages.isNotEmpty)
+                      PageView(
+                        controller: _pageController,
+                        onPageChanged: (i) {
+                          setState(() => _currentImage = i);
+                          _timer?.cancel();
+                          _startAutoPlay();
+                        },
+                        children: displayImages.map((url) {
+                          return Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Center(
+                              child: Image.network(
+                                url,
+                                fit: BoxFit.contain,
+                                loadingBuilder: (_, child, progress) {
+                                  if (progress == null) return child;
+                                  return const SizedBox(width: 32, height: 32, child: CircularProgressIndicator(strokeWidth: 2));
+                                },
+                                errorBuilder: (_, _, _) => _fallbackImage(),
+                              ),
                             ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withAlpha(180),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            widget.qty,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 11,
-                              color: Colors.grey.shade800,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (displayImages.length > 1)
+                          );
+                        }).toList(),
+                      )
+                    else
+                      _fallbackImage(),
                     Positioned(
-                      bottom: 16,
-                      right: 16,
-                      child: Row(
-                        children: List.generate(
-                          displayImages.length,
-                          (i) => AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            margin: const EdgeInsets.symmetric(horizontal: 2),
-                            width: _currentImage == i ? 16 : 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              color: _currentImage == i
-                                  ? Colors.white
-                                  : Colors.white.withAlpha(100),
-                              borderRadius: BorderRadius.circular(3),
-                            ),
+                      bottom: 0, left: 0, right: 0,
+                      child: Container(
+                        height: 60,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Colors.transparent, Colors.white.withValues(alpha: 0.6)],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
                           ),
                         ),
                       ),
                     ),
-                ],
+                    Positioned(
+                      bottom: 16, left: 16,
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: widget.isEnabled ? Colors.green.withValues(alpha: 0.8) : Colors.red.withValues(alpha: 0.8),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              widget.isEnabled ? 'In Stock' : 'Off',
+                              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.9),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              widget.qty,
+                              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: Colors.grey.shade800),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (displayImages.length > 1)
+                      Positioned(
+                        bottom: 16, right: 16,
+                        child: Row(
+                          children: List.generate(
+                            displayImages.length,
+                            (i) => AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              margin: const EdgeInsets.symmetric(horizontal: 2),
+                              width: _currentImage == i ? 16 : 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                color: _currentImage == i
+                                    ? const Color(0xFFFF6B00)
+                                    : const Color(0xFFFF6B00).withValues(alpha: 0.3),
+                                borderRadius: BorderRadius.circular(3),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),

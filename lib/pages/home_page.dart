@@ -261,7 +261,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       return;
     }
     if (!await _requireLogin()) return;
-    _loadProfile();
+    if (index == 4) _loadProfile();
     setState(() => _selectedIndex = index);
   }
 
@@ -572,7 +572,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     children: [
                       IconButton(
                         icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white, size: 22),
-                        onPressed: () => setState(() => _selectedIndex = 3),
+                        onPressed: () async {
+                          if (!await _requireLogin()) return;
+                          if (!mounted) return;
+                          setState(() => _selectedIndex = 3);
+                        },
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                       ),
@@ -787,7 +791,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     final cardW = (screenW - 32 - spacing) / 2;
     final scale = MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 1.5);
     final contentH = 80.0 * scale;
-    final skeletonAspectRatio = cardW / (cardW * 0.75 + contentH);
+    final skeletonAspectRatio = cardW / (130.0 + contentH);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -973,8 +977,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               const SizedBox(width: 8),
               // View Cart button
               GestureDetector(
-                onTap: () {
+                onTap: () async {
                   HapticFeedback.lightImpact();
+                  if (!await _requireLogin()) return;
+                  if (!mounted) return;
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const CartPage()));
                 },
                 child: Container(
@@ -1398,8 +1404,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     HapticFeedback.lightImpact();
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsPage()));
                   },
-                  onCartTap: () {
+                  onCartTap: () async {
                     HapticFeedback.lightImpact();
+                    if (!await _requireLogin()) return;
+                    if (!mounted) return;
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const CartPage()));
                   },
                 ),

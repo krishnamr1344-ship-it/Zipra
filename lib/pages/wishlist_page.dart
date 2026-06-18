@@ -3,6 +3,7 @@ import '../constants/theme.dart';
 import '../models/cart_model.dart';
 import '../services/api_service.dart';
 import '../widgets/app_snackbar.dart';
+import 'login_page.dart';
 
 class WishlistPage extends StatefulWidget {
   const WishlistPage({super.key});
@@ -45,6 +46,12 @@ class _WishlistPageState extends State<WishlistPage> {
   }
 
   Future<void> _addToCart(Map<String, dynamic> item) async {
+    final token = await _api.getToken();
+    if (token == null) {
+      if (!mounted) return;
+      final loggedIn = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => const LoginPage()));
+      if (loggedIn != true) return;
+    }
     final pid = item['product_id'] as String;
     final name = item['product_name'] as String? ?? '';
     final unit = item['product_unit'] as String? ?? '';

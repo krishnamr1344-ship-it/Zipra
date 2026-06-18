@@ -76,20 +76,6 @@ class CartNotifier extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       debugPrint('CartNotifier.add error: $e');
-      // Fallback: add locally if API fails
-      final existing = _items.where((i) => i.productId == productId).firstOrNull;
-      if (existing != null) {
-        existing.count++;
-      } else {
-        _items.add(CartItem(
-          id: '',
-          productId: productId,
-          name: name,
-          qty: qty,
-          price: price,
-          image: image,
-        ));
-      }
       notifyListeners();
     }
   }

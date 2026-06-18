@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../constants/theme.dart';
 import '../models/cart_model.dart';
+import '../services/api_service.dart';
 import '../widgets/empty_cart_widget.dart';
 import '../widgets/app_snackbar.dart';
+import 'login_page.dart';
 import 'payment_page.dart';
 
 class CartPage extends StatelessWidget {
@@ -520,7 +522,14 @@ class _CheckoutBar extends StatelessWidget {
             width: MediaQuery.of(context).size.width * 0.45,
             height: 52,
             child: ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
+                final token = await ApiService().getToken();
+                if (token == null) {
+                  if (!context.mounted) return;
+                  final loggedIn = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => const LoginPage()));
+                  if (loggedIn != true) return;
+                }
+                if (!context.mounted) return;
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => PaymentPage(total: total)),
