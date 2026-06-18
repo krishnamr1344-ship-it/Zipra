@@ -187,88 +187,97 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                   final hasUrl = images[i].text.trim().isNotEmpty && images[i].text.trim().startsWith('http');
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 10),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppColors.chipBg,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                width: 56,
-                                height: 56,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                clipBehavior: Clip.antiAlias,
-                                child: uploading[i]
-                                    ? const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)))
-                                    : hasUrl
-                                        ? Image.network(images[i].text.trim(), width: 56, height: 56, fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.image_outlined, color: Color(0xFFBBBBBB)))
-                                        : const Icon(Icons.image_outlined, color: Color(0xFFBBBBBB)),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: TextField(
-                                  controller: images[i],
-                                  decoration: InputDecoration(
-                                    labelText: 'Image URL ${i + 1}',
-                                    hintText: 'https://...',
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                    isDense: true,
-                                  ),
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                              ),
-                            ],
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: uploading[i]
+                          ? null
+                          : () async {
+                              try {
+                                final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+                                if (picked == null) return;
+                                setSheetState(() => uploading[i] = true);
+                                final url = await CloudinaryService.uploadImage(picked.path);
+                                setSheetState(() {
+                                  uploading[i] = false;
+                                  images[i].text = url;
+                                });
+                              } catch (e) {
+                                setSheetState(() => uploading[i] = false);
+                                if (ctx.mounted) {
+                                  ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                                    content: Text('Upload failed: $e'),
+                                    behavior: SnackBarBehavior.floating,
+                                  ));
+                                }
+                              }
+                            },
+                      child: Container(
+                        height: 110,
+                        decoration: BoxDecoration(
+                          color: hasUrl ? Colors.white : AppColors.chipBg,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: hasUrl ? Theme.of(ctx).colorScheme.primary.withValues(alpha: 0.2) : const Color(0xFFE0E0E0),
+                            width: hasUrl ? 1.5 : 1,
                           ),
-                          const SizedBox(height: 8),
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 6),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                side: BorderSide(color: Theme.of(ctx).colorScheme.primary.withValues(alpha: 0.3)),
-                              ),
-                              icon: uploading[i]
-                                  ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
-                                  : Icon(Icons.photo_library_outlined, size: 16, color: Theme.of(ctx).colorScheme.primary),
-                              label: Text(
-                                uploading[i] ? 'Uploading...' : 'Pick from Gallery',
-                                style: TextStyle(fontSize: 12, color: Theme.of(ctx).colorScheme.primary),
-                              ),
-                              onPressed: uploading[i]
-                                  ? null
-                                  : () async {
-                                      try {
-                                        final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
-                                        if (picked == null) return;
-                                        setSheetState(() => uploading[i] = true);
-                                        final url = await CloudinaryService.uploadImage(picked.path);
-                                        setSheetState(() {
-                                          uploading[i] = false;
-                                          images[i].text = url;
-                                        });
-                                      } catch (e) {
-                                        setSheetState(() => uploading[i] = false);
-                                        if (ctx.mounted) {
-                                          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-                                            content: Text('Upload failed: $e'),
-                                            behavior: SnackBarBehavior.floating,
-                                          ));
-                                        }
-                                      }
-                                    },
+                        ),
+                        child: Stack(
+                          children: [
+                            Center(
+                              child: uploading[i]
+                                  ? const Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 2.5)),
+                                        SizedBox(height: 8),
+                                        Text('Uploading...', style: TextStyle(fontSize: 12, color: Color(0xFF999999))),
+                                      ],
+                                    )
+                                  : hasUrl
+                                      ? ClipRRect(
+                                          borderRadius: BorderRadius.circular(13),
+                                          child: Image.network(images[i].text.trim(), width: double.infinity, height: 110, fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.image_outlined, size: 40, color: Color(0xFFBBBBBB))),
+                                        )
+                                      : Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.cloud_upload_outlined, size: 32, color: Theme.of(ctx).colorScheme.primary.withValues(alpha: 0.5)),
+                                            const SizedBox(height: 6),
+                                            Text('Tap to upload Image ${i + 1}', style: TextStyle(fontSize: 12, color: Theme.of(ctx).colorScheme.primary.withValues(alpha: 0.6), fontWeight: FontWeight.w500)),
+                                          ],
+                                        ),
                             ),
-                          ),
-                        ],
+                            if (hasUrl)
+                              Positioned(
+                                top: 4,
+                                right: 4,
+                                child: GestureDetector(
+                                  onTap: () => setSheetState(() => images[i].text = ''),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withValues(alpha: 0.5),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(Icons.close, size: 14, color: Colors.white),
+                                  ),
+                                ),
+                              ),
+                            if (hasUrl)
+                              Positioned(
+                                bottom: 4,
+                                left: 4,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.5),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text('Image ${i + 1}', style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w500)),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                   );
