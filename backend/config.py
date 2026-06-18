@@ -18,5 +18,5 @@ PUBLIC_PATH_PREFIXES: set[str] = set()
 import os as _os
 
 SUPABASE_URL: str = _os.getenv("SUPABASE_URL", "")
-SUPABASE_SERVICE_KEY: str = _os.getenv("SUPABASE_SERVICE_KEY", "")
+SUPABASE_SERVICE_KEY: str = _os.getenv("SUPABASE_SERVICE_KEY", "") or _os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
 SUPABASE_STORAGE_BUCKET: str = _os.getenv("SUPABASE_STORAGE_BUCKET", "product-images")
