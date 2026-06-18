@@ -5,26 +5,23 @@ import '../constants/cloudinary.dart';
 
 class CloudinaryService {
   static Future<String> uploadImage(String filePath) async {
-    final uri = Uri.parse(
-      'https://api.cloudinary.com/v1_1/${CloudinaryConfig.cloudName}/image/upload',
-    );
+    final uri = Uri.parse(CloudinaryConfig.uploadUrl);
+    debugPrint('Uploading to: $uri');
     final request = http.MultipartRequest('POST', uri)
-      ..fields['upload_preset'] = CloudinaryConfig.uploadPreset
       ..files.add(await http.MultipartFile.fromPath('file', filePath));
-    debugPrint('Cloudinary upload URL: $uri');
-    debugPrint('Cloudinary upload preset: ${CloudinaryConfig.uploadPreset}');
+    debugPrint('Backend upload URL: $uri');
     final response = await request.send();
     final body = await response.stream.bytesToString();
-    debugPrint('Cloudinary response ($response.statusCode): $body');
+    debugPrint('Backend upload response ($response.statusCode): $body');
     if (response.statusCode != 200) {
-      final json = jsonDecode(body) as Map<String, dynamic>;
-      final err = (json['error'] as Map<String, dynamic>?)?['message'] ?? 'Upload failed';
-      debugPrint('Cloudinary error: $err');
-      throw Exception(err);
+      throw Exception('Upload failed: HTTP ${response.statusCode}');
     }
     final json = jsonDecode(body) as Map<String, dynamic>;
-    final url = json['secure_url'] as String;
-    debugPrint('Cloudinary upload success: $url');
-    return url;
+    final relative = json['url'] as String;
+    final fullUrl = relative.startsWith('http')
+        ? relative
+        : 'https://delivery-app-api-16t0.onrender.com$relative';
+    debugPrint('Upload success: $fullUrl');
+    return fullUrl;
   }
 }
