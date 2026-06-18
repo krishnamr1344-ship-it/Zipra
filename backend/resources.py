@@ -53,11 +53,28 @@ import httpx as _httpx
 from config import SUPABASE_URL, SUPABASE_SERVICE_KEY, SUPABASE_STORAGE_BUCKET
 
 
+_MIME_MAP = {
+    ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+    ".png": "image/png", ".webp": "image/webp",
+    ".gif": "image/gif",
+}
+
+
+def _normalize_mime(filename: str, content_type: str | None) -> str:
+    ext = _os.path.splitext(filename)[1].lower()
+    mapped = _MIME_MAP.get(ext)
+    if mapped:
+        return mapped
+    if content_type and content_type.startswith("image/"):
+        return content_type
+    return "image/png"
+
+
 @router.post("/upload")
 async def upload_image(file: UploadFile = FastAPIFile(...)):
     ext = _os.path.splitext(file.filename or "image.png")[1] or ".png"
     filename = f"{_uuid.uuid4().hex}{ext}"
-    content_type = file.content_type or "image/png"
+    content_type = _normalize_mime(file.filename or "image.png", file.content_type)
     data = await file.read()
 
     async with _httpx.AsyncClient() as client:
