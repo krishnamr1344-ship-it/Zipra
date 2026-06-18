@@ -32,7 +32,7 @@ _blocked_ips: dict[str, float] = {}
 _rate_lock = threading.Lock()
 
 
-from config import PUBLIC_PATHS
+from config import PUBLIC_PATHS, PUBLIC_PATH_PREFIXES
 
 FAILURE_CODES = {401, 400, 422}
 
@@ -76,7 +76,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             if block:
                 return block
 
-        if path not in PUBLIC_PATHS:
+        if path not in PUBLIC_PATHS and not any(path.startswith(p) for p in PUBLIC_PATH_PREFIXES):
             auth_header = request.headers.get("Authorization")
             if not auth_header or not auth_header.startswith("Bearer "):
                 return JSONResponse(

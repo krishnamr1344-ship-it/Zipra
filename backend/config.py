@@ -1,4 +1,7 @@
 """
 Shared configuration — single source of truth for public paths.
 """
-PUBLIC_PATHS = {"/", "/docs", "/openapi.json", "/redoc", "/api/auth/register", "/api/auth/login", "/api/auth/logout", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/app-version", "/api/categories", "/api/products", "/api/combo-packs", "/api/check-zone", "/api/places/search", "/api/places/reverse", "/api/suggest-product"}
+PUBLIC_PATHS = {"/", "/docs", "/openapi.json", "/redoc", "/api/auth/register", "/api/auth/login", "/api/auth/logout", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/app-version", "/api/categories", "/api/products", "/api/combo-packs", "/api/check-zone", "/api/places/search", "/api/places/reverse", "/api/suggest-product", "/api/upload", "/uploads"}
+
+# Any path starting with /uploads/ is also public
+PUBLIC_PATH_PREFIXES = {"/uploads/"}

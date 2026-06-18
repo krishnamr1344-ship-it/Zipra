@@ -256,6 +256,9 @@ def seed_catalog(request: Request, db: Session = Depends(get_db)):
 
     db.commit()
     return MessageResponse(message=f"Seeded {created_cats} categories with {created_products} products")
+
+
+@router.put("/products/{product_id}", response_model=ProductResponse)
 def update_product(product_id: str, body: ProductCreate, request: Request, db: Session = Depends(get_db)):
     _require_admin(request, db)
     _validate_uuid(product_id)

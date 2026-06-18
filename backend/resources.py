@@ -46,6 +46,25 @@ from schemas import (
 
 router = APIRouter(prefix="/api")
 
+import os as _os
+import uuid as _uuid
+from fastapi import UploadFile, File as FastAPIFile
+import shutil as _shutil
+
+_UPLOAD_DIR = _os.path.join(_os.path.dirname(__file__), "uploads")
+_os.makedirs(_UPLOAD_DIR, exist_ok=True)
+
+
+@router.post("/upload")
+async def upload_image(file: UploadFile = FastAPIFile(...)):
+    ext = _os.path.splitext(file.filename or "image.png")[1] or ".png"
+    filename = f"{_uuid.uuid4().hex}{ext}"
+    filepath = _os.path.join(_UPLOAD_DIR, filename)
+    with open(filepath, "wb") as f:
+        _shutil.copyfileobj(file.file, f)
+    url = f"/uploads/{filename}"
+    return {"url": url}
+
 
 # ─── HELPERS ──────────────────────────────────────────────────────
 
