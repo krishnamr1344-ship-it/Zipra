@@ -13,7 +13,34 @@ Database:
 import logging
 import os
 import hmac
+import re as _re
 logger = logging.getLogger(__name__)
+
+
+class _SecretsRedactFilter(logging.Filter):
+    """Redact payment secrets and sensitive headers from all logs."""
+    _patterns = [
+        (_re.compile(r'(razorpay_key_secret["\']?\s*[:=]\s*["\']?)[^"\'&\s]+'), r'\1***'),
+        (_re.compile(r'(razorpay_webhook_secret["\']?\s*[:=]\s*["\']?)[^"\'&\s]+'), r'\1***'),
+        (_re.compile(r'(RAZORPAY_KEY_SECRET["\']?\s*[:=]\s*["\']?)[^"\'&\s]+'), r'\1***'),
+        (_re.compile(r'(RAZORPAY_WEBHOOK_SECRET["\']?\s*[:=]\s*["\']?)[^"\'&\s]+'), r'\1***'),
+        (_re.compile(r'(X-API-Key["\']?\s*[:=]\s*["\']?)[^"\'&\s]+'), r'\1***'),
+        (_re.compile(r'(Bearer\s+)[A-Za-z0-9._-]+'), r'\1***'),
+        (_re.compile(r'"token"\s*:\s*"[^"]+'), r'"token":"***'),
+        (_re.compile(r'"password"\s*:\s*"[^"]+'), r'"password":"***'),
+    ]
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        msg = record.getMessage()
+        for pattern, replacement in self._patterns:
+            msg = pattern.sub(replacement, msg)
+        record.msg = msg
+        return True
+
+
+logging.getLogger().addFilter(_SecretsRedactFilter())
+
+
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -51,7 +78,7 @@ if not ADMIN_EMAIL:
 if _missing:
     raise RuntimeError(f"Missing required environment variables: {', '.join(_missing)}")
 
-from config import PUBLIC_PATHS
+from config import PUBLIC_PATHS, RAZORPAY_ENABLED, RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET
 PUBLIC_PATHS_C4 = PUBLIC_PATHS
 
 # Create all tables on startup (new tables only).
@@ -85,6 +112,39 @@ if 'idempotency_key' not in order_cols:
         conn.execute(text("ALTER TABLE orders ADD COLUMN idempotency_key VARCHAR(64) UNIQUE"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_orders_idempotency_key ON orders (idempotency_key)"))
         conn.commit()
+
+# Migrate existing payments table: add Razorpay columns if missing.
+payment_cols = {c['name'] for c in inspector.get_columns('payments')}
+with engine.connect() as conn:
+    if 'gateway_order_id' not in payment_cols:
+        conn.execute(text("ALTER TABLE payments ADD COLUMN gateway_order_id VARCHAR(100)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_payments_gateway_order_id ON payments (gateway_order_id)"))
+    if 'gateway_payment_id' not in payment_cols:
+        conn.execute(text("ALTER TABLE payments ADD COLUMN gateway_payment_id VARCHAR(100)"))
+    if 'gateway_signature' not in payment_cols:
+        conn.execute(text("ALTER TABLE payments ADD COLUMN gateway_signature VARCHAR(500)"))
+    if 'failure_reason' not in payment_cols:
+        conn.execute(text("ALTER TABLE payments ADD COLUMN failure_reason VARCHAR(1000)"))
+    # Drop unique constraint on order_id if it exists (for Razorpay retries).
+    conn.execute(text("""
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM pg_constraint
+                WHERE conname = 'payments_order_id_key'
+                AND conrelid = 'payments'::regclass
+            ) THEN
+                ALTER TABLE payments DROP CONSTRAINT payments_order_id_key;
+            END IF;
+        END $$;
+    """))
+    # Partial unique index: only one successful payment per gateway_payment_id.
+    conn.execute(text("""
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_payments_gateway_payment_id
+        ON payments (gateway_payment_id)
+        WHERE gateway_payment_id IS NOT NULL
+    """))
+    conn.commit()
 
 app = FastAPI(
     title="Delivery App API",

@@ -204,18 +204,27 @@ class ProductImage(Base):
 class Payment(Base):
     __tablename__ = "payments"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    order_id = Column(UUID(as_uuid=True), ForeignKey("orders.id"), nullable=False, unique=True, index=True)
+    order_id = Column(UUID(as_uuid=True), ForeignKey("orders.id"), nullable=False, index=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     amount = Column(Numeric(10, 2), nullable=False)
     method = Column(String(20), nullable=False)
     status = Column(String(20), default="pending", nullable=False, index=True)
     transaction_id = Column(String(100), unique=True, nullable=True)
+    gateway_order_id = Column(String(100), nullable=True)
+    gateway_payment_id = Column(String(100), nullable=True)
+    gateway_signature = Column(String(500), nullable=True)
+    failure_reason = Column(String(1000), nullable=True)
     is_deleted = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
 
     order = relationship("Order", back_populates="payment")
     user = relationship("User", back_populates="payments")
+
+    __table_args__ = (
+        Index("ix_payments_gateway_order_id", "gateway_order_id"),
+        Index("ix_payments_order_user_deleted", "order_id", "user_id", "is_deleted"),
+    )
 
 
 class ComboPack(Base):

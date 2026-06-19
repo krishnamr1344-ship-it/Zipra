@@ -234,6 +234,7 @@ class OrderData {
   final DateTime date;
   final String? deliveryAddress;
   final String? deliveryOtp;
+  final String paymentMethod;
 
   OrderData({
     required this.id,
@@ -243,5 +244,6 @@ class OrderData {
     DateTime? date,
     this.deliveryAddress,
     this.deliveryOtp,
+    this.paymentMethod = 'COD',
   }) : date = date ?? DateTime.now();
 }

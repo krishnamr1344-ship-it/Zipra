@@ -17,10 +17,14 @@ logger = logging.getLogger(__name__)
 import uuid
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+import hashlib
+import hmac
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 import httpx
+import razorpay
 
 from typing import Optional
 
@@ -37,12 +41,14 @@ from schemas import (
     CartAddRequest, CartUpdateRequest, CartItemResponse, CartValidateResponse, CartValidateItem,
     OrderCreateRequest, OrderDirectCreateRequest, OrderResponse, OrderItemResponse, DeliveryAddress,
     PaymentProcessRequest, PaymentResponse, MessageResponse,
+    RazorpayCreateOrderRequest, RazorpayCreateOrderResponse, RazorpayVerifyRequest,
     ZoneCheckRequest, ZoneCheckResponse,
     ComboPackItemInput, ComboPackItemResponse, ComboPackResponse, PackAddRequest,
     SuggestProductRequest,
     WishlistAddRequest, WishlistItemResponse,
     AppVersionResponse, NotificationResponse,
 )
+from config import RAZORPAY_ENABLED, RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET
 
 router = APIRouter(prefix="/api")
 
@@ -1321,12 +1327,12 @@ def create_order_direct(body: OrderDirectCreateRequest, request: Request, db: Se
     return _order_to_response(order)
 
 
-def _confirm_order_payment(order: Order, user_id: str, method: str, db: Session) -> Payment:
-    """Deduct stock, generate OTP, create Payment record.
+def _confirm_order_payment(order: Order, user_id: str, method: str, db: Session, existing_payment: Payment = None) -> Payment:
+    """Deduct stock, generate OTP, create or update Payment record.
     Called at payment-confirmation time:
-    - For COD: within create_order_direct
-    - For cart-based: from process_payment
-    - For Razorpay (future): from webhook handler
+    - For COD: within create_order_direct (creates new Payment)
+    - For cart-based: from process_payment (creates new Payment)
+    - For Razorpay: from verify / webhook (updates existing pending Payment)
     """
     items = db.query(OrderItem).filter(
         OrderItem.order_id == order.id,
@@ -1344,16 +1350,28 @@ def _confirm_order_payment(order: Order, user_id: str, method: str, db: Session)
     otp = ''.join(secrets.choice(_string.digits) for _ in range(6))
     order.delivery_otp = otp
 
+    if existing_payment:
+        existing_payment.status = "success"
+        existing_payment.method = method
+        if not existing_payment.transaction_id:
+            existing_payment.transaction_id = _generate_txn_id(method)
+        return existing_payment
+
     payment = Payment(
         order_id=order.id,
         user_id=user_id,
         amount=order.total_amount,
         method=method,
         status="success",
-        transaction_id="COD" + datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S") + str(uuid.uuid4()).split("-")[0],
+        transaction_id=_generate_txn_id(method),
     )
     db.add(payment)
     return payment
+
+
+def _generate_txn_id(method: str) -> str:
+    prefix = "RZP" if method == "Razorpay" else "COD"
+    return prefix + datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S") + str(uuid.uuid4()).split("-")[0]
 
 
 # ─── PAYMENTS ─────────────────────────────────────────────────────
@@ -1372,6 +1390,8 @@ def _payment_to_response(payment: Payment) -> PaymentResponse:
         method=payment.method,
         status=payment.status,
         transaction_id=payment.transaction_id,
+        gateway_order_id=payment.gateway_order_id,
+        gateway_payment_id=payment.gateway_payment_id,
         expires_at=expires_at,
         created_at=payment.created_at,
     )
@@ -1440,10 +1460,260 @@ def get_payment(order_id: str, request: Request, db: Session = Depends(get_db)):
         Payment.order_id == order_id,
         Payment.user_id == user_id,
         Payment.is_deleted == False,
-    ).first()
+    ).order_by(Payment.created_at.desc()).first()
     if not payment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found")
     return _payment_to_response(payment)
+
+
+# ─── RAZORPAY ─────────────────────────────────────────────────────
+# Security: HMAC compare_digest verification, amount from DB only.
+# No secrets stored in client. Webhook always returns 200.
+
+def _razorpay_client() -> razorpay.Client:
+    return razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+
+
+@router.post("/payments/create-order", response_model=RazorpayCreateOrderResponse)
+def razorpay_create_order(body: RazorpayCreateOrderRequest, request: Request, db: Session = Depends(get_db)):
+    """Create a Razorpay order for a previously created system order.
+    Returns razorpay_order_id, amount (paise), and key_id to the client.
+    """
+    if not RAZORPAY_ENABLED:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Online payments are currently disabled")
+    if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Razorpay not configured")
+
+    user_id = _get_user_id(request)
+    _get_user(user_id, db)
+    _validate_uuid(body.order_id)
+
+    order = db.query(Order).filter(
+        Order.id == body.order_id,
+        Order.user_id == user_id,
+        Order.is_deleted == False,
+    ).first()
+    if not order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+
+    if order.payment_method != "Razorpay":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order is not set for Razorpay payment")
+
+    if order.status == "Confirmed":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order already paid")
+
+    # Check for existing successful payment
+    existing_success = db.query(Payment).filter(
+        Payment.order_id == order.id,
+        Payment.status == "success",
+        Payment.is_deleted == False,
+    ).first()
+    if existing_success:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order already paid")
+
+    # Expire any old pending payments for this order
+    old_pending = db.query(Payment).filter(
+        Payment.order_id == order.id,
+        Payment.status == "pending",
+        Payment.is_deleted == False,
+    ).all()
+    for p in old_pending:
+        _check_payment_expiry(p, db)
+
+    # Amount in paise (smallest currency unit)
+    amount_paise = int(order.total_amount * 100)
+
+    try:
+        client = _razorpay_client()
+        razorpay_order = client.order.create({
+            "amount": amount_paise,
+            "currency": "INR",
+            "receipt": str(order.id),
+            "notes": {"order_id": str(order.id), "user_id": user_id},
+        })
+    except Exception as e:
+        logger.error("Razorpay order creation failed: %s", e)
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Payment gateway error")
+
+    razorpay_order_id = razorpay_order.get("id")
+    if not razorpay_order_id:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Invalid response from payment gateway")
+
+    payment = Payment(
+        order_id=order.id,
+        user_id=user_id,
+        amount=order.total_amount,
+        method="Razorpay",
+        status="pending",
+        gateway_order_id=razorpay_order_id,
+    )
+    db.add(payment)
+    db.commit()
+
+    return RazorpayCreateOrderResponse(
+        razorpay_order_id=razorpay_order_id,
+        amount=amount_paise,
+        key_id=RAZORPAY_KEY_ID,
+    )
+
+
+@router.post("/payments/verify", response_model=PaymentResponse)
+def razorpay_verify(body: RazorpayVerifyRequest, request: Request, db: Session = Depends(get_db)):
+    """Verify Razorpay payment signature after client-side checkout success.
+    Uses hmac.compare_digest to prevent timing attacks.
+    """
+    if not RAZORPAY_ENABLED:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Online payments are currently disabled")
+
+    user_id = _get_user_id(request)
+    _get_user(user_id, db)
+    _validate_uuid(body.order_id)
+
+    order = db.query(Order).filter(
+        Order.id == body.order_id,
+        Order.user_id == user_id,
+        Order.is_deleted == False,
+    ).first()
+    if not order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+
+    if order.status != "Pending":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order already paid")
+
+    # Find the pending payment for this order
+    payment = db.query(Payment).filter(
+        Payment.order_id == order.id,
+        Payment.status == "pending",
+        Payment.is_deleted == False,
+    ).order_by(Payment.created_at.desc()).first()
+    if not payment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No pending payment found for this order")
+
+    if not payment.gateway_order_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Payment not initiated with gateway")
+
+    # HMAC verification: SHA256(razorpay_order_id + "|" + razorpay_payment_id) using key_secret
+    expected_signature = hmac.new(
+        RAZORPAY_KEY_SECRET.encode("utf-8"),
+        f"{payment.gateway_order_id}|{body.razorpay_payment_id}".encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+
+    if not hmac.compare_digest(expected_signature, body.razorpay_signature):
+        payment.status = "failed"
+        payment.failure_reason = "Signature verification failed"
+        db.commit()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Payment verification failed")
+
+    # Check for duplicate gateway_payment_id (reuse attack)
+    duplicate = db.query(Payment).filter(
+        Payment.gateway_payment_id == body.razorpay_payment_id,
+        Payment.status == "success",
+        Payment.is_deleted == False,
+    ).first()
+    if duplicate:
+        payment.status = "failed"
+        payment.failure_reason = "Duplicate payment ID"
+        db.commit()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Payment already processed")
+
+    try:
+        payment.gateway_payment_id = body.razorpay_payment_id
+        payment.gateway_signature = body.razorpay_signature
+
+        _confirm_order_payment(order, user_id, "Razorpay", db, existing_payment=payment)
+        order.status = "Confirmed"
+
+        db.commit()
+        db.refresh(payment)
+    except Exception:
+        db.rollback()
+        raise
+
+    return _payment_to_response(payment)
+
+
+@router.post("/payments/webhook")
+async def razorpay_webhook(request: Request, db: Session = Depends(get_db)):
+    """Razorpay webhook handler. Always returns 200.
+    Uses HMAC compare_digest to verify authenticity.
+    """
+    raw_body = await request.body()
+    webhook_signature = request.headers.get("X-Razorpay-Signature", "")
+
+    if RAZORPAY_WEBHOOK_SECRET:
+        expected_signature = hmac.new(
+            RAZORPAY_WEBHOOK_SECRET.encode("utf-8"),
+            raw_body,
+            hashlib.sha256,
+        ).hexdigest()
+        if not hmac.compare_digest(expected_signature, webhook_signature):
+            logger.warning("Razorpay webhook HMAC verification failed")
+            return JSONResponse(status_code=200, content={"status": "ignored"})
+
+    try:
+        event = json.loads(raw_body)
+    except json.JSONDecodeError:
+        logger.warning("Razorpay webhook invalid JSON")
+        return JSONResponse(status_code=200, content={"status": "ignored"})
+
+    event_type = event.get("event", "")
+    payload = event.get("payload", {})
+    payment_data = payload.get("payment", {}).get("entity", {})
+
+    gateway_payment_id = payment_data.get("id", "")
+    gateway_order_id = payment_data.get("order_id", "")
+    status_from_gateway = payment_data.get("status", "")
+    failure_reason = payment_data.get("error_description", "") or payment_data.get("error_reason", "")
+
+    if not gateway_payment_id or not gateway_order_id:
+        logger.warning("Razorpay webhook missing payment/order ID")
+        return JSONResponse(status_code=200, content={"status": "ignored"})
+
+    # Check for duplicate webhook
+    existing = db.query(Payment).filter(
+        Payment.gateway_payment_id == gateway_payment_id,
+        Payment.status == "success",
+    ).first()
+    if existing:
+        return JSONResponse(status_code=200, content={"status": "already_processed"})
+
+    payment = db.query(Payment).filter(
+        Payment.gateway_order_id == gateway_order_id,
+        Payment.is_deleted == False,
+    ).order_by(Payment.created_at.desc()).first()
+    if not payment:
+        logger.warning("Razorpay webhook: no payment found for gateway_order_id=%s", gateway_order_id)
+        return JSONResponse(status_code=200, content={"status": "ignored"})
+
+    if event_type == "payment.captured" and status_from_gateway == "captured":
+        if payment.status == "success":
+            return JSONResponse(status_code=200, content={"status": "already_processed"})
+
+        order = db.query(Order).filter(Order.id == payment.order_id).first()
+        if not order:
+            return JSONResponse(status_code=200, content={"status": "ignored"})
+
+        try:
+            payment.gateway_payment_id = gateway_payment_id
+
+            _confirm_order_payment(order, str(order.user_id), "Razorpay", db, existing_payment=payment)
+            order.status = "Confirmed"
+
+            db.commit()
+            logger.info("Razorpay webhook: payment %s confirmed for order %s", gateway_payment_id, order.id)
+        except Exception:
+            db.rollback()
+            logger.exception("Razorpay webhook: processing failed for payment %s", gateway_payment_id)
+
+    elif event_type == "payment.failed":
+        payment.status = "failed"
+        payment.gateway_payment_id = gateway_payment_id
+        payment.failure_reason = failure_reason or "Payment failed at gateway"
+        db.commit()
+        logger.info("Razorpay webhook: payment %s failed: %s", gateway_payment_id, failure_reason)
+
+    return JSONResponse(status_code=200, content={"status": "ok"})
 
 
 @router.post("/check-zone", response_model=ZoneCheckResponse)

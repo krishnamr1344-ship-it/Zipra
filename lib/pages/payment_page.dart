@@ -7,6 +7,7 @@ import '../widgets/app_snackbar.dart';
 import 'home_page.dart';
 import 'orders_page.dart';
 import 'delivery_location_page.dart';
+import 'payment_gateway_screen.dart';
 
 class PaymentPage extends StatefulWidget {
   final int total;
@@ -19,6 +20,7 @@ class PaymentPage extends StatefulWidget {
 class _PaymentPageState extends State<PaymentPage> {
   final _api = ApiService();
   bool _processing = false;
+  String _selectedMethod = 'cod';
 
   String _deliveryArea = '';
   String _deliveryDetail = '';
@@ -93,7 +95,19 @@ class _PaymentPageState extends State<PaymentPage> {
         'quantity': i.count,
       })).toList();
 
-      await _api.createOrder(items, 'cod', addressId: _addressId.isNotEmpty ? _addressId : null);
+      final order = await _api.createOrder(items, _selectedMethod, addressId: _addressId.isNotEmpty ? _addressId : null);
+      final orderId = order['id'] as String?;
+
+      if (_selectedMethod == 'razorpay' && orderId != null) {
+        setState(() => _processing = false);
+        cartNotifier.clear();
+        if (!mounted) return;
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => PaymentGatewayScreen(orderId: orderId, total: widget.total)),
+        );
+        return;
+      }
     } catch (e) {
       if (mounted) setState(() => _processing = false);
       if (!mounted) return;
@@ -105,6 +119,44 @@ class _PaymentPageState extends State<PaymentPage> {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const OrderStatusPage()),
+    );
+  }
+
+  Widget _methodTile(IconData icon, String title, String subtitle, String value) {
+    final selected = _selectedMethod == value;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedMethod = value),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.chipBg : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: selected ? AppColors.primary : Colors.grey.shade200, width: selected ? 1.5 : 1),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: AppColors.primary, size: 24),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: AppColors.textPrimary)),
+                  Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                ],
+              ),
+            ),
+            Icon(selected ? Icons.radio_button_checked : Icons.radio_button_off, color: selected ? AppColors.primary : Colors.grey, size: 22),
+          ],
+        ),
+      ),
     );
   }
 
@@ -185,36 +237,18 @@ class _PaymentPageState extends State<PaymentPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.chipBg,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.primary, width: 1.5),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(Icons.money_outlined, color: AppColors.primary, size: 24),
-                      ),
-                      const SizedBox(width: 14),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Cash on Delivery', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: AppColors.textPrimary)),
-                            Text('Pay when you receive', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                          ],
-                        ),
-                      ),
-                      const Icon(Icons.radio_button_checked, color: AppColors.primary, size: 22),
-                    ],
-                  ),
+                _methodTile(
+                  Icons.money_outlined,
+                  'Cash on Delivery',
+                  'Pay when you receive',
+                  'cod',
+                ),
+                const SizedBox(height: 12),
+                _methodTile(
+                  Icons.credit_card_outlined,
+                  'Pay Online',
+                  'Credit / Debit card, UPI, Net Banking',
+                  'razorpay',
                 ),
               ],
             ),

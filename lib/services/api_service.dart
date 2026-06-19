@@ -445,6 +445,30 @@ class ApiService {
     return _handleResponse(res);
   }
 
+  // ─── Razorpay ─────────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> createRazorpayOrder(String orderId) async {
+    final headers = await _authHeaders(required: true);
+    final res = await http.post(
+      Uri.parse('$_baseUrl/api/payments/create-order'),
+      headers: headers,
+      body: jsonEncode({'order_id': orderId}),
+    ).timeout(const Duration(seconds: 15));
+    if (_checkAndHandleUnauthorized(res.statusCode)) return {};
+    return _handleResponse(res);
+  }
+
+  Future<Map<String, dynamic>> verifyRazorpayPayment(String orderId, String paymentId, String signature) async {
+    final headers = await _authHeaders(required: true);
+    final res = await http.post(
+      Uri.parse('$_baseUrl/api/payments/verify'),
+      headers: headers,
+      body: jsonEncode({'order_id': orderId, 'razorpay_payment_id': paymentId, 'razorpay_signature': signature}),
+    ).timeout(const Duration(seconds: 15));
+    if (_checkAndHandleUnauthorized(res.statusCode)) return {};
+    return _handleResponse(res);
+  }
+
   Future<Map<String, dynamic>> getAppVersion() async {
     final res = await http.get(
       Uri.parse('$_baseUrl/api/app-version'),

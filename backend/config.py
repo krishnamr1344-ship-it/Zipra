@@ -8,9 +8,16 @@ PUBLIC_PATHS: set[str] = {
     "/api/app-version", "/api/categories", "/api/products",
     "/api/combo-packs", "/api/check-zone", "/api/places/search",
     "/api/places/reverse", "/api/suggest-product",
+    "/api/payments/webhook",
 }
 
 PUBLIC_PATH_PREFIXES: set[str] = set()
+
+# ─── Razorpay ─────────────────────────────────────────────────────
+RAZORPAY_ENABLED: bool = _os.getenv("RAZORPAY_ENABLED", "").lower() in ("1", "true", "yes")
+RAZORPAY_KEY_ID: str = _os.getenv("RAZORPAY_KEY_ID", "")
+RAZORPAY_KEY_SECRET: str = _os.getenv("RAZORPAY_KEY_SECRET", "")
+RAZORPAY_WEBHOOK_SECRET: str = _os.getenv("RAZORPAY_WEBHOOK_SECRET", "")
 
 
 # ─── Supabase ─────────────────────────────────────────────────────

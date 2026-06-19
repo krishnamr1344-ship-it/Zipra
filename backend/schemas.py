@@ -32,7 +32,7 @@ UNIT_LENGTH = 20
 TRANSACTION_ID_LENGTH = 100
 IMAGE_URL_LENGTH = 1000
 
-VALID_PAYMENT_METHODS = {"cod", "COD"}
+VALID_PAYMENT_METHODS = {"cod", "COD", "razorpay", "Razorpay"}
 VALID_ORDER_STATUSES = {"Pending", "Confirmed", "Shipped", "Delivered", "Cancelled"}
 VALID_PAYMENT_STATUSES = {"pending", "success", "failed"}
 
@@ -511,7 +511,7 @@ class OrderCreateRequest(BaseModel):
         v = v.strip().lower()
         if v not in VALID_PAYMENT_METHODS:
             raise ValueError(f"Payment method must be one of: {', '.join(sorted(VALID_PAYMENT_METHODS))}")
-        return "COD"
+        return "COD" if v == "cod" else "Razorpay"
 
 class OrderDirectCreateRequest(BaseModel):
     items: list[OrderItemInput] = Field(min_length=1)
@@ -525,7 +525,7 @@ class OrderDirectCreateRequest(BaseModel):
         v = v.strip().lower()
         if v not in VALID_PAYMENT_METHODS:
             raise ValueError(f"Payment method must be one of: {', '.join(sorted(VALID_PAYMENT_METHODS))}")
-        return "COD"
+        return "COD" if v == "cod" else "Razorpay"
 
 
 class OrderItemResponse(BaseModel):
@@ -582,7 +582,7 @@ class PaymentProcessRequest(BaseModel):
         v = v.strip().lower()
         if v not in VALID_PAYMENT_METHODS:
             raise ValueError(f"Payment method must be one of: {', '.join(sorted(VALID_PAYMENT_METHODS))}")
-        return "COD"
+        return "COD" if v == "cod" else "Razorpay"
 
 
 class PaymentResponse(BaseModel):
@@ -592,11 +592,30 @@ class PaymentResponse(BaseModel):
     method: str
     status: str
     transaction_id: Optional[str] = None
+    gateway_order_id: Optional[str] = None
+    gateway_payment_id: Optional[str] = None
     expires_at: Optional[datetime] = None
     created_at: datetime
 
     class Config:
         from_attributes = True
+
+
+# ─── RAZORPAY ─────────────────────────────────────────────────────
+
+class RazorpayCreateOrderRequest(BaseModel):
+    order_id: str
+
+class RazorpayCreateOrderResponse(BaseModel):
+    razorpay_order_id: str
+    amount: int
+    currency: str = "INR"
+    key_id: str
+
+class RazorpayVerifyRequest(BaseModel):
+    order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str
 
 
 # ─── WISHLIST ────────────────────────────────────────────────────

@@ -115,6 +115,7 @@ class _OrdersPageState extends State<OrdersPage> {
       status: o['status'] ?? 'Pending',
       date: DateTime.tryParse(o['created_at'] ?? '') ?? DateTime.now(),
       deliveryAddress: addr,
+      paymentMethod: o['payment_method'] ?? 'COD',
       items: items.map((i) => CartItem(
         id: i['product_id'] ?? '',
         productId: i['product_id'] ?? '',
