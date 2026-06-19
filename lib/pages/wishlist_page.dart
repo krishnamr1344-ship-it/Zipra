@@ -4,6 +4,7 @@ import '../models/cart_model.dart';
 import '../services/api_service.dart';
 import '../widgets/app_snackbar.dart';
 import 'login_page.dart';
+import 'product_detail_page.dart';
 
 class WishlistPage extends StatefulWidget {
   const WishlistPage({super.key});
@@ -55,7 +56,7 @@ class _WishlistPageState extends State<WishlistPage> {
     final pid = item['product_id'] as String;
     final name = item['product_name'] as String? ?? '';
     final unit = item['product_unit'] as String? ?? '';
-    final price = ((item['product_price'] ?? 0) as num).toDouble().round();
+    final price = ((item['product_final_price'] ?? item['product_price'] ?? 0) as num).toDouble().round();
     final image = item['product_image'] as String?;
     await cartNotifier.add(pid, name: name, qty: unit, price: price, image: image);
     if (!mounted) return;
@@ -126,11 +127,29 @@ class _WishlistPageState extends State<WishlistPage> {
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
         itemCount: _products.length,
-        itemBuilder: (_, i) => _WishlistCard(
-          item: _products[i],
-          onRemove: () => _remove(_products[i]['product_id'] as String),
-          onAddToCart: () => _addToCart(_products[i]),
-        ),
+        itemBuilder: (_, i) {
+          final item = _products[i];
+          return _WishlistCard(
+            item: item,
+            onRemove: () => _remove(item['product_id'] as String),
+            onAddToCart: () => _addToCart(item),
+            onTap: () {
+              final img = item['product_image'] as String?;
+              Navigator.push(context, MaterialPageRoute(
+                builder: (_) => ProductDetailPage(
+                  icon: Icons.favorite,
+                  color: AppColors.primary,
+                  name: item['product_name'] as String? ?? '',
+                  productId: item['product_id'] as String,
+                  price: ((item['product_final_price'] ?? item['product_price'] ?? 0) as num).toDouble().round(),
+                  qty: item['product_unit'] as String? ?? '',
+                  images: img != null && img.isNotEmpty ? [img] : [],
+                  discountPercent: (item['product_discount_percent'] ?? 0) as int,
+                ),
+              ));
+            },
+          );
+        },
       ),
     );
   }
@@ -250,17 +269,22 @@ class _WishlistCard extends StatelessWidget {
   final Map<String, dynamic> item;
   final VoidCallback onRemove;
   final VoidCallback onAddToCart;
+  final VoidCallback? onTap;
 
   const _WishlistCard({
     required this.item,
     required this.onRemove,
     required this.onAddToCart,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final name = item['product_name'] as String? ?? '';
-    final price = ((item['product_price'] ?? 0) as num).toDouble().round();
+    final finalPrice = ((item['product_final_price'] ?? item['product_price'] ?? 0) as num).toDouble().round();
+    final originalPrice = ((item['product_price'] ?? 0) as num).toDouble().round();
+    final discountPercent = (item['product_discount_percent'] ?? 0) as int;
+    final hasDiscount = discountPercent > 0;
     final unit = item['product_unit'] as String? ?? '';
     final imageUrl = item['product_image'] as String?;
 
@@ -299,14 +323,16 @@ class _WishlistCard extends StatelessWidget {
             ) ?? false;
           },
           onDismissed: (_) => onRemove(),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
-            ),
-            child: Row(
-              children: [
+          child: GestureDetector(
+            onTap: onTap,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
+              ),
+              child: Row(
+                children: [
                 ClipRRect(
                   borderRadius: const BorderRadius.horizontal(left: Radius.circular(14)),
                   child: SizedBox(
@@ -328,7 +354,25 @@ class _WishlistCard extends StatelessWidget {
                       if (unit.isNotEmpty)
                         Text(unit, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                       const SizedBox(height: 4),
-                      Text('₹$price', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.primary)),
+                      if (hasDiscount)
+                        Row(
+                          children: [
+                            Text('₹$finalPrice', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.primary)),
+                            const SizedBox(width: 6),
+                            Text('₹$originalPrice', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, decoration: TextDecoration.lineThrough)),
+                            const SizedBox(width: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: AppColors.errorLight,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text('$discountPercent%', style: const TextStyle(fontSize: 9, color: AppColors.error, fontWeight: FontWeight.w600)),
+                            ),
+                          ],
+                        )
+                      else
+                        Text('₹$finalPrice', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.primary)),
                     ],
                   ),
                 ),
@@ -368,6 +412,7 @@ class _WishlistCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
               ],
+            ),
             ),
           ),
         ),

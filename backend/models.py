@@ -88,6 +88,7 @@ class Product(Base):
         back_populates="product",
         lazy="selectin",
         cascade="all, delete-orphan",
+        order_by="ProductImage.sort_order",
     )
     cart_items = relationship("CartItem", back_populates="product")
     order_items = relationship("OrderItem", back_populates="product")

@@ -439,7 +439,7 @@ def _cart_item_to_response(item: CartItem) -> CartItemResponse:
         product_name=product.name if product else '',
         product_price=selling_price,
         product_unit=product.unit if product else '',
-        product_image=product.images[0].image_url if product and product.images else None,
+        product_image=next((img.image_url for img in product.images if not img.is_deleted), None) if product else None,
         quantity=item.quantity,
         subtotal=round(selling_price * item.quantity, 2),
     )
@@ -860,7 +860,9 @@ def list_wishlist(request: Request, db: Session = Depends(get_db)):
             product_name=prod.name if prod else "",
             product_price=round(float(prod.price), 2) if prod else 0,
             product_unit=prod.unit if prod else "",
-            product_image=prod.images[0].image_url if prod and prod.images else None,
+            product_image=next((img.image_url for img in prod.images if not img.is_deleted), None) if prod else None,
+            product_discount_percent=prod.discount_percent if prod else 0,
+            product_final_price=round(float(prod.price) * (100 - (prod.discount_percent or 0)) / 100, 2) if prod else 0,
             created_at=item.created_at,
         ))
     return result
@@ -884,7 +886,9 @@ def add_to_wishlist(body: WishlistAddRequest, request: Request, db: Session = De
             product_name=product.name,
             product_price=round(float(product.price), 2),
             product_unit=product.unit,
-            product_image=product.images[0].image_url if product.images else None,
+            product_image=next((img.image_url for img in product.images if not img.is_deleted), None),
+            product_discount_percent=product.discount_percent,
+            product_final_price=round(float(product.price) * (100 - (product.discount_percent or 0)) / 100, 2),
             created_at=existing.created_at,
         )
 
@@ -903,7 +907,9 @@ def add_to_wishlist(body: WishlistAddRequest, request: Request, db: Session = De
             product_name=product.name,
             product_price=round(float(product.price), 2),
             product_unit=product.unit,
-            product_image=product.images[0].image_url if product.images else None,
+            product_image=next((img.image_url for img in product.images if not img.is_deleted), None),
+            product_discount_percent=product.discount_percent,
+            product_final_price=round(float(product.price) * (100 - (product.discount_percent or 0)) / 100, 2),
             created_at=soft.created_at,
         )
 
@@ -917,7 +923,9 @@ def add_to_wishlist(body: WishlistAddRequest, request: Request, db: Session = De
         product_name=product.name,
         product_price=round(float(product.price), 2),
         product_unit=product.unit,
-        product_image=product.images[0].image_url if product.images else None,
+        product_image=next((img.image_url for img in product.images if not img.is_deleted), None),
+        product_discount_percent=product.discount_percent,
+        product_final_price=round(float(product.price) * (100 - (product.discount_percent or 0)) / 100, 2),
         created_at=item.created_at,
     )
 
@@ -1338,7 +1346,7 @@ def _pack_to_response(pack: ComboPack) -> dict:
                 "product_name": prod.name if prod else "",
                 "product_price": round(float(prod.price), 2) if prod else 0,
                 "product_unit": prod.unit if prod else "",
-                "product_image": prod.images[0].image_url if prod and prod.images else None,
+                "product_image": next((img.image_url for img in prod.images if not img.is_deleted), None) if prod else None,
                 "quantity": pi.quantity,
             })
     return {

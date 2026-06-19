@@ -595,6 +595,8 @@ class WishlistItemResponse(BaseModel):
     product_price: float
     product_unit: str
     product_image: Optional[str] = None
+    product_discount_percent: int = 0
+    product_final_price: float = 0
     created_at: datetime
 
     class Config:
