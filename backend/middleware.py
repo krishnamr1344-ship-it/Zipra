@@ -79,7 +79,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         path = request.url.path
         now = time.time()
 
-        is_mutating = request.method in MUTATING_METHODS and path not in PUBLIC_PATHS
+        is_mutating = request.method in MUTATING_METHODS
 
         if is_mutating:
             block = self._is_blocked(ip, now)
