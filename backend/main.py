@@ -84,7 +84,7 @@ PUBLIC_PATHS_C4 = PUBLIC_PATHS
 # Create all tables on startup (new tables only).
 Base.metadata.create_all(bind=engine)
 # Migrate existing tables: add discount_percent column if missing.
-from sqlalchemy import inspect, text
+from sqlalchemy import inspect
 inspector = inspect(engine)
 existing_cols = {c['name'] for c in inspector.get_columns('products')}
 if 'discount_percent' not in existing_cols:
@@ -185,7 +185,6 @@ async def validate_api_key(request: Request, call_next):
 # This API uses JWT Bearer tokens (not cookies) so CSRF via cookie-
 # stealing is not a vector.  Requests with Bearer tokens (mobile app)
 # skip the origin check entirely.
-import re
 from urllib.parse import urlparse
 
 MUTATING_METHODS = {"POST", "PUT", "DELETE", "PATCH"}
@@ -444,7 +443,6 @@ def startup():
         db.rollback()
     finally:
         db.close()
-    # _seed_data()  # Disabled — production data already seeded in Neon
 
 
 @app.get("/")

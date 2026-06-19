@@ -27,6 +27,7 @@ import httpx
 import razorpay
 
 from typing import Optional
+from shapely.geometry import shape as shapely_shape, Point
 
 from database import get_db
 from models import (
@@ -831,7 +832,6 @@ def create_address_from_gps(body: GpsAddressCreate, request: Request, db: Sessio
 @router.get("/places/reverse")
 def reverse_geocode(lat: float, lng: float, db: Session = Depends(get_db)):
     try:
-        import httpx
         with httpx.Client(timeout=httpx.Timeout(10.0, connect=5, read=8, write=5, pool=5)) as client:
             resp = client.get(
                 "https://nominatim.openstreetmap.org/reverse",
@@ -868,7 +868,6 @@ def reverse_geocode(lat: float, lng: float, db: Session = Depends(get_db)):
 @router.get("/places/search")
 def search_places(q: str, db: Session = Depends(get_db)):
     try:
-        import httpx
         with httpx.Client(timeout=httpx.Timeout(10.0, connect=5, read=8, write=5, pool=5)) as client:
             resp = client.get(
                 "https://nominatim.openstreetmap.org/search",
@@ -1066,7 +1065,6 @@ def update_cart_item(item_id: str, body: CartUpdateRequest, request: Request, db
     if body.quantity == 0:
         item.is_deleted = True
         db.commit()
-        from fastapi.responses import JSONResponse
         return JSONResponse(content={"detail": "Item removed from cart"}, status_code=status.HTTP_200_OK)
 
     item.quantity = body.quantity
@@ -1273,8 +1271,6 @@ def create_order_direct(body: OrderDirectCreateRequest, request: Request, db: Se
                     DeliveryZone.is_active == True,
                 ).all()
                 if zones:
-                    from shapely.geometry import shape as shapely_shape
-                    from shapely.geometry import Point
                     point = Point(float(addr.longitude), float(addr.latitude))
                     in_zone = False
                     for z in zones:
@@ -1726,9 +1722,6 @@ def check_delivery_zone(body: ZoneCheckRequest, db: Session = Depends(get_db)):
         ).all()
         if not zones:
             return ZoneCheckResponse(serviceable=True, message="No zones configured — allowing all areas")
-
-        from shapely.geometry import shape as shapely_shape
-        from shapely.geometry import Point
 
         point = Point(body.lng, body.lat)
         for z in zones:

@@ -639,10 +639,6 @@ class WishlistItemResponse(BaseModel):
         from_attributes = True
 
 
-class WishlistRemoveResponse(BaseModel):
-    message: str
-
-
 # ─── COMBO PACKS ──────────────────────────────────────────────────
 
 PACK_NAME_LENGTH = 200

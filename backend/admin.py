@@ -11,7 +11,6 @@ Security:
 import logging
 import uuid
 logger = logging.getLogger(__name__)
-from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import text

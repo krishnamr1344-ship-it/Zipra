@@ -10,7 +10,6 @@ Security:
 """
 import logging
 import hashlib
-import hmac
 import smtplib
 import ssl
 from email.message import EmailMessage
