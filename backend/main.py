@@ -79,6 +79,13 @@ if 'delivery_otp' not in order_cols:
         conn.execute(text("ALTER TABLE orders ADD COLUMN delivery_otp VARCHAR(6)"))
         conn.commit()
 
+# Migrate existing orders table: add idempotency_key column if missing.
+if 'idempotency_key' not in order_cols:
+    with engine.connect() as conn:
+        conn.execute(text("ALTER TABLE orders ADD COLUMN idempotency_key VARCHAR(64) UNIQUE"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_orders_idempotency_key ON orders (idempotency_key)"))
+        conn.commit()
+
 app = FastAPI(
     title="Delivery App API",
     description="Secure backend for delivery application",

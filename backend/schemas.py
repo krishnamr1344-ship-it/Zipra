@@ -517,6 +517,7 @@ class OrderDirectCreateRequest(BaseModel):
     items: list[OrderItemInput] = Field(min_length=1)
     payment_method: str
     address_id: Optional[str] = None
+    idempotency_key: Optional[str] = None
 
     @field_validator("payment_method")
     @classmethod

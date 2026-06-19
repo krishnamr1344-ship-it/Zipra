@@ -1111,7 +1111,8 @@ def validate_cart(request: Request, db: Session = Depends(get_db)):
     
     for ci in cart_items:
         product = _get_product_or_404(str(ci.product_id), db)
-        current_price = round(float(product.price) * (100 - (product.discount_percent or 0)) / 100, 2)
+        disc = Decimal(str(product.discount_percent or 0))
+        current_price = float((product.price * (100 - disc) / 100).quantize(Decimal("0.01")))
         messages = []
         
         if product.stock <= 0:
@@ -1186,8 +1187,9 @@ def create_order(body: OrderCreateRequest, request: Request, db: Session = Depen
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Insufficient stock for {product.name}",
             )
-        selling_price = round(float(product.price) * (100 - (product.discount_percent or 0)) / 100, 2)
-        total += Decimal(str(selling_price)) * ci.quantity
+        disc = Decimal(str(product.discount_percent or 0))
+        selling_price = (product.price * (100 - disc) / 100).quantize(Decimal("0.01"))
+        total += selling_price * ci.quantity
         products_with_qty.append((product, ci.quantity, selling_price))
 
     order = Order(
@@ -1205,18 +1207,11 @@ def create_order(body: OrderCreateRequest, request: Request, db: Session = Depen
                 order_id=order.id,
                 product_id=product.id,
                 product_name=product.name,
-                product_price=Decimal(str(price)),
+                product_price=price,
                 quantity=qty,
-                subtotal=Decimal(str(price)) * qty,
+                subtotal=price * qty,
             )
             db.add(oi)
-            product.stock -= qty
-
-        for ci in cart_items:
-            ci.is_deleted = True
-
-        otp = ''.join(secrets.choice(_string.digits) for _ in range(6))
-        order.delivery_otp = otp
         db.commit()
     except Exception:
         db.rollback()
@@ -1231,6 +1226,15 @@ def create_order_direct(body: OrderDirectCreateRequest, request: Request, db: Se
     user_id = _get_user_id(request)
     _get_user(user_id, db)
 
+    if body.idempotency_key:
+        existing = db.query(Order).filter(
+            Order.idempotency_key == body.idempotency_key,
+            Order.user_id == user_id,
+            Order.is_deleted == False,
+        ).first()
+        if existing:
+            return _order_to_response(existing)
+
     total = Decimal("0.00")
     products_with_qty = []
 
@@ -1241,8 +1245,9 @@ def create_order_direct(body: OrderDirectCreateRequest, request: Request, db: Se
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Insufficient stock for {product.name}",
             )
-        selling_price = round(float(product.price) * (100 - (product.discount_percent or 0)) / 100, 2)
-        total += Decimal(str(selling_price)) * item.quantity
+        disc = Decimal(str(product.discount_percent or 0))
+        selling_price = (product.price * (100 - disc) / 100).quantize(Decimal("0.01"))
+        total += selling_price * item.quantity
         products_with_qty.append((product, item.quantity, selling_price))
 
     address_id = body.address_id
@@ -1286,6 +1291,7 @@ def create_order_direct(body: OrderDirectCreateRequest, request: Request, db: Se
         address_id=address_id,
         total_amount=total,
         payment_method=body.payment_method,
+        idempotency_key=body.idempotency_key,
     )
     db.add(order)
     db.flush()
@@ -1296,25 +1302,15 @@ def create_order_direct(body: OrderDirectCreateRequest, request: Request, db: Se
                 order_id=order.id,
                 product_id=product.id,
                 product_name=product.name,
-                product_price=Decimal(str(price)),
+                product_price=price,
                 quantity=qty,
-                subtotal=Decimal(str(price)) * qty,
+                subtotal=price * qty,
             )
             db.add(oi)
-            product.stock -= qty
 
-        payment = Payment(
-            order_id=order.id,
-            user_id=user_id,
-            method=body.payment_method,
-            status="success",
-            amount=total,
-        )
-        payment.transaction_id = str(uuid.uuid4()).replace("-", "")[:16].upper()
-        db.add(payment)
+        if body.payment_method == "COD":
+            _confirm_order_payment(order, user_id, body.payment_method, db)
 
-        otp = ''.join(secrets.choice(_string.digits) for _ in range(6))
-        order.delivery_otp = otp
         db.commit()
     except Exception:
         db.rollback()
@@ -1322,6 +1318,41 @@ def create_order_direct(body: OrderDirectCreateRequest, request: Request, db: Se
 
     db.refresh(order)
     return _order_to_response(order)
+
+
+def _confirm_order_payment(order: Order, user_id: str, method: str, db: Session) -> Payment:
+    """Deduct stock, generate OTP, create Payment record.
+    Called at payment-confirmation time:
+    - For COD: within create_order_direct
+    - For cart-based: from process_payment
+    - For Razorpay (future): from webhook handler
+    """
+    items = db.query(OrderItem).filter(
+        OrderItem.order_id == order.id,
+        OrderItem.is_deleted == False,
+    ).all()
+    for oi in items:
+        product = _get_product_or_404(str(oi.product_id), db, for_update=True)
+        if product.stock < oi.quantity:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Insufficient stock for {product.name}",
+            )
+        product.stock -= oi.quantity
+
+    otp = ''.join(secrets.choice(_string.digits) for _ in range(6))
+    order.delivery_otp = otp
+
+    payment = Payment(
+        order_id=order.id,
+        user_id=user_id,
+        amount=order.total_amount,
+        method=method,
+        status="success",
+        transaction_id="COD" + datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S") + str(uuid.uuid4()).split("-")[0],
+    )
+    db.add(payment)
+    return payment
 
 
 # ─── PAYMENTS ─────────────────────────────────────────────────────
@@ -1380,18 +1411,23 @@ def process_payment(body: PaymentProcessRequest, request: Request, db: Session =
     if existing_payment:
         return _payment_to_response(existing_payment)
 
-    payment = Payment(
-        order_id=order.id,
-        user_id=user_id,
-        amount=order.total_amount,
-        method=body.method,
-        status="success",
-        transaction_id="COD" + datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S") + str(uuid.uuid4()).split("-")[0],
-    )
-    order.status = "Confirmed"
-    db.add(payment)
-    db.commit()
-    db.refresh(payment)
+    try:
+        payment = _confirm_order_payment(order, user_id, body.method, db)
+        order.status = "Confirmed"
+
+        cart_items = db.query(CartItem).filter(
+            CartItem.user_id == user_id,
+            CartItem.is_deleted == False,
+        ).all()
+        for ci in cart_items:
+            ci.is_deleted = True
+
+        db.commit()
+        db.refresh(payment)
+    except Exception:
+        db.rollback()
+        raise
+
     return _payment_to_response(payment)
 
 

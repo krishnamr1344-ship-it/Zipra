@@ -156,6 +156,7 @@ class Order(Base):
     total_amount = Column(Numeric(10, 2), nullable=False)
     payment_method = Column(String(20), nullable=False)
     delivery_otp = Column(String(6), nullable=True)
+    idempotency_key = Column(String(64), nullable=True, unique=True)
     is_deleted = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
@@ -165,7 +166,10 @@ class Order(Base):
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
     payment = relationship("Payment", back_populates="order", uselist=False, cascade="all, delete-orphan")
 
-    __table_args__ = (Index("ix_orders_user_deleted", "user_id", "is_deleted"),)
+    __table_args__ = (
+        Index("ix_orders_user_deleted", "user_id", "is_deleted"),
+        Index("ix_orders_idempotency_key", "idempotency_key"),
+    )
 
 
 class OrderItem(Base):
