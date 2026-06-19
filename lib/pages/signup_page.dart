@@ -39,18 +39,24 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
     _animCtl.forward();
   }
 
+  bool _isValidEmail(String e) => RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(e);
+  bool _isValidPhone(String p) => RegExp(r'^\+?[1-9]\d{9,14}$').hasMatch(p);
+
   Future<void> _signup() async {
     setState(() {
-      _nameError = _nameCtl.text.trim().isEmpty ? 'Name is required' : null;
-      _emailError = _emailCtl.text.trim().isEmpty ? 'Email is required' : null;
-      _phoneError = null;
+      final name = _nameCtl.text.trim();
+      final email = _emailCtl.text.trim();
+      final phone = _phoneCtl.text.trim();
+      _nameError = name.isEmpty ? 'Name is required' : null;
+      _emailError = email.isEmpty ? 'Email is required' : (!_isValidEmail(email) ? 'Invalid email format' : null);
+      _phoneError = phone.isEmpty ? 'Phone number is required' : (!_isValidPhone(phone) ? 'Invalid phone number (10-15 digits)' : null);
       _passError = _passCtl.text.isEmpty ? 'Password is required' : null;
       _confirmError = _confirmPassCtl.text.isEmpty ? 'Confirm your password' : null;
       if (_passCtl.text.isNotEmpty && _confirmPassCtl.text.isNotEmpty && _passCtl.text != _confirmPassCtl.text) {
         _confirmError = 'Passwords do not match';
       }
     });
-    if (_nameError != null || _emailError != null || _passError != null || _confirmError != null) return;
+    if (_nameError != null || _emailError != null || _phoneError != null || _passError != null || _confirmError != null) return;
     setState(() => _loading = true);
     try {
       await ApiService().register(_nameCtl.text.trim(), _emailCtl.text.trim(), _phoneCtl.text.trim(), _passCtl.text);
@@ -60,7 +66,7 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
       await SuccessModal.show(
         context,
         title: 'Account Created Successfully',
-        subtitle: 'Welcome to Boss Tech Delivery',
+        subtitle: 'Welcome to Zipra',
         description: 'Your account is ready. Start shopping now.',
         primaryLabel: 'Continue Shopping',
         secondaryLabel: 'View Profile',

@@ -138,23 +138,27 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
       - Duplicate email returns generic error (don't reveal if email exists).
     """
     # Security: check for existing user.
-    existing = db.query(User).filter(User.email == body.email).first()
-    if existing:
-        if existing.is_deleted:
+    existing_email = db.query(User).filter(User.email == body.email).first()
+    if existing_email:
+        if existing_email.is_deleted:
             # Reactivate soft-deleted user and update details.
-            existing.is_deleted = False
-            existing.name = body.name
-            existing.phone = body.phone
-            existing.password_hash = _hash_password(body.password)
+            existing_email.is_deleted = False
+            existing_email.name = body.name
+            existing_email.phone = body.phone
+            existing_email.password_hash = _hash_password(body.password)
             db.commit()
-            db.refresh(existing)
-            token, jti, expires = _create_jwt(str(existing.id), existing.role)
+            db.refresh(existing_email)
+            token, jti, expires = _create_jwt(str(existing_email.id), existing_email.role)
             return {
                 "message": "Registration successful",
                 "token": token,
-                "user": {"id": str(existing.id), "name": existing.name, "email": existing.email, "role": existing.role},
+                "user": {"id": str(existing_email.id), "name": existing_email.name, "email": existing_email.email, "role": existing_email.role},
             }
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Registration failed")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+
+    existing_phone = db.query(User).filter(User.phone == body.phone).first()
+    if existing_phone and not existing_phone.is_deleted:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Phone number already registered")
 
     user = User(
         email=body.email,
