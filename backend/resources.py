@@ -1307,6 +1307,7 @@ def create_order_direct(body: OrderDirectCreateRequest, request: Request, db: Se
                 subtotal=price * qty,
             )
             db.add(oi)
+        db.flush()
 
         if body.payment_method == "COD":
             _confirm_order_payment(order, user_id, body.payment_method, db)
