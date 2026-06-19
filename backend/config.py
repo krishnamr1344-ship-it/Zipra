@@ -1,6 +1,8 @@
 """
 Shared configuration — single source of truth for public paths.
 """
+import os as _os
+
 PUBLIC_PATHS: set[str] = {
     "/", "/docs", "/openapi.json", "/redoc",
     "/api/auth/register", "/api/auth/login", "/api/auth/logout",
@@ -21,8 +23,6 @@ RAZORPAY_WEBHOOK_SECRET: str = _os.getenv("RAZORPAY_WEBHOOK_SECRET", "")
 
 
 # ─── Supabase ─────────────────────────────────────────────────────
-import os as _os
-
 SUPABASE_URL: str = _os.getenv("SUPABASE_URL", "")
 SUPABASE_SERVICE_KEY: str = _os.getenv("SUPABASE_SERVICE_KEY", "") or _os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
 SUPABASE_UPLOAD_KEY: str = _os.getenv("SUPABASE_UPLOAD_KEY", "") or SUPABASE_SERVICE_KEY
