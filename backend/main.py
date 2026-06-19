@@ -365,7 +365,7 @@ def _seed_data():
 
 @app.on_event("startup")
 def startup():
-    """Ensure admin user exists with proper role on every startup."""
+    """Ensure existing admin user has the correct role on every startup."""
     db: Session = SessionLocal()
     try:
         admin = db.query(User).filter(User.email == ADMIN_EMAIL).first()
@@ -374,20 +374,8 @@ def startup():
                 admin.role = "admin"
                 db.commit()
                 logger.info("Fixed admin user role for %s", ADMIN_EMAIL)
-        else:
-            hashed = bcrypt.hashpw(ADMIN_PASSWORD.encode("utf-8"), bcrypt.gensalt(rounds=12)).decode("utf-8")
-            admin = User(
-                email=ADMIN_EMAIL,
-                password_hash=hashed,
-                name="Admin",
-                phone="0000000000",
-                role="admin",
-            )
-            db.add(admin)
-            db.commit()
-            logger.info("Created admin user %s", ADMIN_EMAIL)
     except Exception as e:
-        logger.warning("Admin user setup failed: %s", e)
+        logger.warning("Admin user role check failed: %s", e)
         db.rollback()
     finally:
         db.close()
