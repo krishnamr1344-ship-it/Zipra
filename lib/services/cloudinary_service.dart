@@ -2,13 +2,18 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../constants/cloudinary.dart';
+import 'api_service.dart';
 
 class CloudinaryService {
   static Future<String> uploadImage(String filePath) async {
+    final token = await ApiService().getToken();
     final uri = Uri.parse(CloudinaryConfig.uploadUrl);
     debugPrint('Uploading to: $uri');
     final request = http.MultipartRequest('POST', uri)
       ..files.add(await http.MultipartFile.fromPath('file', filePath));
+    if (token != null) {
+      request.headers['Authorization'] = 'Bearer $token';
+    }
     debugPrint('Backend upload URL: $uri');
     final response = await request.send();
     final body = await response.stream.bytesToString();

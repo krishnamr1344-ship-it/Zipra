@@ -50,7 +50,7 @@ import os as _os
 import uuid as _uuid
 from fastapi import UploadFile, File as FastAPIFile
 import httpx as _httpx
-from config import SUPABASE_URL, SUPABASE_SERVICE_KEY, SUPABASE_STORAGE_BUCKET
+from config import SUPABASE_URL, SUPABASE_UPLOAD_KEY, SUPABASE_STORAGE_BUCKET
 
 
 _MIME_MAP = {
@@ -58,6 +58,28 @@ _MIME_MAP = {
     ".png": "image/png", ".webp": "image/webp",
     ".gif": "image/gif",
 }
+
+_MAX_UPLOAD_SIZE = 5 * 1024 * 1024  # 5 MB
+
+# Magic bytes for image validation
+_IMAGE_MAGIC = {
+    b"\xff\xd8\xff": "image/jpeg",
+    b"\x89PNG\r\n\x1a\n": "image/png",
+    b"GIF87a": "image/gif",
+    b"GIF89a": "image/gif",
+    b"RIFF": "image/webp",  # WEBP starts with RIFF, need extra check
+}
+
+
+def _detect_image_type(data: bytes) -> str | None:
+    for magic, mime in _IMAGE_MAGIC.items():
+        if data.startswith(magic):
+            if magic == b"RIFF" and len(data) > 12:
+                if data[8:12] in (b"WEBP",):
+                    return mime
+                continue
+            return mime
+    return None
 
 
 def _normalize_mime(filename: str, content_type: str | None) -> str:
@@ -72,16 +94,42 @@ def _normalize_mime(filename: str, content_type: str | None) -> str:
 
 @router.post("/upload")
 async def upload_image(file: UploadFile = FastAPIFile(...)):
+    if file.size is not None and file.size > _MAX_UPLOAD_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File too large. Maximum size is {_MAX_UPLOAD_SIZE // (1024 * 1024)} MB",
+        )
+
     ext = _os.path.splitext(file.filename or "image.png")[1] or ".png"
+    if ext.lower() not in _MIME_MAP:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported file extension '{ext}'. Allowed: {', '.join(_MIME_MAP)}",
+        )
+
+    data = await file.read()
+
+    if len(data) > _MAX_UPLOAD_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File too large. Maximum size is {_MAX_UPLOAD_SIZE // (1024 * 1024)} MB",
+        )
+
+    detected_mime = _detect_image_type(data)
+    if detected_mime is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Uploaded file is not a valid image",
+        )
+
     filename = f"{_uuid.uuid4().hex}{ext}"
     content_type = _normalize_mime(file.filename or "image.png", file.content_type)
-    data = await file.read()
 
     async with _httpx.AsyncClient() as client:
         res = await client.post(
             f"{SUPABASE_URL}/storage/v1/object/{SUPABASE_STORAGE_BUCKET}/{filename}",
             headers={
-                "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                "Authorization": f"Bearer {SUPABASE_UPLOAD_KEY}",
                 "Content-Type": content_type,
             },
             content=data,
@@ -1110,7 +1158,7 @@ def get_order(order_id: str, request: Request, db: Session = Depends(get_db)):
     user_id = _get_user_id(request)
     _validate_uuid(order_id)
     order = _get_order_or_404(order_id, user_id, db)
-    return _order_to_response(order, include_otp=True)
+    return _order_to_response(order)
 
 
 @router.post("/orders", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
@@ -1175,7 +1223,7 @@ def create_order(body: OrderCreateRequest, request: Request, db: Session = Depen
         raise
 
     db.refresh(order)
-    return _order_to_response(order, include_otp=True)
+    return _order_to_response(order)
 
 
 @router.post("/orders/direct", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
@@ -1273,7 +1321,7 @@ def create_order_direct(body: OrderDirectCreateRequest, request: Request, db: Se
         raise
 
     db.refresh(order)
-    return _order_to_response(order, include_otp=True)
+    return _order_to_response(order)
 
 
 # ─── PAYMENTS ─────────────────────────────────────────────────────

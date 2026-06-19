@@ -108,11 +108,6 @@ class _OrdersPageState extends State<OrdersPage> {
       addr = '${da['address_line1'] ?? ''}, ${da['city'] ?? ''}';
     }
     final orderId = o['id']?.toString() ?? '';
-    String? deliveryOtp;
-    try {
-      final detail = await ApiService().getOrderById(orderId);
-      deliveryOtp = detail['delivery_otp'] as String?;
-    } catch (_) {}
     if (!context.mounted) return;
     final orderData = OrderData(
       id: orderId,
@@ -120,7 +115,6 @@ class _OrdersPageState extends State<OrdersPage> {
       status: o['status'] ?? 'Pending',
       date: DateTime.tryParse(o['created_at'] ?? '') ?? DateTime.now(),
       deliveryAddress: addr,
-      deliveryOtp: deliveryOtp,
       items: items.map((i) => CartItem(
         id: i['product_id'] ?? '',
         productId: i['product_id'] ?? '',

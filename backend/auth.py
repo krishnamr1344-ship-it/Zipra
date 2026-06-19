@@ -37,7 +37,7 @@ BCRYPT_ROUNDS = int(os.getenv("BCRYPT_ROUNDS", "12"))
 if not JWT_SECRET:
     raise RuntimeError("JWT_SECRET not set in environment variables")
 if len(JWT_SECRET) < 32:
-    logger.warning("JWT_SECRET is only %d characters long (recommended: 32+)", len(JWT_SECRET))
+    raise RuntimeError(f"JWT_SECRET is only {len(JWT_SECRET)} characters long (minimum: 32)")
 
 SMTP_HOST = os.getenv("SMTP_HOST")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
@@ -51,10 +51,12 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 def _send_reset_email(recipient: str, code: str):
-    """Send password reset code via SMTP. Silently skips if SMTP not configured."""
+    """Send password reset code via SMTP. Raises if SMTP not configured."""
     if not SMTP_HOST or not SMTP_USERNAME or not SMTP_PASSWORD:
-        logger.warning("SMTP not configured — reset code for %s: %s", recipient, code)
-        return
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Password reset is currently unavailable. Contact support.",
+        )
     try:
         msg = EmailMessage()
         msg["Subject"] = "Your Password Reset Code"
@@ -267,6 +269,13 @@ def update_profile(body: UpdateProfileRequest, request: Request, db: Session = D
 
 @router.post("/forgot-password")
 def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    # Check SMTP availability early to avoid leaking generated codes
+    if not SMTP_HOST or not SMTP_USERNAME or not SMTP_PASSWORD:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Password reset is currently unavailable. Contact support.",
+        )
+
     user = db.query(User).filter(
         User.email == body.email,
         User.is_deleted == False,

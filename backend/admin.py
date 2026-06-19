@@ -446,6 +446,7 @@ def list_orders(request: Request, db: Session = Depends(get_db)):
             "user_phone": user_phone,
             "user_gps_address": user_gps,
             "delivery_address": delivery_address,
+            "delivery_otp": o.delivery_otp,
         })
     return result
 

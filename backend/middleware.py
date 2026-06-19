@@ -2,8 +2,10 @@
 middleware.py
 Purpose: Rate limiting + JWT validation middleware.
 Security:
-  - /login & /register rate limited: counts only FAILED attempts per IP.
-  - JWT check on all protected routes (except /register, /login).
+  - All mutating endpoints (POST/PUT/DELETE/PATCH) rate limited per IP.
+  - Counts only FAILED attempts (4xx) to avoid penalising legitimate users.
+  - Respects X-Forwarded-For header for proxy deployments (Render).
+  - JWT check on all protected routes (except public paths).
   - Blacklisted tokens are rejected immediately.
 """
 import os
@@ -34,7 +36,18 @@ _rate_lock = threading.Lock()
 
 from config import PUBLIC_PATHS, PUBLIC_PATH_PREFIXES
 
-FAILURE_CODES = {401, 400, 422}
+MUTATING_METHODS = {"POST", "PUT", "DELETE", "PATCH"}
+FAILURE_CODES = {400, 401, 403, 422, 429}
+
+
+def _get_client_ip(request: Request) -> str:
+    """Extract client IP from X-Forwarded-For or fall back to direct connection."""
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        ip = forwarded.split(",")[0].strip()
+        if ip:
+            return ip
+    return request.client.host if request.client else "unknown"
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -62,16 +75,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 _rate_store[ip] = []
 
     async def dispatch(self, request: Request, call_next):
-        ip = request.client.host if request.client else "unknown"
+        ip = _get_client_ip(request)
         path = request.url.path
         now = time.time()
 
-        is_auth = (
-            (path == "/api/auth/login" or path == "/api/auth/register" or path == "/api/auth/forgot-password" or path == "/api/auth/reset-password")
-            and request.method == "POST"
-        )
+        is_mutating = request.method in MUTATING_METHODS and path not in PUBLIC_PATHS
 
-        if is_auth:
+        if is_mutating:
             block = self._is_blocked(ip, now)
             if block:
                 return block
@@ -112,7 +122,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         response = await call_next(request)
 
-        if is_auth and response.status_code in FAILURE_CODES:
+        if is_mutating and response.status_code in FAILURE_CODES:
             self._record_failure(ip, now)
 
         return response
