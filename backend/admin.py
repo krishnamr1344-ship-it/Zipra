@@ -461,6 +461,12 @@ def update_order_status(order_id: str, body: StatusUpdateRequest, request: Reque
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order is already delivered and cannot be modified")
     if body.status == "Delivered":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Use the delivery verification endpoint to mark orders as delivered")
+    if body.status == "Cancelled" and order.status != "Cancelled":
+        for oi in order.items:
+            if not oi.is_deleted:
+                product = db.query(Product).filter(Product.id == oi.product_id, Product.is_deleted == False).first()
+                if product:
+                    product.stock += oi.quantity
     order.status = body.status
     db.commit()
     return MessageResponse(message=f"Order status updated to {body.status}")
