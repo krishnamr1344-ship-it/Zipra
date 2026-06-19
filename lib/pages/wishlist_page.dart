@@ -99,6 +99,10 @@ class _WishlistPageState extends State<WishlistPage> {
           decoration: const BoxDecoration(gradient: AppColors.appBarGradient),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
           if (_products.isNotEmpty)
             IconButton(

@@ -111,7 +111,15 @@ class _PaymentPageState extends State<PaymentPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Payment'), backgroundColor: Theme.of(context).colorScheme.primary, foregroundColor: Colors.white),
+      appBar: AppBar(
+        title: const Text('Payment'),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: Column(
         children: [
           Expanded(
@@ -282,8 +290,17 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (_, __) {
+        _timer?.cancel();
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const HomePage()),
+          (route) => false,
+        );
+      },
+      child: Scaffold(
+        body: Center(
         child: Padding(
           padding: const EdgeInsets.all(40),
           child: Column(
@@ -372,6 +389,8 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
           ),
         ),
       ),
+      ),
     );
   }
 }
+

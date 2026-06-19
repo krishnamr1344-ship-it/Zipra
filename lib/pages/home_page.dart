@@ -979,7 +979,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   HapticFeedback.lightImpact();
                   if (!await _requireLogin()) return;
                   if (!mounted) return;
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const CartPage()));
+                  if (!mounted) return;
+                  setState(() => _selectedIndex = 3);
                 },
                 child: Container(
                   height: 44,
@@ -1063,14 +1064,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     final topOrdered = cats.where((c) => (catCounts[c] ?? 0) >= 3).toList();
 
     // ---------------------------------------------------
-    // Category card builder (3-column grid)
+    // Category card builder (horizontal scroll)
     // ---------------------------------------------------
-    Widget buildCategoryCard(BuildContext context, int index) {
-      final cat = cats[index];
-      final meta = catMeta[cat] ?? <String, dynamic>{'image': '', 'gradient': [0xFFF5F5F5, 0xFFEEEEEE], 'badge': null, 'emoji': '\u{1F6D2}'};
+    Widget buildCategoryCard(String cat, Map<String, dynamic> meta) {
       final gradients = meta['gradient'] as List<int>;
-      final count = catCounts[cat] ?? 0;
-      final badge = meta['badge'] as String?;
       final imageUrl = meta['image'] as String? ?? '';
 
       return GestureDetector(
@@ -1078,22 +1075,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           HapticFeedback.lightImpact();
           setState(() { _selectedCategory = cat; _selectedIndex = 0; });
         },
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            children: [
-              // Image area
-              Expanded(
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    if (imageUrl.isNotEmpty)
-                      Image.network(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: SizedBox(
+                width: 72,
+                height: 72,
+                child: imageUrl.isNotEmpty
+                    ? Image.network(
                         imageUrl,
                         fit: BoxFit.cover,
                         loadingBuilder: (_, child, chunk) => chunk == null
@@ -1111,45 +1102,26 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                           child: Center(child: Text(meta['emoji'] as String, style: const TextStyle(fontSize: 28))),
                         ),
                       )
-                    else
-                      Container(
+                    : Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(colors: [Color(gradients[0]), Color(gradients[1])], begin: Alignment.topLeft, end: Alignment.bottomRight),
                         ),
                         child: Center(child: Text(meta['emoji'] as String, style: const TextStyle(fontSize: 28))),
                       ),
-                    // Badge
-                    if (badge != null)
-                      Positioned(
-                        top: 4, right: 4,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: badge == 'HOT' ? const Color(0xFFFF3D00) : badge == 'NEW' ? const Color(0xFF2E7D32) : _orange,
-                            borderRadius: BorderRadius.circular(6),
-                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 4, offset: const Offset(0, 1))],
-                          ),
-                          child: Text(badge, style: const TextStyle(color: Colors.white, fontSize: 7, fontWeight: FontWeight.w800, letterSpacing: 0.3)),
-                        ),
-                      ),
-                  ],
-                ),
               ),
-              // Name + count
-              Padding(
-                padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(cat, maxLines: 2, overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF222222), height: 1.2)),
-                    const SizedBox(height: 1),
-                    Text('$count items', style: const TextStyle(fontSize: 8, color: Color(0xFFAAAAAA))),
-                  ],
-                ),
+            ),
+            const SizedBox(height: 6),
+            SizedBox(
+              width: 72,
+              child: Text(
+                cat,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF333333)),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       );
     }
@@ -1334,7 +1306,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       return GestureDetector(
         onTap: () {
           HapticFeedback.lightImpact();
-          Navigator.push(context, MaterialPageRoute(builder: (_) => const CartPage()));
+          setState(() => _selectedIndex = 3);
         },
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -1406,7 +1378,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     HapticFeedback.lightImpact();
                     if (!await _requireLogin()) return;
                     if (!mounted) return;
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const CartPage()));
+                    setState(() => _selectedIndex = 3);
                   },
                 ),
               ),
@@ -1432,15 +1404,22 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 ),
               ),
 
-              // 3-column category grid
-              SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  childAspectRatio: 0.82,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
+              // Horizontal category list
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 110,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.only(left: 20, right: 16),
+                    itemCount: cats.length,
+                    separatorBuilder: (_, _) => const SizedBox(width: 16),
+                    itemBuilder: (_, i) {
+                      final cat = cats[i];
+                      final meta = catMeta[cat] ?? <String, dynamic>{'image': '', 'gradient': [0xFFF5F5F5, 0xFFEEEEEE], 'badge': null, 'emoji': '\u{1F6D2}'};
+                      return buildCategoryCard(cat, meta);
+                    },
+                  ),
                 ),
-                delegate: SliverChildBuilderDelegate(buildCategoryCard, childCount: cats.length),
               ),
 
               // Bottom padding

@@ -128,8 +128,10 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
+        child: Stack(
+          children: [
+            SingleChildScrollView(
+              child: Column(
             children: [
               Container(
                 width: double.infinity,
@@ -266,6 +268,20 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
               const SizedBox(height: 30),
             ],
           ),
+        ),
+            if (Navigator.canPop(context))
+              Positioned(
+                top: 4,
+                left: 4,
+                child: IconButton(
+                  icon: Icon(Icons.arrow_back, color: Colors.white.withValues(alpha: 0.9)),
+                  onPressed: () => Navigator.pop(context),
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.black.withValues(alpha: 0.1),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
