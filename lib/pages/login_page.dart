@@ -3,6 +3,7 @@ import '../constants/theme.dart';
 import '../services/api_service.dart';
 import '../services/location_service.dart';
 import '../services/delivery_zone_service.dart';
+import '../models/cart_model.dart';
 import '../widgets/app_snackbar.dart';
 import 'signup_page.dart';
 import 'forgot_password_page.dart';
@@ -78,13 +79,13 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       }
 
       if (!mounted) return;
+      wishlistNotifier.load();
+      cartNotifier.load();
       final nav = Navigator.of(context);
       if (role == 'admin') {
         nav.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const AdminHomePage()), (route) => false);
-      } else if (nav.canPop()) {
-        nav.pop(true);
       } else {
-        nav.pushReplacement(MaterialPageRoute(builder: (_) => const HomePage()));
+        nav.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const HomePage()), (route) => false);
       }
     } on ApiException catch (e) {
       if (!mounted) return;

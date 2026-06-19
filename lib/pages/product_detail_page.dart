@@ -43,12 +43,14 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   void initState() {
     super.initState();
     cartNotifier.addListener(_onCartChanged);
+    wishlistNotifier.addListener(_onCartChanged);
     _startAutoPlay();
   }
 
   @override
   void dispose() {
     cartNotifier.removeListener(_onCartChanged);
+    wishlistNotifier.removeListener(_onCartChanged);
     _timer?.cancel();
     _pageController.dispose();
     super.dispose();

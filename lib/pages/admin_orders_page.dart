@@ -143,7 +143,6 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
       body: RefreshIndicator(
         onRefresh: _load,
         child: CustomScrollView(
-          physics: const BouncingScrollPhysics(),
           slivers: [
             SliverAppBar(
               expandedHeight: 200,

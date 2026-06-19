@@ -50,6 +50,12 @@ class CartPage extends StatelessWidget {
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: true,
+      leading: onBrowse == null
+          ? IconButton(
+              icon: Icon(Icons.arrow_back, color: Colors.grey.shade700),
+              onPressed: () => Navigator.pop(context),
+            )
+          : null,
       title: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

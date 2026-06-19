@@ -59,6 +59,10 @@ class _OrdersPageState extends State<OrdersPage> {
           ),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
           IconButton(icon: const Icon(Icons.refresh, color: Colors.white), onPressed: _refresh),
         ],

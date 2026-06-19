@@ -63,6 +63,7 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
       if (!mounted) return;
       // The SuccessModal handles navigation via onPrimary/onSecondary callbacks.
       // Do NOT navigate again after the modal returns — that would cause double navigation.
+      var navigated = false;
       await SuccessModal.show(
         context,
         title: 'Account Created Successfully',
@@ -71,6 +72,7 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
         primaryLabel: 'Continue Shopping',
         secondaryLabel: 'View Profile',
         onPrimary: () {
+          navigated = true;
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (_) => const HomePage()),
@@ -78,6 +80,7 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
           );
         },
         onSecondary: () {
+          navigated = true;
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (_) => const HomePage()),
@@ -85,7 +88,13 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
           );
         },
       );
-      // NOTE: No additional navigation here — the modal's callbacks already navigate.
+      if (!navigated && mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const HomePage()),
+          (route) => false,
+        );
+      }
     } on ApiException catch (e) {
       if (!mounted) return;
       AppSnackbar.show(context, e.message, type: SnackbarType.error);

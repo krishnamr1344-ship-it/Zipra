@@ -426,7 +426,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
 
     Widget sectionLabel(String text) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
         child: Text(text, style: labelStyle),
       );
     }
@@ -462,7 +462,6 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
         slivers: [
           SliverAppBar(
             expandedHeight: 220,
@@ -592,7 +591,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
             ),
           ),
           if (!isCancelled && statusFlow.isNotEmpty)
-            sectionLabel('ORDER PROGRESS'),
+            SliverToBoxAdapter(child: sectionLabel('ORDER PROGRESS')),
           if (!isCancelled && statusFlow.isNotEmpty)
             SliverToBoxAdapter(
               child: Padding(
@@ -744,7 +743,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                 ),
               ),
             ),
-          sectionLabel('ORDER ITEMS'),
+          SliverToBoxAdapter(child: sectionLabel('ORDER ITEMS')),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -840,7 +839,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
               ),
             ),
           ),
-          sectionLabel('PAYMENT'),
+          SliverToBoxAdapter(child: sectionLabel('PAYMENT')),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -899,7 +898,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
               ),
             ),
           ),
-          sectionLabel('CUSTOMER'),
+          SliverToBoxAdapter(child: sectionLabel('CUSTOMER')),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1095,7 +1094,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
             ),
           ),
           if (deliveryAddr != null) ...[
-            sectionLabel('DELIVERY ADDRESS'),
+            SliverToBoxAdapter(child: sectionLabel('DELIVERY ADDRESS')),
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -1188,7 +1187,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
           ],
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               child: _order['status'] == 'Delivered'
                   ? Container(
                       width: double.infinity,
