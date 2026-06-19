@@ -2,15 +2,15 @@
 seed_via_api.py
 Adds Indian grocery categories and products via the admin API.
 """
-import sys
-import json
-import urllib.request
-import time
+import os, sys, json, urllib.request, time
 
+BASE = os.environ.get("SEED_API_BASE", "http://localhost:8000")
+EMAIL = os.environ.get("SEED_ADMIN_EMAIL")
+PASSWORD = os.environ.get("SEED_ADMIN_PASSWORD")
 
-BASE = "https://delivery-app-api-16t0.onrender.com"
-EMAIL = "mrselva133@gmail.com"
-PASSWORD = "Selva123@"
+if not EMAIL or not PASSWORD:
+    print("FATAL: Set SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD env vars", file=sys.stderr)
+    sys.exit(1)
 
 
 def api(method, path, data=None, token=None):

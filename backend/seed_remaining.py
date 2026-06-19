@@ -2,14 +2,19 @@
 Seed remaining products (categories with 0 products).
 Robust with retries and rate limiting.
 """
-import sys, json, time, urllib.request, urllib.error, urllib.parse
+import os, sys, json, time, urllib.request, urllib.error, urllib.parse
 
-BASE = "https://delivery-app-api-16t0.onrender.com"
+BASE = os.environ.get("SEED_API_BASE", "http://localhost:8000")
 
 def login():
+    email = os.environ.get("SEED_ADMIN_EMAIL")
+    password = os.environ.get("SEED_ADMIN_PASSWORD")
+    if not email or not password:
+        print("FATAL: Set SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD env vars", file=sys.stderr)
+        sys.exit(1)
     r = urllib.request.urlopen(urllib.request.Request(
         f"{BASE}/api/auth/login",
-        data=json.dumps({"email":"mrselva133@gmail.com","password":"Selva123@"}).encode(),
+        data=json.dumps({"email": email, "password": password}).encode(),
         headers={"Content-Type":"application/json", "Origin":BASE}), timeout=20)
     return json.loads(r.read())["token"]
 

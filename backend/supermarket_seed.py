@@ -3,11 +3,15 @@ supermarket_seed.py - Complete Zipra supermarket catalog.
 Creates 47 categories + 1000+ products via admin API.
 Skips duplicates by name. Images use placehold.co (replace for production).
 """
-import sys, json, time, urllib.request, urllib.error, urllib.parse
+import os, sys, json, time, urllib.request, urllib.error, urllib.parse
 
-BASE = "https://delivery-app-api-16t0.onrender.com"
-EMAIL = "mrselva133@gmail.com"
-PASSWORD = "Selva123@"
+BASE = os.environ.get("SEED_API_BASE", "http://localhost:8000")
+EMAIL = os.environ.get("SEED_ADMIN_EMAIL")
+PASSWORD = os.environ.get("SEED_ADMIN_PASSWORD")
+
+if not EMAIL or not PASSWORD:
+    print("FATAL: Set SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD env vars", file=sys.stderr)
+    sys.exit(1)
 
 def api(method, path, data=None, token=None):
     h = {"Content-Type": "application/json", "Origin": BASE}
