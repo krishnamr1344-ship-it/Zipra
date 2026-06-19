@@ -40,7 +40,7 @@ FRONTEND_URL = os.getenv("FRONTEND_URL")
 API_KEY = os.getenv("API_KEY")
 
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
 
 # Crash on startup if critical env vars are missing (never fall back to defaults).
 _missing = []
@@ -48,8 +48,6 @@ if not FRONTEND_URL:
     _missing.append("FRONTEND_URL")
 if not ADMIN_EMAIL:
     _missing.append("ADMIN_EMAIL")
-if not ADMIN_PASSWORD:
-    _missing.append("ADMIN_PASSWORD")
 if _missing:
     raise RuntimeError(f"Missing required environment variables: {', '.join(_missing)}")
 
