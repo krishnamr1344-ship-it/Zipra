@@ -34,7 +34,7 @@ from schemas import (
     CategoryCreate, CategoryResponse,
     ProductCreate, ProductResponse,
     AddressCreate, AddressUpdate, AddressResponse, GpsAddressCreate,
-    CartAddRequest, CartUpdateRequest, CartItemResponse,
+    CartAddRequest, CartUpdateRequest, CartItemResponse, CartValidateResponse, CartValidateItem,
     OrderCreateRequest, OrderDirectCreateRequest, OrderResponse, OrderItemResponse, DeliveryAddress,
     PaymentProcessRequest, PaymentResponse, MessageResponse,
     ZoneCheckRequest, ZoneCheckResponse,
@@ -975,7 +975,10 @@ def add_to_cart(body: CartAddRequest, request: Request, db: Session = Depends(ge
     ).first()
 
     if existing:
-        existing.quantity += body.quantity
+        new_qty = existing.quantity + body.quantity
+        if product.stock < new_qty:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Insufficient stock for {product.name}")
+        existing.quantity = new_qty
         db.commit()
         db.refresh(existing)
         return _cart_item_to_response(existing)
@@ -1013,6 +1016,9 @@ def update_cart_item(item_id: str, body: CartUpdateRequest, request: Request, db
         return JSONResponse(content={"detail": "Item removed from cart"}, status_code=status.HTTP_200_OK)
 
     item.quantity = body.quantity
+    product = item.product
+    if product and body.quantity > 0 and product.stock < body.quantity:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Insufficient stock for {product.name}")
     db.commit()
     db.refresh(item)
     return _cart_item_to_response(item)
@@ -1039,6 +1045,51 @@ def clear_cart(request: Request, db: Session = Depends(get_db)):
         item.is_deleted = True
     db.commit()
     return MessageResponse(message="Cart cleared")
+
+
+@router.post("/cart/validate", response_model=CartValidateResponse)
+def validate_cart(request: Request, db: Session = Depends(get_db)):
+    user_id = _get_user_id(request)
+    cart_items = db.query(CartItem).filter(
+        CartItem.user_id == user_id,
+        CartItem.is_deleted == False,
+    ).all()
+    if not cart_items:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cart is empty")
+    
+    all_valid = True
+    items = []
+    total = 0.0
+    
+    for ci in cart_items:
+        product = _get_product_or_404(str(ci.product_id), db)
+        current_price = round(float(product.price) * (100 - (product.discount_percent or 0)) / 100, 2)
+        messages = []
+        
+        if product.stock <= 0:
+            messages.append(f"{product.name} is out of stock")
+            valid = False
+        elif product.stock < ci.quantity:
+            messages.append(f"Only {product.stock} units available for {product.name}")
+            valid = False
+        else:
+            valid = True
+        
+        subtotal = round(current_price * ci.quantity, 2)
+        items.append(CartValidateItem(
+            product_id=str(product.id),
+            current_price=current_price,
+            current_stock=product.stock,
+            quantity=ci.quantity,
+            subtotal=subtotal,
+            valid=valid,
+            message="; ".join(messages) if messages else None,
+        ))
+        if not valid:
+            all_valid = False
+        total += subtotal
+    
+    return CartValidateResponse(valid=all_valid, items=items, total=round(total, 2))
 
 
 # ─── ORDERS ───────────────────────────────────────────────────────
@@ -1087,8 +1138,9 @@ def create_order(body: OrderCreateRequest, request: Request, db: Session = Depen
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Insufficient stock for {product.name}",
             )
-        total += product.price * ci.quantity
-        products_with_qty.append((product, ci.quantity))
+        selling_price = round(float(product.price) * (100 - (product.discount_percent or 0)) / 100, 2)
+        total += Decimal(str(selling_price)) * ci.quantity
+        products_with_qty.append((product, ci.quantity, selling_price))
 
     order = Order(
         user_id=user_id,
@@ -1100,14 +1152,14 @@ def create_order(body: OrderCreateRequest, request: Request, db: Session = Depen
     db.flush()
 
     try:
-        for product, qty in products_with_qty:
+        for product, qty, price in products_with_qty:
             oi = OrderItem(
                 order_id=order.id,
                 product_id=product.id,
                 product_name=product.name,
-                product_price=product.price,
+                product_price=Decimal(str(price)),
                 quantity=qty,
-                subtotal=product.price * qty,
+                subtotal=Decimal(str(price)) * qty,
             )
             db.add(oi)
             product.stock -= qty
@@ -1141,8 +1193,9 @@ def create_order_direct(body: OrderDirectCreateRequest, request: Request, db: Se
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Insufficient stock for {product.name}",
             )
-        total += product.price * item.quantity
-        products_with_qty.append((product, item.quantity))
+        selling_price = round(float(product.price) * (100 - (product.discount_percent or 0)) / 100, 2)
+        total += Decimal(str(selling_price)) * item.quantity
+        products_with_qty.append((product, item.quantity, selling_price))
 
     address_id = body.address_id
     if address_id:
@@ -1190,14 +1243,14 @@ def create_order_direct(body: OrderDirectCreateRequest, request: Request, db: Se
     db.flush()
 
     try:
-        for product, qty in products_with_qty:
+        for product, qty, price in products_with_qty:
             oi = OrderItem(
                 order_id=order.id,
                 product_id=product.id,
                 product_name=product.name,
-                product_price=product.price,
+                product_price=Decimal(str(price)),
                 quantity=qty,
-                subtotal=product.price * qty,
+                subtotal=Decimal(str(price)) * qty,
             )
             db.add(oi)
             product.stock -= qty

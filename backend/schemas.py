@@ -479,6 +479,22 @@ class CartItemResponse(BaseModel):
         from_attributes = True
 
 
+class CartValidateItem(BaseModel):
+    product_id: str
+    current_price: float
+    current_stock: int
+    quantity: int
+    subtotal: float
+    valid: bool
+    message: Optional[str] = None
+
+
+class CartValidateResponse(BaseModel):
+    valid: bool
+    items: list[CartValidateItem]
+    total: float
+
+
 # ─── ORDER ────────────────────────────────────────────────────────
 
 class OrderItemInput(BaseModel):
