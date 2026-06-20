@@ -51,6 +51,7 @@ class _StatusBox extends StatelessWidget {
       case 'Shipped': return const Color(0xFF2196F3);
       case 'Delivered': return AppColors.success;
       case 'Cancelled': return AppColors.error;
+      case 'Failed': return AppColors.error;
       default: return AppColors.textSecondary;
     }
   }
@@ -70,6 +71,7 @@ class _StatusBox extends StatelessWidget {
     final steps = ['Placed', 'Confirmed', 'Shipped', 'Delivered'];
     final active = _activeIndex;
     final cancelled = order.status == 'Cancelled';
+    final failed = order.status == 'Failed';
 
     return Container(
       width: double.infinity,
@@ -122,8 +124,9 @@ class _StatusBox extends StatelessWidget {
                 final isDone = i < active;
                 final isCurrent = i == active;
                 final isLast = i == steps.length - 1;
-                final done = cancelled ? i == 0 : isDone;
-                final curr = cancelled ? false : isCurrent;
+                final terminal = cancelled || failed;
+                final done = terminal ? i == 0 : isDone;
+                final curr = terminal ? false : isCurrent;
 
                 return IntrinsicHeight(
                   child: Row(
@@ -151,8 +154,8 @@ class _StatusBox extends StatelessWidget {
                                       : null,
                             ),
                             child: Center(
-                              child: cancelled && i > 0
-                                  ? Icon(Icons.close, size: 14, color: Colors.red.withAlpha(150))
+                              child: terminal && i > 0
+                                  ? Icon(failed ? Icons.error_outline : Icons.close, size: 14, color: Colors.red.withAlpha(150))
                                   : done
                                       ? const Icon(Icons.check, size: 16, color: Colors.white)
                                       : curr

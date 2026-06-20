@@ -53,6 +53,8 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
         return const Color(0xFF10B981);
       case 'Cancelled':
         return const Color(0xFFEF4444);
+      case 'Failed':
+        return const Color(0xFFDC2626);
       default:
         return Colors.grey;
     }
@@ -70,6 +72,8 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
         return Icons.inventory_2;
       case 'Cancelled':
         return Icons.cancel_outlined;
+      case 'Failed':
+        return Icons.error_outline;
       default:
         return Icons.help_outline;
     }
@@ -86,6 +90,9 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
         'done': e.key <= ci,
         'current': false,
       }).toList();
+    }
+    if (_order['status'] == 'Failed') {
+      return [];
     }
     return all.asMap().entries.map((e) => {
       'status': e.value,
@@ -393,6 +400,8 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
         return 'Order is out for delivery';
       case 'Cancelled':
         return 'Cancel this order';
+      case 'Failed':
+        return 'Payment failed — customer may retry';
       default:
         return '';
     }
@@ -410,6 +419,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
         : _order['id'].toString();
     final statusFlow = _statusFlow;
     final isCancelled = _order['status'] == 'Cancelled';
+    final isFailed = _order['status'] == 'Failed';
 
     final labelStyle = TextStyle(
       fontSize: 12,
@@ -590,9 +600,9 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
               ),
             ),
           ),
-          if (!isCancelled && statusFlow.isNotEmpty)
+          if (!isCancelled && !isFailed && statusFlow.isNotEmpty)
             SliverToBoxAdapter(child: sectionLabel('ORDER PROGRESS')),
-          if (!isCancelled && statusFlow.isNotEmpty)
+          if (!isCancelled && !isFailed && statusFlow.isNotEmpty)
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -697,7 +707,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                 ),
               ),
             ),
-          if (isCancelled)
+          if (isCancelled || isFailed)
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -717,22 +727,22 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                           color: const Color(0xFFEF4444).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        child: const Icon(Icons.cancel_rounded,
-                            color: Color(0xFFEF4444), size: 26),
+                        child: Icon(isFailed ? Icons.error_outline : Icons.cancel_rounded,
+                            color: const Color(0xFFEF4444), size: 26),
                       ),
                       const SizedBox(width: 14),
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Order Cancelled',
-                                style: TextStyle(
+                            Text(isFailed ? 'Payment Failed' : 'Order Cancelled',
+                                style: const TextStyle(
                                     fontWeight: FontWeight.w700,
                                     fontSize: 16,
                                     color: Color(0xFFEF4444))),
-                            SizedBox(height: 2),
-                            Text('This order has been cancelled',
-                                style: TextStyle(
+                            const SizedBox(height: 2),
+                            Text(isFailed ? 'Customer may retry payment' : 'This order has been cancelled',
+                                style: const TextStyle(
                                     fontSize: 13,
                                     color: Color(0xFFEF4444))),
                           ],
@@ -1188,7 +1198,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: _order['status'] == 'Delivered'
+              child: _order['status'] == 'Delivered' || _order['status'] == 'Failed'
                   ? Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 16),

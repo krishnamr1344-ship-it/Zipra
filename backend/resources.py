@@ -1401,6 +1401,9 @@ def _check_payment_expiry(payment: Payment, db: Session):
     if elapsed >= PAYMENT_TIMEOUT_SECONDS:
         payment.status = "failed"
         payment.transaction_id = None
+        order = db.query(Order).filter(Order.id == payment.order_id).first()
+        if order:
+            order.status = "Failed"
         db.commit()
         db.refresh(payment)
 
@@ -1419,7 +1422,7 @@ def process_payment(body: PaymentProcessRequest, request: Request, db: Session =
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
 
-    if order.status != "Pending":
+    if order.status not in ("Pending", "Failed"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Payment already processed")
 
     existing_payment = db.query(Payment).filter(
@@ -1496,7 +1499,7 @@ def razorpay_create_order(body: RazorpayCreateOrderRequest, request: Request, db
     if order.payment_method != "Razorpay":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order is not set for Razorpay payment")
 
-    if order.status == "Confirmed":
+    if order.status not in ("Pending", "Failed"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order already paid")
 
     # Check for existing successful payment
@@ -1574,7 +1577,7 @@ def razorpay_verify(body: RazorpayVerifyRequest, request: Request, db: Session =
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
 
-    if order.status != "Pending":
+    if order.status not in ("Pending", "Failed"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order already paid")
 
     # Find the pending payment for this order
@@ -1599,6 +1602,7 @@ def razorpay_verify(body: RazorpayVerifyRequest, request: Request, db: Session =
     if not hmac.compare_digest(expected_signature, body.razorpay_signature):
         payment.status = "failed"
         payment.failure_reason = "Signature verification failed"
+        order.status = "Failed"
         db.commit()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Payment verification failed")
 
@@ -1611,6 +1615,7 @@ def razorpay_verify(body: RazorpayVerifyRequest, request: Request, db: Session =
     if duplicate:
         payment.status = "failed"
         payment.failure_reason = "Duplicate payment ID"
+        order.status = "Failed"
         db.commit()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Payment already processed")
 
@@ -1707,6 +1712,9 @@ async def razorpay_webhook(request: Request, db: Session = Depends(get_db)):
         payment.status = "failed"
         payment.gateway_payment_id = gateway_payment_id
         payment.failure_reason = failure_reason or "Payment failed at gateway"
+        order = db.query(Order).filter(Order.id == payment.order_id).first()
+        if order:
+            order.status = "Failed"
         db.commit()
         logger.info("Razorpay webhook: payment %s failed: %s", gateway_payment_id, failure_reason)
 

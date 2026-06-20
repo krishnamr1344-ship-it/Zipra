@@ -73,6 +73,8 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
         return const Color(0xFF10B981);
       case 'Cancelled':
         return const Color(0xFFEF4444);
+      case 'Failed':
+        return const Color(0xFFDC2626);
       default:
         return Colors.grey;
     }
@@ -90,6 +92,8 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
         return Icons.inventory_2;
       case 'Cancelled':
         return Icons.cancel_outlined;
+      case 'Failed':
+        return Icons.error_outline;
       default:
         return Icons.help_outline;
     }
@@ -130,7 +134,8 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
       'Confirmed',
       'Shipped',
       'Delivered',
-      'Cancelled'
+      'Cancelled',
+      'Failed'
     ];
 
     final pending = _countByStatus('Pending');

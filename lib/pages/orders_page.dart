@@ -155,6 +155,7 @@ class _OrderCard extends StatelessWidget {
       case 'Shipped': return const Color(0xFF2196F3);
       case 'Delivered': return AppColors.success;
       case 'Cancelled': return AppColors.error;
+      case 'Failed': return AppColors.error;
       default: return AppColors.textSecondary;
     }
   }
@@ -166,6 +167,7 @@ class _OrderCard extends StatelessWidget {
       case 'Shipped': return Icons.local_shipping;
       case 'Delivered': return Icons.inventory_2;
       case 'Cancelled': return Icons.cancel_outlined;
+      case 'Failed': return Icons.error_outline;
       default: return Icons.help_outline;
     }
   }

@@ -33,7 +33,7 @@ TRANSACTION_ID_LENGTH = 100
 IMAGE_URL_LENGTH = 1000
 
 VALID_PAYMENT_METHODS = {"cod", "COD", "razorpay", "Razorpay"}
-VALID_ORDER_STATUSES = {"Pending", "Confirmed", "Shipped", "Delivered", "Cancelled"}
+VALID_ORDER_STATUSES = {"Pending", "Confirmed", "Shipped", "Delivered", "Cancelled", "Failed"}
 VALID_PAYMENT_STATUSES = {"pending", "success", "failed"}
 
 
