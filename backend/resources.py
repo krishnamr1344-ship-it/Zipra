@@ -1497,15 +1497,15 @@ def razorpay_create_order(body: RazorpayCreateOrderRequest, request: Request, db
     if existing_success:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order already paid")
 
-    # Expire all old non-successful payments for this order (one-to-one constraint)
+    # Remove old non-successful payments (one-to-one constraint)
     old_payments = db.query(Payment).filter(
         Payment.order_id == order.id,
         Payment.status != "success",
         Payment.is_deleted == False,
     ).all()
     for p in old_payments:
-        p.status = "failed"
-        p.failure_reason = "Replaced by new payment attempt"
+        db.delete(p)
+    db.flush()
 
     # Amount in paise (smallest currency unit)
     amount_paise = int(order.total_amount * 100)
