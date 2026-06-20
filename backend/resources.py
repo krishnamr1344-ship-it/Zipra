@@ -9,6 +9,7 @@ Security:
   - SQLAlchemy ORM only — no raw SQL.
   - Soft-delete used everywhere (is_deleted flag).
 """
+from __future__ import annotations
 import logging
 import json
 import secrets

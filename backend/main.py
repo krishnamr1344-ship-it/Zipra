@@ -125,25 +125,26 @@ with engine.connect() as conn:
         conn.execute(text("ALTER TABLE payments ADD COLUMN gateway_signature VARCHAR(500)"))
     if 'failure_reason' not in payment_cols:
         conn.execute(text("ALTER TABLE payments ADD COLUMN failure_reason VARCHAR(1000)"))
-    # Drop unique constraint on order_id if it exists (for Razorpay retries).
-    conn.execute(text("""
-        DO $$
-        BEGIN
-            IF EXISTS (
-                SELECT 1 FROM pg_constraint
-                WHERE conname = 'payments_order_id_key'
-                AND conrelid = 'payments'::regclass
-            ) THEN
-                ALTER TABLE payments DROP CONSTRAINT payments_order_id_key;
-            END IF;
-        END $$;
-    """))
-    # Partial unique index: only one successful payment per gateway_payment_id.
-    conn.execute(text("""
-        CREATE UNIQUE INDEX IF NOT EXISTS uq_payments_gateway_payment_id
-        ON payments (gateway_payment_id)
-        WHERE gateway_payment_id IS NOT NULL
-    """))
+    # Drop unique constraint on order_id if it exists (PostgreSQL-only, for Razorpay retries).
+    if engine.dialect.name == "postgresql":
+        conn.execute(text("""
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM pg_constraint
+                    WHERE conname = 'payments_order_id_key'
+                    AND conrelid = 'payments'::regclass
+                ) THEN
+                    ALTER TABLE payments DROP CONSTRAINT payments_order_id_key;
+                END IF;
+            END $$;
+        """))
+        # Partial unique index: only one successful payment per gateway_payment_id.
+        conn.execute(text("""
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_payments_gateway_payment_id
+            ON payments (gateway_payment_id)
+            WHERE gateway_payment_id IS NOT NULL
+        """))
     conn.commit()
 
 app = FastAPI(

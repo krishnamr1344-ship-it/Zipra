@@ -52,6 +52,7 @@ __pycache__/
 *$py.class
 *.so
 backend/__pycache__/
+backend/test.db
 
 # Obfuscation related
 app.*.map.json

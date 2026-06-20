@@ -378,9 +378,17 @@ def delete_category(category_id: str, request: Request, db: Session = Depends(ge
 
 
 @router.get("/orders")
-def list_orders(request: Request, db: Session = Depends(get_db)):
+def list_orders(request: Request, db: Session = Depends(get_db), status: str = None):
     _require_admin(request, db)
-    orders = db.query(Order).filter(Order.is_deleted == False).order_by(Order.created_at.desc()).all()
+    query = db.query(Order).filter(Order.is_deleted == False)
+    if status:
+        valid = {"Pending", "Confirmed", "Shipped", "Delivered", "Cancelled", "Failed"}
+        if status not in valid:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid status. Must be one of: {', '.join(sorted(valid))}")
+        query = query.filter(Order.status == status)
+    else:
+        query = query.filter(Order.status != "Failed")
+    orders = query.order_by(Order.created_at.desc()).all()
     result = []
     for o in orders:
         items = []
@@ -457,6 +465,8 @@ def update_order_status(order_id: str, body: StatusUpdateRequest, request: Reque
     order = db.query(Order).filter(Order.id == order_id, Order.is_deleted == False).first()
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+    if order.status == "Failed":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot modify a failed payment order")
     if order.status == "Delivered":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order is already delivered and cannot be modified")
     if body.status == "Delivered":
