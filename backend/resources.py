@@ -1394,20 +1394,6 @@ def _payment_to_response(payment: Payment) -> PaymentResponse:
     )
 
 
-def _check_payment_expiry(payment: Payment, db: Session):
-    if payment.status != "pending":
-        return
-    elapsed = (datetime.now(timezone.utc) - payment.created_at).total_seconds()
-    if elapsed >= PAYMENT_TIMEOUT_SECONDS:
-        payment.status = "failed"
-        payment.transaction_id = None
-        order = db.query(Order).filter(Order.id == payment.order_id).first()
-        if order:
-            order.status = "Failed"
-        db.commit()
-        db.refresh(payment)
-
-
 @router.post("/payments/process", response_model=PaymentResponse)
 def process_payment(body: PaymentProcessRequest, request: Request, db: Session = Depends(get_db)):
     user_id = _get_user_id(request)
@@ -1511,14 +1497,15 @@ def razorpay_create_order(body: RazorpayCreateOrderRequest, request: Request, db
     if existing_success:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order already paid")
 
-    # Expire any old pending payments for this order
-    old_pending = db.query(Payment).filter(
+    # Expire all old non-successful payments for this order (one-to-one constraint)
+    old_payments = db.query(Payment).filter(
         Payment.order_id == order.id,
-        Payment.status == "pending",
+        Payment.status != "success",
         Payment.is_deleted == False,
     ).all()
-    for p in old_pending:
-        _check_payment_expiry(p, db)
+    for p in old_payments:
+        p.status = "failed"
+        p.failure_reason = "Replaced by new payment attempt"
 
     # Amount in paise (smallest currency unit)
     amount_paise = int(order.total_amount * 100)
