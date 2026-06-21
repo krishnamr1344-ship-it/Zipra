@@ -166,7 +166,7 @@ class _AdminNotificationsPageState extends State<AdminNotificationsPage> {
                         'link': linkCtl.text.trim().isEmpty ? null : linkCtl.text.trim(),
                       };
                       await _api.createNotification(body);
-                      notificationService.sendNotification(body);
+                      notificationService.load();
                       if (ctx.mounted) Navigator.pop(ctx);
                       _load();
                     } catch (e) {
