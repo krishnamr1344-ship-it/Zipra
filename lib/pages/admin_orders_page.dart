@@ -99,22 +99,6 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
     }
   }
 
-  String _timeAgo(String? dateStr) {
-    if (dateStr == null || dateStr.length < 19) return '';
-    try {
-      final dt = DateTime.parse(dateStr.substring(0, 19));
-      final diff = DateTime.now().difference(dt);
-      if (diff.inDays > 7) return '${dt.day}/${dt.month}/${dt.year}';
-      if (diff.inDays > 0) return '${diff.inDays}d ago';
-      if (diff.inHours > 0) return '${diff.inHours}h ago';
-      if (diff.inMinutes > 0) return '${diff.inMinutes}m ago';
-      return 'just now';
-    } catch (e) {
-        debugPrint("pages.admin_orders_page: $e");
-      return dateStr.substring(0, 10);
-    }
-  }
-
   int _countByStatus(String status) {
     if (status == 'All') return _orders.length;
     return _orders.where((o) => (o as Map)['status'] == status).length;
@@ -405,8 +389,6 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                       final shortId = o['id'].toString().length > 8
                           ? o['id'].toString().substring(0, 8)
                           : o['id'].toString();
-                      final timeAgo = _timeAgo(o['created_at']?.toString());
-
                       return Container(
                           margin: const EdgeInsets.only(bottom: 12),
                           decoration: BoxDecoration(
@@ -482,20 +464,10 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                                                             style: const TextStyle(
                                                                 fontWeight:
                                                                     FontWeight
-                                                                        .w800,
-                                                                fontSize: 15),
-                                                          ),
-                                                          const SizedBox(
-                                                              width: 6),
-                                                          Text(
-                                                            timeAgo,
-                                                            style: TextStyle(
-                                                              fontSize: 11,
-                                                              color: AppColors
-                                                                  .textHint,
-                                                            ),
-                                                          ),
-                                                        ],
+                                                          .w800,
+                                                                 fontSize: 15),
+                                                           ),
+                                                         ],
                                                       ),
                                                       const SizedBox(height: 4),
                                                       Row(

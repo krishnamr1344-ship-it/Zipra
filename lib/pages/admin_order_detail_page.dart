@@ -544,28 +544,6 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.calendar_today,
-                                      size: 14, color: Colors.white70),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    _order['created_at']
-                                            ?.toString()
-                                            .substring(0, 10) ??
-                                        '',
-                                    style: const TextStyle(
-                                        fontSize: 13, color: Colors.white70),
-                                  ),
-                                ],
-                              ),
-                            ),
                             const Spacer(),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.end,

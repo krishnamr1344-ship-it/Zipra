@@ -118,20 +118,24 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
     if (!mounted) return;
     setState(() => _checkoutOpen = false);
 
-    // Cancel intent to create Failed order (new flow only)
+    String? orderId;
     if (widget.intentId != null) {
       try {
-        await _api.cancelPaymentIntent(widget.intentId!);
+        final result = await _api.cancelPaymentIntent(widget.intentId!);
+        orderId = result['order_id'] as String?;
       } catch (_) {}
     }
 
     if (!mounted) return;
-    AppSnackbar.show(
+    Navigator.pushReplacement(
       context,
-      'Payment failed: ${response.message}',
-      type: SnackbarType.error,
+      MaterialPageRoute(
+        builder: (_) => PaymentFailedScreen(
+          orderId: orderId ?? widget.orderId,
+          total: widget.total,
+        ),
+      ),
     );
-    Navigator.pop(context);
   }
 
   void _handleExternalWallet(ExternalWalletResponse response) {
@@ -165,26 +169,39 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      AppSnackbar.show(
+      Navigator.pushReplacement(
         context,
-        'Payment verification failed: $e',
-        type: SnackbarType.error,
+        MaterialPageRoute(
+          builder: (_) => PaymentFailedScreen(
+            orderId: widget.orderId,
+            total: widget.total,
+          ),
+        ),
       );
-      Navigator.pop(context);
     }
   }
 
   Future<void> _handleBack() async {
     _razorpay?.clear();
 
-    // Cancel intent to create Failed order (new flow only)
+    String? orderId;
     if (widget.intentId != null) {
       try {
-        await _api.cancelPaymentIntent(widget.intentId!);
+        final result = await _api.cancelPaymentIntent(widget.intentId!);
+        orderId = result['order_id'] as String?;
       } catch (_) {}
     }
 
-    if (mounted) Navigator.pop(context);
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PaymentFailedScreen(
+          orderId: orderId ?? widget.orderId,
+          total: widget.total,
+        ),
+      ),
+    );
   }
 
   @override
@@ -352,6 +369,121 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class PaymentFailedScreen extends StatelessWidget {
+  final String? orderId;
+  final int total;
+
+  const PaymentFailedScreen({super.key, this.orderId, required this.total});
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (_, _) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const OrdersPage()),
+          (route) => false,
+        );
+      },
+      child: Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(40),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: AppColors.errorLight,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: AppColors.error,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Your Order Payment Failed',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Please retry payment to complete your order.',
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                if (orderId != null)
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PaymentGatewayScreen(
+                              orderId: orderId,
+                              total: total,
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.payment_rounded, size: 20),
+                      label: const Text(
+                        'Retry Payment',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const OrdersPage()),
+                        (route) => false,
+                      );
+                    },
+                    child: const Text(
+                      'View My Orders',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
                       ),
                     ),
                   ),
