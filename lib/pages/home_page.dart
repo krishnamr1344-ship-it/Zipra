@@ -1448,6 +1448,198 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   // ---------------------------------------------------------------------------
+  // CATEGORY CARD - shared by Home & Categories tabs
+  // ---------------------------------------------------------------------------
+
+  Map<String, dynamic> _catMeta(Map<String, dynamic> catData) {
+    const fallback = <String, Map<String, dynamic>>{
+      'All': {
+        'gradient': [0xFFE8F5E9, 0xFFC8E6C9],
+        'emoji': '\u{1F4CB}',
+      },
+      'Fresh Dairy': {
+        'gradient': [0xFFFFF3E0, 0xFFFFE0B2],
+        'emoji': '\u{1F95B}',
+      },
+      'Rice & Grocery': {
+        'gradient': [0xFFFFF8E1, 0xFFFFECB3],
+        'emoji': '\u{1F35E}',
+      },
+      'Dals': {
+        'gradient': [0xFFFFF3E0, 0xFFFFCC80],
+        'emoji': '\u{1F330}',
+      },
+      'Oils': {
+        'gradient': [0xFFFFF3E0, 0xFFFFCC80],
+        'emoji': '\u{1F6ED}',
+      },
+      'Masala': {
+        'gradient': [0xFFFBE9E7, 0xFFFFCDD2],
+        'emoji': '\u{1F336}\uFE0F',
+      },
+      'Tea & Beverages': {
+        'gradient': [0xFFFFF3E0, 0xFFFFE0B2],
+        'emoji': '\u2615',
+      },
+      'Bathroom & Personal Care': {
+        'gradient': [0xFFFCE4EC, 0xFFF8BBD0],
+        'emoji': '\u{1F9F4}',
+      },
+    };
+
+    final name = catData['name'] as String;
+    final fb = fallback[name] ?? fallback.values.first;
+    return <String, dynamic>{
+      'image': catData['image'] as String?,
+      'gradient': fb['gradient'],
+      'emoji': fb['emoji'],
+    };
+  }
+
+  Widget _buildCategoryCard(String cat, Map<String, dynamic> meta) {
+    final gradients = meta['gradient'] as List<int>;
+    final imageUrl = meta['image'] as String? ?? '';
+    final emoji = meta['emoji'] as String? ?? '\u{1F6D2}';
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        setState(() {
+          _selectedCategory = cat;
+          _selectedIndex = 0;
+        });
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(gradients[0]), Color(gradients[1])],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: imageUrl.isNotEmpty
+                    ? Image.network(
+                        imageUrl,
+                        fit: BoxFit.contain,
+                        loadingBuilder: (_, child, chunk) => chunk == null
+                            ? child
+                            : Center(
+                                child: Text(
+                                  emoji,
+                                  style: const TextStyle(fontSize: 28),
+                                ),
+                              ),
+                        errorBuilder: (_, _, _) => Center(
+                          child: Text(
+                            emoji,
+                            style: const TextStyle(fontSize: 28),
+                          ),
+                        ),
+                      )
+                    : Center(
+                        child: Text(
+                          emoji,
+                          style: const TextStyle(fontSize: 28),
+                        ),
+                      ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            cat,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF333333),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Shared category grid widget used by Home & Categories tabs
+  Widget _buildCategoryGrid() {
+    final cats = List<String>.from(_categories);
+    final catMetaMap = <String, Map<String, dynamic>>{};
+    const fallback = <String, dynamic>{
+      'image': null,
+      'gradient': [0xFFF5F5F5, 0xFFEEEEEE],
+      'emoji': '\u{1F6D2}',
+    };
+    for (final catData in _categoriesData) {
+      final name = catData['name'] as String;
+      catMetaMap[name] = _catMeta(catData);
+    }
+    catMetaMap['All'] = const <String, dynamic>{
+      'image': null,
+      'gradient': [0xFFE8F5E9, 0xFFC8E6C9],
+      'emoji': '\u{1F4CB}',
+    };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          child: Row(
+            children: [
+              Container(
+                width: 3,
+                height: 18,
+                decoration: BoxDecoration(
+                  color: _orange,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Shop by Category',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF222222),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 4,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 1.0,
+            ),
+            itemCount: cats.length,
+            itemBuilder: (context, index) {
+              final cat = cats[index];
+              return _buildCategoryCard(
+                cat,
+                catMetaMap[cat] ?? fallback,
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // CATEGORIES TAB
   // ---------------------------------------------------------------------------
 
@@ -1518,107 +1710,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
 
     final topOrdered = cats.where((c) => (catCounts[c] ?? 0) >= 3).toList();
-
-    // ---------------------------------------------------
-    // Category card builder (horizontal scroll)
-    // ---------------------------------------------------
-    Widget buildCategoryCard(String cat, Map<String, dynamic> meta) {
-      final gradients = meta['gradient'] as List<int>;
-      final imageUrl = meta['image'] as String? ?? '';
-      final emoji = meta['emoji'] as String? ?? '\u{1F6D2}';
-
-      return GestureDetector(
-        onTap: () {
-          HapticFeedback.lightImpact();
-          setState(() {
-            _selectedCategory = cat;
-            _selectedIndex = 0;
-          });
-        },
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: SizedBox(
-                width: double.infinity,
-                height: 72,
-                child: imageUrl.isNotEmpty
-                    ? Image.network(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (_, child, chunk) => chunk == null
-                            ? child
-                            : Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Color(gradients[0]),
-                                      Color(gradients[1]),
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    emoji,
-                                    style: const TextStyle(fontSize: 28),
-                                  ),
-                                ),
-                              ),
-                        errorBuilder: (_, _, _) => Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Color(gradients[0]),
-                                Color(gradients[1]),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              emoji,
-                              style: const TextStyle(fontSize: 28),
-                            ),
-                          ),
-                        ),
-                      )
-                    : Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Color(gradients[0]), Color(gradients[1])],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                        ),
-                        child: Center(
-                          child: Text(
-                            emoji,
-                            style: const TextStyle(fontSize: 28),
-                          ),
-                        ),
-                      ),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              cat,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF333333),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
 
     // ---------------------------------------------------
     // Most Ordered section builder
@@ -2078,28 +2169,29 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      for (final cat in cats)
-                        SizedBox(
-                          width:
-                              (MediaQuery.of(context).size.width - 60) / 4,
-                          child: buildCategoryCard(
-                            cat,
-                            catMetaMap[cat] ??
-                                <String, dynamic>{
-                                  'image': null,
-                                  'gradient': [
-                                    0xFFF5F5F5,
-                                    0xFFEEEEEE,
-                                  ],
-                                  'emoji': '\u{1F6D2}',
-                                },
-                          ),
-                        ),
-                    ],
+                  child: GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 4,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 1.0,
+                    ),
+                    itemCount: cats.length,
+                    itemBuilder: (context, index) {
+                      final cat = cats[index];
+                      return _buildCategoryCard(
+                        cat,
+                        catMetaMap[cat] ??
+                            <String, dynamic>{
+                              'image': null,
+                              'gradient': [0xFFF5F5F5, 0xFFEEEEEE],
+                              'emoji': '\u{1F6D2}',
+                            },
+                      );
+                    },
                   ),
                 ),
               ),
