@@ -25,6 +25,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 import httpx
+import razorpay
 
 from typing import Optional
 from shapely.geometry import shape as shapely_shape, Point
@@ -1459,26 +1460,8 @@ def get_payment(order_id: str, request: Request, db: Session = Depends(get_db)):
 # Security: HMAC compare_digest verification, amount from DB only.
 # No secrets stored in client. Webhook always returns 200.
 
-def _razorpay_api_post(path: str, payload: dict) -> dict:
-    """Call Razorpay REST API directly using urllib."""
-    import base64, json, urllib.request
-    auth = base64.b64encode(f"{RAZORPAY_KEY_ID}:{RAZORPAY_KEY_SECRET}".encode()).decode()
-    body = json.dumps(payload).encode()
-    req = urllib.request.Request(
-        f"https://api.razorpay.com/v1/{path}",
-        data=body,
-        headers={
-            "Authorization": f"Basic {auth}",
-            "Content-Type": "application/json",
-        },
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            return json.loads(resp.read().decode())
-    except urllib.error.HTTPError as e:
-        raise RuntimeError(f"Razorpay API error {e.code}: {e.read().decode()}")
-    except urllib.error.URLError as e:
-        raise RuntimeError(f"Razorpay connection error: {e.reason}")
+def _razorpay_client() -> razorpay.Client:
+    return razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
 
 def _create_intent_from_cart(body: RazorpayCreateOrderRequest, user_id: str, db: Session) -> tuple[PaymentIntent, int]:
@@ -1546,7 +1529,8 @@ def _create_intent_from_cart(body: RazorpayCreateOrderRequest, user_id: str, db:
 
     amount_paise = int(total * 100)
     try:
-        razorpay_order = _razorpay_api_post("orders", {
+        client = _razorpay_client()
+        razorpay_order = client.order.create({
             "amount": amount_paise,
             "currency": "INR",
             "receipt": f"intent_{intent.id}",
@@ -1554,8 +1538,8 @@ def _create_intent_from_cart(body: RazorpayCreateOrderRequest, user_id: str, db:
         })
     except Exception as e:
         db.rollback()
-        logger.exception("Razorpay order creation failed in intent")
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Payment gateway error: {e}")
+        logger.error("Razorpay order creation failed: %s", e)
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Payment gateway error")
 
     razorpay_order_id = razorpay_order.get("id")
     if not razorpay_order_id:
@@ -1671,15 +1655,16 @@ def razorpay_create_order(body: RazorpayCreateOrderRequest, request: Request, db
     amount_paise = int(order.total_amount * 100)
 
     try:
-        razorpay_order = _razorpay_api_post("orders", {
+        client = _razorpay_client()
+        razorpay_order = client.order.create({
             "amount": amount_paise,
             "currency": "INR",
             "receipt": str(order.id),
             "notes": {"order_id": str(order.id), "user_id": user_id},
         })
     except Exception as e:
-        logger.exception("Razorpay order creation failed in retry")
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Payment gateway error: {e}")
+        logger.error("Razorpay order creation failed: %s", e)
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Payment gateway error")
 
     razorpay_order_id = razorpay_order.get("id")
     if not razorpay_order_id:
