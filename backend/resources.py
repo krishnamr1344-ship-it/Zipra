@@ -1460,19 +1460,25 @@ def get_payment(order_id: str, request: Request, db: Session = Depends(get_db)):
 # No secrets stored in client. Webhook always returns 200.
 
 def _razorpay_api_post(path: str, payload: dict) -> dict:
-    """Call Razorpay REST API directly using httpx."""
-    import base64
+    """Call Razorpay REST API directly using urllib."""
+    import base64, json, urllib.request
     auth = base64.b64encode(f"{RAZORPAY_KEY_ID}:{RAZORPAY_KEY_SECRET}".encode()).decode()
-    with httpx.Client() as client:
-        r = client.post(
-            f"https://api.razorpay.com/v1/{path}",
-            json=payload,
-            headers={"Authorization": f"Basic {auth}"},
-            timeout=15,
-        )
-        if r.status_code not in (200, 201):
-            raise RuntimeError(f"Razorpay API error {r.status_code}: {r.text}")
-        return r.json()
+    body = json.dumps(payload).encode()
+    req = urllib.request.Request(
+        f"https://api.razorpay.com/v1/{path}",
+        data=body,
+        headers={
+            "Authorization": f"Basic {auth}",
+            "Content-Type": "application/json",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return json.loads(resp.read().decode())
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"Razorpay API error {e.code}: {e.read().decode()}")
+    except urllib.error.URLError as e:
+        raise RuntimeError(f"Razorpay connection error: {e.reason}")
 
 
 def _create_intent_from_cart(body: RazorpayCreateOrderRequest, user_id: str, db: Session) -> tuple[PaymentIntent, int]:
@@ -1548,8 +1554,8 @@ def _create_intent_from_cart(body: RazorpayCreateOrderRequest, user_id: str, db:
         })
     except Exception as e:
         db.rollback()
-        logger.error("Razorpay order creation failed: %s", e)
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Payment gateway error")
+        logger.exception("Razorpay order creation failed in intent")
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Payment gateway error: {e}")
 
     razorpay_order_id = razorpay_order.get("id")
     if not razorpay_order_id:
@@ -1672,8 +1678,8 @@ def razorpay_create_order(body: RazorpayCreateOrderRequest, request: Request, db
             "notes": {"order_id": str(order.id), "user_id": user_id},
         })
     except Exception as e:
-        logger.error("Razorpay order creation failed: %s", e)
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Payment gateway error")
+        logger.exception("Razorpay order creation failed in retry")
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Payment gateway error: {e}")
 
     razorpay_order_id = razorpay_order.get("id")
     if not razorpay_order_id:
