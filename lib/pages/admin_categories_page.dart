@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../constants/theme.dart';
 import '../services/admin_api_service.dart';
+import '../services/cloudinary_service.dart';
 import '../widgets/state_widgets.dart';
+import 'package:image_picker/image_picker.dart';
 
 class AdminCategoriesPage extends StatefulWidget {
   const AdminCategoriesPage({super.key});
@@ -75,8 +77,11 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
   void _showForm([Map<String, dynamic>? cat]) {
     final nameCtl = TextEditingController(text: cat?['name'] ?? '');
     final descCtl = TextEditingController(text: cat?['description'] ?? '');
+    String? imageUrl = cat?['image'] as String?;
+    bool uploading = false;
     bool saving = false;
     String? nameError;
+    final picker = ImagePicker();
 
     showModalBottomSheet(
       context: context,
@@ -150,6 +155,67 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
                 ),
                 maxLines: 2,
               ),
+              const SizedBox(height: 14),
+              GestureDetector(
+                onTap: uploading ? null : () async {
+                  final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+                  if (picked == null) return;
+                  setSheetState(() => uploading = true);
+                  try {
+                    final url = await CloudinaryService.uploadImage(picked.path);
+                    setSheetState(() {
+                      imageUrl = url;
+                      uploading = false;
+                    });
+                  } catch (_) {
+                    setSheetState(() => uploading = false);
+                  }
+                },
+                child: Container(
+                  height: 100,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+                  ),
+                  child: uploading
+                      ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                      : imageUrl?.isNotEmpty == true
+                          ? Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: Image.network(imageUrl!, fit: BoxFit.cover),
+                                ),
+                                Positioned(
+                                  top: 4,
+                                  right: 4,
+                                  child: GestureDetector(
+                                    onTap: () => setSheetState(() => imageUrl = null),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.black54,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(Icons.close, size: 16, color: Colors.white),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.cloud_upload_outlined, size: 32, color: Theme.of(ctx).colorScheme.primary.withValues(alpha: 0.5)),
+                                const SizedBox(height: 4),
+                                Text('Tap to upload image', style: TextStyle(fontSize: 12, color: Theme.of(ctx).colorScheme.primary.withValues(alpha: 0.6))),
+                              ],
+                            ),
+                ),
+              ),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
@@ -174,10 +240,13 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
                           if (nameError != null) return;
                           setSheetState(() => saving = true);
                           try {
-                            final data = {
+                            final data = <String, dynamic>{
                               'name': nameCtl.text,
                               'description': descCtl.text,
                             };
+                            if (imageUrl?.isNotEmpty == true) {
+                              data['image'] = imageUrl;
+                            }
                             if (cat == null) {
                               await _api.createCategory(data);
                             } else {
