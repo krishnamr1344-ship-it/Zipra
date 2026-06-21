@@ -1683,9 +1683,11 @@ def razorpay_create_order(body: RazorpayCreateOrderRequest, request: Request, db
             str(order.id),
             {"order_id": str(order.id), "user_id": user_id},
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("Razorpay order creation failed: %s", e)
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Payment gateway error")
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Payment gateway error: {e}")
 
     razorpay_order_id = razorpay_order.get("id")
     if not razorpay_order_id:
