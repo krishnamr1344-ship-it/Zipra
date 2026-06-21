@@ -275,8 +275,6 @@ def _make_razorpay_order_response(amount=9000):
 
 @pytest.fixture()
 def mock_razorpay_client():
-    with patch.object(resources.razorpay, "Client") as mock_cls:
-        mock_instance = MagicMock()
-        mock_instance.order.create.return_value = _make_razorpay_order_response()
-        mock_cls.return_value = mock_instance
-        yield mock_instance
+    with patch.object(resources, "_razorpay_create_order") as mock_fn:
+        mock_fn.return_value = _make_razorpay_order_response()
+        yield mock_fn

@@ -25,7 +25,6 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 import httpx
-import razorpay
 
 from typing import Optional
 from shapely.geometry import shape as shapely_shape, Point
@@ -1460,8 +1459,15 @@ def get_payment(order_id: str, request: Request, db: Session = Depends(get_db)):
 # Security: HMAC compare_digest verification, amount from DB only.
 # No secrets stored in client. Webhook always returns 200.
 
-def _razorpay_client() -> razorpay.Client:
-    return razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+def _razorpay_create_order(amount_paise: int, receipt: str, notes: dict) -> dict:
+    resp = httpx.post(
+        "https://api.razorpay.com/v1/orders",
+        auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET),
+        json={"amount": amount_paise, "currency": "INR", "receipt": receipt, "notes": notes},
+        timeout=httpx.Timeout(30.0),
+    )
+    resp.raise_for_status()
+    return resp.json()
 
 
 def _create_intent_from_cart(body: RazorpayCreateOrderRequest, user_id: str, db: Session) -> tuple[PaymentIntent, int]:
@@ -1529,13 +1535,11 @@ def _create_intent_from_cart(body: RazorpayCreateOrderRequest, user_id: str, db:
 
     amount_paise = int(total * 100)
     try:
-        client = _razorpay_client()
-        razorpay_order = client.order.create({
-            "amount": amount_paise,
-            "currency": "INR",
-            "receipt": f"intent_{intent.id}",
-            "notes": {"intent_id": str(intent.id), "user_id": user_id},
-        })
+        razorpay_order = _razorpay_create_order(
+            amount_paise,
+            f"intent_{intent.id}",
+            {"intent_id": str(intent.id), "user_id": user_id},
+        )
     except Exception as e:
         db.rollback()
         logger.error("Razorpay order creation failed: %s", e)
@@ -1655,13 +1659,11 @@ def razorpay_create_order(body: RazorpayCreateOrderRequest, request: Request, db
     amount_paise = int(order.total_amount * 100)
 
     try:
-        client = _razorpay_client()
-        razorpay_order = client.order.create({
-            "amount": amount_paise,
-            "currency": "INR",
-            "receipt": str(order.id),
-            "notes": {"order_id": str(order.id), "user_id": user_id},
-        })
+        razorpay_order = _razorpay_create_order(
+            amount_paise,
+            str(order.id),
+            {"order_id": str(order.id), "user_id": user_id},
+        )
     except Exception as e:
         logger.error("Razorpay order creation failed: %s", e)
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Payment gateway error")
