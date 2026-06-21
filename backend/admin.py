@@ -17,7 +17,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, Category, Product, ProductImage, ProductFlag, Address, Order, Payment, DeliveryZone, ComboPack, ComboPackItem, Notification
+from models import User, Category, Product, ProductImage, ProductFlag, Address, Order, Payment, DeliveryZone, ComboPack, ComboPackItem, Banner, Notification
 from pydantic import BaseModel
 from schemas import (
     CategoryCreate, CategoryResponse,
@@ -26,6 +26,7 @@ from schemas import (
     DeliveryZoneCreate,
     ComboPackCreate, ComboPackUpdate, ComboPackResponse, ComboPackItemResponse, ComboPackItemInput,
     NotificationCreate, NotificationResponse,
+    BannerCreate, BannerUpdate, BannerResponse,
 )
 
 class SeedCatalogItem(BaseModel):
@@ -789,6 +790,25 @@ def delete_delivery_zone(zone_id: str, request: Request, db: Session = Depends(g
 # ─── NOTIFICATIONS ────────────────────────────────────────────────
 
 
+@router.get("/notifications", response_model=list[NotificationResponse])
+def list_admin_notifications(request: Request, db: Session = Depends(get_db)):
+    _require_admin(request, db)
+    notifications = db.query(Notification).filter(
+        Notification.is_deleted == False,
+    ).order_by(Notification.created_at.desc()).limit(100).all()
+    return [
+        NotificationResponse(
+            id=str(n.id),
+            title=n.title,
+            message=n.message,
+            type=n.type,
+            image_url=n.image_url,
+            link=n.link,
+            created_at=n.created_at,
+        ) for n in notifications
+    ]
+
+
 @router.post("/notifications", response_model=NotificationResponse, status_code=status.HTTP_201_CREATED)
 def create_notification(body: NotificationCreate, request: Request, db: Session = Depends(get_db)):
     _require_admin(request, db)
@@ -812,3 +832,111 @@ def create_notification(body: NotificationCreate, request: Request, db: Session 
         created_at=notif.created_at,
     )
 
+
+@router.delete("/notifications/{notification_id}", response_model=MessageResponse)
+def delete_notification(notification_id: str, request: Request, db: Session = Depends(get_db)):
+    _require_admin(request, db)
+    notif = db.query(Notification).filter(Notification.id == notification_id, Notification.is_deleted == False).first()
+    if not notif:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    notif.is_deleted = True
+    db.commit()
+    return MessageResponse(message="Notification deleted")
+
+
+# ─── BANNERS ──────────────────────────────────────────────────────
+
+
+@router.get("/banners", response_model=list[BannerResponse])
+def list_banners(request: Request, db: Session = Depends(get_db)):
+    _require_admin(request, db)
+    banners = db.query(Banner).filter(
+        Banner.is_deleted == False,
+    ).order_by(Banner.sort_order, Banner.created_at.desc()).all()
+    return [
+        BannerResponse(
+            id=str(b.id),
+            title=b.title,
+            subtitle=b.subtitle,
+            image_url=b.image_url,
+            link=b.link,
+            color=b.color,
+            is_active=b.is_active,
+            sort_order=b.sort_order,
+            created_at=b.created_at,
+        ) for b in banners
+    ]
+
+
+@router.post("/banners", response_model=BannerResponse, status_code=status.HTTP_201_CREATED)
+def create_banner(body: BannerCreate, request: Request, db: Session = Depends(get_db)):
+    _require_admin(request, db)
+    banner = Banner(
+        title=body.title.strip(),
+        subtitle=body.subtitle.strip() if body.subtitle else None,
+        image_url=body.image_url.strip() if body.image_url else None,
+        link=body.link.strip() if body.link else None,
+        color=body.color,
+        is_active=body.is_active,
+        sort_order=body.sort_order,
+    )
+    db.add(banner)
+    db.commit()
+    db.refresh(banner)
+    return BannerResponse(
+        id=str(banner.id),
+        title=banner.title,
+        subtitle=banner.subtitle,
+        image_url=banner.image_url,
+        link=banner.link,
+        color=banner.color,
+        is_active=banner.is_active,
+        sort_order=banner.sort_order,
+        created_at=banner.created_at,
+    )
+
+
+@router.put("/banners/{banner_id}", response_model=BannerResponse)
+def update_banner(banner_id: str, body: BannerUpdate, request: Request, db: Session = Depends(get_db)):
+    _require_admin(request, db)
+    banner = db.query(Banner).filter(Banner.id == banner_id, Banner.is_deleted == False).first()
+    if not banner:
+        raise HTTPException(status_code=404, detail="Banner not found")
+    if body.title is not None:
+        banner.title = body.title.strip()
+    if body.subtitle is not None:
+        banner.subtitle = body.subtitle.strip() if body.subtitle else None
+    if body.image_url is not None:
+        banner.image_url = body.image_url.strip() if body.image_url else None
+    if body.link is not None:
+        banner.link = body.link.strip() if body.link else None
+    if body.color is not None:
+        banner.color = body.color
+    if body.is_active is not None:
+        banner.is_active = body.is_active
+    if body.sort_order is not None:
+        banner.sort_order = body.sort_order
+    db.commit()
+    db.refresh(banner)
+    return BannerResponse(
+        id=str(banner.id),
+        title=banner.title,
+        subtitle=banner.subtitle,
+        image_url=banner.image_url,
+        link=banner.link,
+        color=banner.color,
+        is_active=banner.is_active,
+        sort_order=banner.sort_order,
+        created_at=banner.created_at,
+    )
+
+
+@router.delete("/banners/{banner_id}", response_model=MessageResponse)
+def delete_banner(banner_id: str, request: Request, db: Session = Depends(get_db)):
+    _require_admin(request, db)
+    banner = db.query(Banner).filter(Banner.id == banner_id, Banner.is_deleted == False).first()
+    if not banner:
+        raise HTTPException(status_code=404, detail="Banner not found")
+    banner.is_deleted = True
+    db.commit()
+    return MessageResponse(message="Banner deleted")

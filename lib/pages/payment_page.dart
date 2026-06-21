@@ -7,7 +7,7 @@ import '../widgets/app_snackbar.dart';
 import 'home_page.dart';
 import 'orders_page.dart';
 import 'delivery_location_page.dart';
-import 'payment_gateway_screen.dart';
+import 'payment_gateway_screen.dart' show PaymentGatewayScreen;
 
 class PaymentPage extends StatefulWidget {
   final int total;
@@ -108,29 +108,33 @@ class _PaymentPageState extends State<PaymentPage> {
           .map((i) => ({'product_id': i.productId, 'quantity': i.count}))
           .toList();
 
-      final order = await _api.createOrder(
+      final intent = await _api.createPaymentIntent(
         items,
-        _selectedMethod,
-        addressId: _addressId.isNotEmpty ? _addressId : null,
+        _addressId.isNotEmpty ? _addressId : null,
       );
-      final orderId = order['id'] as String?;
+      final intentId = intent['intent_id'] as String?;
 
-      if (orderId != null) {
-        setState(() => _processing = false);
-        if (!mounted) return;
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) =>
-                PaymentGatewayScreen(
-                  orderId: orderId,
-                  total: widget.total,
-                  onPaymentSuccess: () => cartNotifier.clear(),
-                ),
-          ),
-        );
-        return;
+      if (intentId == null) {
+        throw Exception('Failed to create payment intent');
       }
+
+      setState(() => _processing = false);
+      if (!mounted) return;
+
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) =>
+              PaymentGatewayScreen(
+                intentId: intentId,
+                total: widget.total,
+                razorpayOrderId: intent['razorpay_order_id'] as String?,
+                razorpayKeyId: intent['key_id'] as String?,
+                razorpayAmount: intent['amount'] as int?,
+                onPaymentSuccess: () => cartNotifier.clear(),
+              ),
+        ),
+      );
     } catch (e) {
       if (mounted) setState(() => _processing = false);
       if (!mounted) return;
@@ -139,7 +143,6 @@ class _PaymentPageState extends State<PaymentPage> {
         'Failed to place order. $e',
         type: SnackbarType.error,
       );
-      return;
     }
   }
 
@@ -500,7 +503,7 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: AppColors.warningLight,
+                    color: AppColors.successLight,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(
@@ -508,12 +511,12 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFF3CD),
+                          color: AppColors.success.withAlpha(20),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(
-                          Icons.hourglass_empty,
-                          color: AppColors.primaryLight,
+                          Icons.check_circle,
+                          color: AppColors.success,
                           size: 28,
                         ),
                       ),
@@ -523,7 +526,7 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'Order Pending',
+                              'Order Confirmed',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,

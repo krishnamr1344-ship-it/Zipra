@@ -603,16 +603,21 @@ class PaymentResponse(BaseModel):
 # ─── RAZORPAY ─────────────────────────────────────────────────────
 
 class RazorpayCreateOrderRequest(BaseModel):
-    order_id: str
+    order_id: Optional[str] = None
+    cart_items: Optional[list[OrderItemInput]] = None
+    address_id: Optional[str] = None
+    phone: Optional[str] = None
 
 class RazorpayCreateOrderResponse(BaseModel):
     razorpay_order_id: str
     amount: int
     currency: str = "INR"
     key_id: str
+    intent_id: Optional[str] = None
 
 class RazorpayVerifyRequest(BaseModel):
-    order_id: str
+    order_id: Optional[str] = None
+    intent_id: Optional[str] = None
     razorpay_payment_id: str
     razorpay_signature: str
 
@@ -900,6 +905,66 @@ class AppVersionResponse(BaseModel):
     latest_version: str
     apk_download_url: str
     release_notes: Optional[str] = None
+
+
+class BannerCreate(BaseModel):
+    title: str
+    subtitle: Optional[str] = None
+    image_url: Optional[str] = None
+    link: Optional[str] = None
+    color: str = "FF6B00"
+    is_active: bool = True
+    sort_order: int = 0
+
+    @field_validator("title")
+    @classmethod
+    def valid_title(cls, v):
+        v = v.strip()
+        if not v:
+            raise ValueError("Title is required")
+        if len(v) > 200:
+            raise ValueError("Title must not exceed 200 characters")
+        return v
+
+    @field_validator("subtitle")
+    @classmethod
+    def valid_subtitle(cls, v):
+        if v and len(v) > 500:
+            raise ValueError("Subtitle must not exceed 500 characters")
+        return v
+
+    @field_validator("color")
+    @classmethod
+    def valid_color(cls, v):
+        v = v.strip()
+        if not v or len(v) > 20:
+            raise ValueError("Invalid color value")
+        return v
+
+
+class BannerUpdate(BaseModel):
+    title: Optional[str] = None
+    subtitle: Optional[str] = None
+    image_url: Optional[str] = None
+    link: Optional[str] = None
+    color: Optional[str] = None
+    is_active: Optional[bool] = None
+    sort_order: Optional[int] = None
+
+
+class BannerResponse(BaseModel):
+    id: str
+    title: str
+    subtitle: Optional[str] = None
+    image_url: Optional[str] = None
+    link: Optional[str] = None
+    color: str
+    is_active: bool
+    sort_order: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 class NotificationCreate(BaseModel):

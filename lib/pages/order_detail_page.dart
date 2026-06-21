@@ -102,10 +102,12 @@ class _StatusBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final failed = order.status == 'Failed';
+    if (failed) return _buildFailedStatus(context);
+
     final steps = ['Placed', 'Confirmed', 'Shipped', 'Delivered'];
     final active = _activeIndex;
     final cancelled = order.status == 'Cancelled';
-    final failed = order.status == 'Failed';
 
     return Container(
       width: double.infinity,
@@ -158,7 +160,7 @@ class _StatusBox extends StatelessWidget {
                 final isDone = i < active;
                 final isCurrent = i == active;
                 final isLast = i == steps.length - 1;
-                final terminal = cancelled || failed;
+                final terminal = cancelled;
                 final done = terminal ? i == 0 : isDone;
                 final curr = terminal ? false : isCurrent;
 
@@ -189,7 +191,7 @@ class _StatusBox extends StatelessWidget {
                             ),
                             child: Center(
                               child: terminal && i > 0
-                                  ? Icon(failed ? Icons.error_outline : Icons.close, size: 14, color: Colors.red.withAlpha(150))
+                                  ? Icon(Icons.close, size: 14, color: Colors.red.withAlpha(150))
                                   : done
                                       ? const Icon(Icons.check, size: 16, color: Colors.white)
                                       : curr
@@ -243,6 +245,98 @@ class _StatusBox extends StatelessWidget {
                   ),
                 );
               }),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFailedStatus(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 3))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withAlpha(20),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.error_outline, size: 22, color: AppColors.error),
+              ),
+              const SizedBox(width: 12),
+              const Text('Payment Failed', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withAlpha(20),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text('Failed', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.error)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.error.withAlpha(8),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.error.withAlpha(18)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.payment, size: 24, color: AppColors.error),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Payment could not be processed',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Your order has been placed but payment failed. Click "Retry Payment" to try again with a different payment method.',
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.4),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+            decoration: BoxDecoration(
+              color: Colors.amber.withAlpha(12),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.amber.withAlpha(30)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, size: 18, color: Colors.amber),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Your items are still reserved. Complete payment within the time limit to avoid order cancellation.',
+                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.4),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

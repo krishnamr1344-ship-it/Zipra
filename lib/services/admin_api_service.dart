@@ -179,10 +179,60 @@ class AdminApiService {
     }
   }
 
+  // ─── Notifications ──────────────────────────────────────────────────
+
+  Future<List<dynamic>> getNotifications() async {
+    final res = await http.get(Uri.parse('$_baseUrl/api/admin/notifications'), headers: await _authHeader()).timeout(_timeout);
+    if (res.statusCode != 200) throw ApiException('Failed to load notifications');
+    return _decodeJson(res.body);
+  }
+
+  Future<Map<String, dynamic>> createNotification(Map<String, dynamic> data) async {
+    final res = await http.post(Uri.parse('$_baseUrl/api/admin/notifications'), headers: await _authHeader(), body: jsonEncode(data)).timeout(_timeout);
+    if (res.statusCode != 201) throw ApiException(_decodeJson(res.body)['detail'] ?? 'Failed to create notification');
+    return _decodeJson(res.body);
+  }
+
+  Future<void> deleteNotification(String id) async {
+    final res = await http.delete(Uri.parse('$_baseUrl/api/admin/notifications/$id'), headers: await _authHeader()).timeout(_timeout);
+    if (res.statusCode != 200) {
+      final msg = _decodeJson(res.body)['detail'] ?? 'Failed to delete notification';
+      throw ApiException('$msg');
+    }
+  }
+
   Future<void> deleteDeliveryZone(String id) async {
     final res = await http.delete(Uri.parse('$_baseUrl/api/admin/delivery-zones/$id'), headers: await _authHeader()).timeout(_timeout);
     if (res.statusCode != 200) {
       final msg = _decodeJson(res.body)['detail'] ?? 'Failed to delete zone';
+      throw ApiException('$msg');
+    }
+  }
+
+  // ─── Banners ──────────────────────────────────────────────────────
+
+  Future<List<dynamic>> getBanners() async {
+    final res = await http.get(Uri.parse('$_baseUrl/api/admin/banners'), headers: await _authHeader()).timeout(_timeout);
+    if (res.statusCode != 200) throw ApiException('Failed to load banners');
+    return _decodeJson(res.body);
+  }
+
+  Future<Map<String, dynamic>> createBanner(Map<String, dynamic> data) async {
+    final res = await http.post(Uri.parse('$_baseUrl/api/admin/banners'), headers: await _authHeader(), body: jsonEncode(data)).timeout(_timeout);
+    if (res.statusCode != 201) throw ApiException(_decodeJson(res.body)['detail'] ?? 'Failed to create banner');
+    return _decodeJson(res.body);
+  }
+
+  Future<Map<String, dynamic>> updateBanner(String id, Map<String, dynamic> data) async {
+    final res = await http.put(Uri.parse('$_baseUrl/api/admin/banners/$id'), headers: await _authHeader(), body: jsonEncode(data)).timeout(_timeout);
+    if (res.statusCode != 200) throw ApiException(_decodeJson(res.body)['detail'] ?? 'Failed to update banner');
+    return _decodeJson(res.body);
+  }
+
+  Future<void> deleteBanner(String id) async {
+    final res = await http.delete(Uri.parse('$_baseUrl/api/admin/banners/$id'), headers: await _authHeader()).timeout(_timeout);
+    if (res.statusCode != 200) {
+      final msg = _decodeJson(res.body)['detail'] ?? 'Failed to delete banner';
       throw ApiException('$msg');
     }
   }

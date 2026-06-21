@@ -33,8 +33,8 @@ from shapely.geometry import shape as shapely_shape, Point
 from database import get_db
 from models import (
     User, Category, Product, ProductImage, ProductFlag, Address, CartItem,
-    Order, OrderItem, Payment, DeliveryZone, ComboPack, ComboPackItem, ProductSuggestion,
-    WishlistItem, AppVersion, Notification,
+    Order, OrderItem, Payment, PaymentIntent, DeliveryZone, ComboPack, ComboPackItem, ProductSuggestion,
+    WishlistItem, AppVersion, Banner, Notification,
 )
 from schemas import (
     CategoryCreate, CategoryResponse,
@@ -48,7 +48,7 @@ from schemas import (
     ComboPackItemInput, ComboPackItemResponse, ComboPackResponse, PackAddRequest,
     SuggestProductRequest,
     WishlistAddRequest, WishlistItemResponse,
-    AppVersionResponse, NotificationResponse,
+    AppVersionResponse, NotificationResponse, BannerResponse,
 )
 from config import RAZORPAY_ENABLED, RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET
 
@@ -486,6 +486,14 @@ def _get_order_or_404(order_id: str, user_id: str, db: Session) -> Order:
     return order
 
 
+def _get_product_image(product: Optional[Product]) -> Optional[str]:
+    if not product:
+        return None
+    img = next((img.image_url for img in product.images if not img.is_deleted), None)
+    if img:
+        return img
+    return product.image if product.image else None
+
 def _cart_item_to_response(item: CartItem) -> CartItemResponse:
     product = item.product
     selling_price = round(float(product.price) * (100 - product.discount_percent) / 100, 2) if product else 0
@@ -495,7 +503,7 @@ def _cart_item_to_response(item: CartItem) -> CartItemResponse:
         product_name=product.name if product else '',
         product_price=selling_price,
         product_unit=product.unit if product else '',
-        product_image=next((img.image_url for img in product.images if not img.is_deleted), None) if product else None,
+        product_image=_get_product_image(product),
         quantity=item.quantity,
         subtotal=round(selling_price * item.quantity, 2),
     )
@@ -1456,10 +1464,127 @@ def _razorpay_client() -> razorpay.Client:
     return razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
 
+def _create_intent_from_cart(body: RazorpayCreateOrderRequest, user_id: str, db: Session) -> tuple[PaymentIntent, int]:
+    """Create a PaymentIntent from raw cart items, validate stock, compute amount."""
+    total = Decimal("0.00")
+    products = []
+    for item in body.cart_items:
+        product = _get_product_or_404(str(item.product_id), db, for_update=True)
+        if product.stock < item.quantity:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Insufficient stock for {product.name}. Please try again later.",
+            )
+        disc = Decimal(str(product.discount_percent or 0))
+        selling_price = (product.price * (100 - disc) / 100).quantize(Decimal("0.01"))
+        total += selling_price * item.quantity
+        products.append({
+            "product_id": str(product.id),
+            "product_name": product.name,
+            "product_price": str(selling_price),
+            "quantity": item.quantity,
+            "subtotal": str(selling_price * item.quantity),
+        })
+
+    intent = PaymentIntent(
+        user_id=user_id,
+        amount=total,
+        cart_data=json.dumps(products),
+        address_id=body.address_id,
+        phone=body.phone,
+    )
+    db.add(intent)
+    db.flush()
+
+    addr_id = body.address_id
+    if addr_id:
+        _validate_uuid(addr_id)
+        addr = db.query(Address).filter(
+            Address.id == addr_id,
+            Address.user_id == user_id,
+            Address.is_deleted == False,
+        ).first()
+        if addr and addr.latitude is not None and addr.longitude is not None:
+            zones = db.query(DeliveryZone).filter(
+                DeliveryZone.is_deleted == False,
+                DeliveryZone.is_active == True,
+            ).all()
+            if zones:
+                point = Point(float(addr.longitude), float(addr.latitude))
+                in_zone = False
+                for z in zones:
+                    try:
+                        geom = json.loads(z.geojson_data)
+                        polygon = shapely_shape(geom)
+                        if polygon.contains(point):
+                            in_zone = True
+                            break
+                    except Exception:
+                        continue
+                if not in_zone:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Delivery not available in your area",
+                    )
+
+    amount_paise = int(total * 100)
+    try:
+        client = _razorpay_client()
+        razorpay_order = client.order.create({
+            "amount": amount_paise,
+            "currency": "INR",
+            "receipt": f"intent_{intent.id}",
+            "notes": {"intent_id": str(intent.id), "user_id": user_id},
+        })
+    except Exception as e:
+        db.rollback()
+        logger.error("Razorpay order creation failed: %s", e)
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Payment gateway error")
+
+    razorpay_order_id = razorpay_order.get("id")
+    if not razorpay_order_id:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Invalid response from payment gateway")
+
+    intent.razorpay_order_id = razorpay_order_id
+    db.commit()
+    return intent, amount_paise
+
+
+def _create_order_from_intent(intent: PaymentIntent, user_id: str, status: str, db: Session) -> Order:
+    """Create Order + OrderItems from a PaymentIntent's stored cart data."""
+    total = Decimal(str(intent.amount))
+    order = Order(
+        user_id=user_id,
+        address_id=intent.address_id,
+        total_amount=total,
+        payment_method="Razorpay",
+        status=status,
+    )
+    db.add(order)
+    db.flush()
+
+    products = json.loads(intent.cart_data)
+    for p in products:
+        oi = OrderItem(
+            order_id=order.id,
+            product_id=p["product_id"],
+            product_name=p["product_name"],
+            product_price=Decimal(p["product_price"]),
+            quantity=p["quantity"],
+            subtotal=Decimal(p["subtotal"]),
+        )
+        db.add(oi)
+    db.flush()
+    return order
+
+
 @router.post("/payments/create-order", response_model=RazorpayCreateOrderResponse)
 def razorpay_create_order(body: RazorpayCreateOrderRequest, request: Request, db: Session = Depends(get_db)):
-    """Create a Razorpay order for a previously created system order.
-    Returns razorpay_order_id, amount (paise), and key_id to the client.
+    """Create a Razorpay order.
+    - With order_id (retry): use existing failed/pending order.
+    - With cart_items (first attempt): create PaymentIntent from cart.
+    Returns razorpay_order_id, amount (paise), key_id, and intent_id.
     """
     if not RAZORPAY_ENABLED:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Online payments are currently disabled")
@@ -1468,8 +1593,22 @@ def razorpay_create_order(body: RazorpayCreateOrderRequest, request: Request, db
 
     user_id = _get_user_id(request)
     _get_user(user_id, db)
-    _validate_uuid(body.order_id)
 
+    # New flow: create PaymentIntent from cart items
+    if body.cart_items:
+        intent, amount_paise = _create_intent_from_cart(body, user_id, db)
+        return RazorpayCreateOrderResponse(
+            razorpay_order_id=intent.razorpay_order_id,
+            amount=amount_paise,
+            key_id=RAZORPAY_KEY_ID,
+            intent_id=str(intent.id),
+        )
+
+    # Legacy retry flow: existing order
+    if not body.order_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Provide order_id (retry) or cart_items (new order)")
+
+    _validate_uuid(body.order_id)
     order = db.query(Order).filter(
         Order.id == body.order_id,
         Order.user_id == user_id,
@@ -1484,7 +1623,6 @@ def razorpay_create_order(body: RazorpayCreateOrderRequest, request: Request, db
     if order.status not in ("Pending", "Failed"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order already paid")
 
-    # Re-verify stock availability before creating Razorpay order (prevents retry of out-of-stock orders)
     items = db.query(OrderItem).filter(
         OrderItem.order_id == order.id,
         OrderItem.is_deleted == False,
@@ -1497,7 +1635,6 @@ def razorpay_create_order(body: RazorpayCreateOrderRequest, request: Request, db
                 detail=f"Insufficient stock for {product.name}. Please try again later.",
             )
 
-    # Check for existing successful payment
     existing_success = db.query(Payment).filter(
         Payment.order_id == order.id,
         Payment.status == "success",
@@ -1506,7 +1643,6 @@ def razorpay_create_order(body: RazorpayCreateOrderRequest, request: Request, db
     if existing_success:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order already paid")
 
-    # Remove old non-successful payments (one-to-one constraint)
     old_payments = db.query(Payment).filter(
         Payment.order_id == order.id,
         Payment.status != "success",
@@ -1516,7 +1652,6 @@ def razorpay_create_order(body: RazorpayCreateOrderRequest, request: Request, db
         db.delete(p)
     db.flush()
 
-    # Amount in paise (smallest currency unit)
     amount_paise = int(order.total_amount * 100)
 
     try:
@@ -1557,14 +1692,99 @@ def razorpay_create_order(body: RazorpayCreateOrderRequest, request: Request, db
 def razorpay_verify(body: RazorpayVerifyRequest, request: Request, db: Session = Depends(get_db)):
     """Verify Razorpay payment signature after client-side checkout success.
     Uses hmac.compare_digest to prevent timing attacks.
+    Supports both intent-based (new) and order-based (retry) flows.
     """
     if not RAZORPAY_ENABLED:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Online payments are currently disabled")
 
     user_id = _get_user_id(request)
     _get_user(user_id, db)
-    _validate_uuid(body.order_id)
 
+    # ─── New flow: verify by intent_id, create Order from PaymentIntent ───
+    if body.intent_id:
+        intent = db.query(PaymentIntent).filter(
+            PaymentIntent.id == body.intent_id,
+            PaymentIntent.user_id == user_id,
+            PaymentIntent.is_deleted == False,
+        ).first()
+        if not intent:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment intent not found")
+        if not intent.razorpay_order_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Payment not initiated with gateway")
+
+        gateway_order_id = intent.razorpay_order_id
+
+        # HMAC verification
+        expected_signature = hmac.new(
+            RAZORPAY_KEY_SECRET.encode("utf-8"),
+            f"{gateway_order_id}|{body.razorpay_payment_id}".encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
+
+        # Check for duplicate gateway_payment_id
+        duplicate = db.query(Payment).filter(
+            Payment.gateway_payment_id == body.razorpay_payment_id,
+            Payment.status == "success",
+            Payment.is_deleted == False,
+        ).first()
+
+        hmac_ok = hmac.compare_digest(expected_signature, body.razorpay_signature)
+
+        if not hmac_ok or duplicate:
+            order = _create_order_from_intent(intent, user_id, "Failed", db)
+            payment = Payment(
+                order_id=order.id,
+                user_id=user_id,
+                amount=intent.amount,
+                method="Razorpay",
+                status="failed",
+                gateway_order_id=gateway_order_id,
+                gateway_payment_id=body.razorpay_payment_id,
+                gateway_signature=body.razorpay_signature,
+                failure_reason="Duplicate payment ID" if duplicate else "Signature verification failed",
+                intent_id=intent.id,
+            )
+            db.add(payment)
+            intent.is_deleted = True
+            db.commit()
+            db.refresh(payment)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Payment verification failed",
+            )
+
+        # Success: create Order, confirm, deduct stock
+        order = _create_order_from_intent(intent, user_id, "Pending", db)
+
+        try:
+            payment = _confirm_order_payment(order, user_id, "Razorpay", db)
+            order.status = "Confirmed"
+            payment.gateway_payment_id = body.razorpay_payment_id
+            payment.gateway_signature = body.razorpay_signature
+            payment.gateway_order_id = gateway_order_id
+            payment.intent_id = intent.id
+
+            cart_items = db.query(CartItem).filter(
+                CartItem.user_id == user_id,
+                CartItem.is_deleted == False,
+            ).all()
+            for ci in cart_items:
+                ci.is_deleted = True
+
+            intent.is_deleted = True
+            db.commit()
+            db.refresh(payment)
+        except Exception:
+            db.rollback()
+            raise
+
+        return _payment_to_response(payment)
+
+    # ─── Legacy flow: verify by order_id (retry) ───
+    if not body.order_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Provide order_id or intent_id")
+
+    _validate_uuid(body.order_id)
     order = db.query(Order).filter(
         Order.id == body.order_id,
         Order.user_id == user_id,
@@ -1576,7 +1796,6 @@ def razorpay_verify(body: RazorpayVerifyRequest, request: Request, db: Session =
     if order.status not in ("Pending", "Failed"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order already paid")
 
-    # Find the pending payment for this order
     payment = db.query(Payment).filter(
         Payment.order_id == order.id,
         Payment.status == "pending",
@@ -1588,7 +1807,6 @@ def razorpay_verify(body: RazorpayVerifyRequest, request: Request, db: Session =
     if not payment.gateway_order_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Payment not initiated with gateway")
 
-    # HMAC verification: SHA256(razorpay_order_id + "|" + razorpay_payment_id) using key_secret
     expected_signature = hmac.new(
         RAZORPAY_KEY_SECRET.encode("utf-8"),
         f"{payment.gateway_order_id}|{body.razorpay_payment_id}".encode("utf-8"),
@@ -1602,7 +1820,6 @@ def razorpay_verify(body: RazorpayVerifyRequest, request: Request, db: Session =
         db.commit()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Payment verification failed")
 
-    # Check for duplicate gateway_payment_id (reuse attack)
     duplicate = db.query(Payment).filter(
         Payment.gateway_payment_id == body.razorpay_payment_id,
         Payment.status == "success",
@@ -1629,6 +1846,42 @@ def razorpay_verify(body: RazorpayVerifyRequest, request: Request, db: Session =
         raise
 
     return _payment_to_response(payment)
+
+
+@router.post("/payments/cancel/{intent_id}")
+def razorpay_cancel_intent(intent_id: str, request: Request, db: Session = Depends(get_db)):
+    """Cancel a payment intent. Creates a Failed order from the stored cart data.
+    Called when the user closes Razorpay without completing payment.
+    """
+    user_id = _get_user_id(request)
+    _get_user(user_id, db)
+    _validate_uuid(intent_id)
+
+    intent = db.query(PaymentIntent).filter(
+        PaymentIntent.id == intent_id,
+        PaymentIntent.user_id == user_id,
+        PaymentIntent.is_deleted == False,
+    ).with_for_update().first()
+    if not intent:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment intent not found")
+
+    order = _create_order_from_intent(intent, user_id, "Failed", db)
+    payment = Payment(
+        order_id=order.id,
+        user_id=user_id,
+        amount=intent.amount,
+        method="Razorpay",
+        status="failed",
+        gateway_order_id=intent.razorpay_order_id,
+        failure_reason="Payment cancelled by user",
+        intent_id=intent.id,
+    )
+    db.add(payment)
+    intent.is_deleted = True
+    db.commit()
+    db.refresh(payment)
+
+    return {"order_id": str(order.id), "status": "cancelled"}
 
 
 @router.post("/payments/webhook")
@@ -1875,6 +2128,31 @@ def get_latest_app_version(db: Session = Depends(get_db)):
         apk_download_url=record.apk_download_url,
         release_notes=record.release_notes,
     )
+
+
+# ─── BANNERS ───────────────────────────────────────────────────────
+
+
+@router.get("/banners", response_model=list[BannerResponse])
+def list_banners(request: Request, db: Session = Depends(get_db)):
+    _get_user_id(request)
+    banners = db.query(Banner).filter(
+        Banner.is_deleted == False,
+        Banner.is_active == True,
+    ).order_by(Banner.sort_order, Banner.created_at.desc()).all()
+    return [
+        BannerResponse(
+            id=str(b.id),
+            title=b.title,
+            subtitle=b.subtitle,
+            image_url=b.image_url,
+            link=b.link,
+            color=b.color,
+            is_active=b.is_active,
+            sort_order=b.sort_order,
+            created_at=b.created_at,
+        ) for b in banners
+    ]
 
 
 # ─── NOTIFICATIONS ────────────────────────────────────────────────

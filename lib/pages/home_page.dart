@@ -46,6 +46,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   bool _detecting = false;
 
   List<String> _categories = ['All'];
+  List<Map<String, dynamic>> _categoriesData = [];
   List<Map<String, dynamic>> _allProducts = [];
   bool _loadingProducts = true;
   bool _error = false;
@@ -58,37 +59,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   Timer? _carouselTimer;
   final _catCarouselController = PageController();
   int _currentCatCarouselPage = 0;
+  bool _canPop = false;
 
   static const _orange = Color(0xFFFF6B00);
   static const _orangeSecondary = Color(0xFFFF8F00);
   static const _bgWarm = Color(0xFFFFF8F3);
 
-  static const _offerBanners = [
-    {
-      'title': 'Weekend Special',
-      'subtitle': 'Extra 20% off on all snacks',
-      'color': 0xFFFF6B00,
-      'emoji': '\u{1F6CD}\uFE0F',
-    },
-    {
-      'title': 'Fresh Arrivals',
-      'subtitle': 'Farm-fresh fruits & vegetables',
-      'color': 0xFFFF8F00,
-      'emoji': '\u{1F353}\u{1F96C}',
-    },
-    {
-      'title': 'Free Delivery',
-      'subtitle': 'On orders above \u20B9499',
-      'color': 0xFFE65100,
-      'emoji': '\u{1F69A}',
-    },
-    {
-      'title': 'New Launch',
-      'subtitle': 'Premium dry fruits collection',
-      'color': 0xFFFF6B00,
-      'emoji': '\u{1F330}',
-    },
-  ];
+  List<Map<String, dynamic>> _banners = [];
 
   @override
   void initState() {
@@ -129,7 +106,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       if (!mounted) return;
       try {
         if (_heroCarouselController.hasClients) {
-          final next = (_currentHeroPage + 1) % _offerBanners.length;
+          final len = _banners.length;
+          if (len == 0) return;
+          final next = (_currentHeroPage + 1) % len;
           _heroCarouselController.animateToPage(
             next,
             duration: const Duration(milliseconds: 400),
@@ -270,6 +249,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         final prods = await _api.getProducts();
         if (!mounted) return;
         setState(() {
+          _categoriesData = cats.cast<Map<String, dynamic>>();
           _categories = [
             'All',
             ...cats.map<String>((c) => c['name'] as String),
@@ -277,6 +257,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           _allProducts = prods.cast<Map<String, dynamic>>();
           _loadingProducts = false;
         });
+        _loadBanners();
         return;
       } catch (e) {
         debugPrint('HomePage._loadData attempt $attempt/$maxRetries error: $e');
@@ -303,8 +284,47 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       final userData = await _api.getSavedUser();
       if (!mounted) return;
       setState(() => _user = userData);
+      await _api.getCategories();
     } catch (e) {
+      if (_isAuthError(e)) {
+        await _handleExpiredToken();
+        return;
+      }
       debugPrint("pages.home_page: $e");
+    }
+  }
+
+  bool _isAuthError(dynamic e) {
+    final msg = e.toString().toLowerCase();
+    return msg.contains('401') || msg.contains('unauthorized') || msg.contains('token expired') || msg.contains('not authenticated');
+  }
+
+  Future<void> _handleExpiredToken() async {
+    await _api.logout();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (route) => false,
+    );
+  }
+
+  Future<void> _loadBanners() async {
+    try {
+      final data = await _api.getBanners();
+      if (!mounted) return;
+      setState(() {
+        _banners = data.map<Map<String, dynamic>>((b) {
+          final banner = b as Map<String, dynamic>;
+          final hexColor = (banner['color'] as String?) ?? 'FF6B00';
+          return {
+            'title': banner['title'] as String? ?? '',
+            'subtitle': banner['subtitle'] as String? ?? '',
+            'color': int.parse('FF$hexColor', radix: 16),
+          };
+        }).toList();
+      });
+    } catch (e) {
+      debugPrint('pages.home_page:_loadBanners $e');
     }
   }
 
@@ -392,9 +412,35 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       _buildAccount(initial, name),
     ];
 
-    return Scaffold(
-      body: IndexedStack(index: _selectedIndex, children: pages),
-      bottomNavigationBar: _buildBottomNav(),
+    return PopScope(
+      canPop: _canPop,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        if (_selectedIndex != 0) {
+          setState(() => _selectedIndex = 0);
+          return;
+        }
+        final exit = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Text('Exit App'),
+            content: const Text('Are you sure you want to exit?'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+              TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Exit', style: TextStyle(color: AppColors.error))),
+            ],
+          ),
+        );
+        if (exit == true && context.mounted) {
+          setState(() => _canPop = true);
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
+        body: IndexedStack(index: _selectedIndex, children: pages),
+        bottomNavigationBar: _buildBottomNav(),
+      ),
     );
   }
 
@@ -541,7 +587,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   Widget _buildHeaderAvatar(String initial) {
     final imageUrl = _user?['profile_image'] as String? ?? '';
     return GestureDetector(
-      onTap: () => setState(() => _selectedIndex = 4),
+      onTap: () async {
+        if (!await _requireLogin()) return;
+        setState(() => _selectedIndex = 4);
+      },
       child: Container(
         width: 34,
         height: 34,
@@ -1118,9 +1167,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             child: PageView.builder(
               controller: _heroCarouselController,
               onPageChanged: (i) => setState(() => _currentHeroPage = i),
-              itemCount: _offerBanners.length,
+              itemCount: _banners.length,
               itemBuilder: (_, i) {
-                final b = _offerBanners[i];
+                final b = _banners[i];
                 final color = Color(b['color'] as int);
                 return Container(
                   decoration: BoxDecoration(
@@ -1167,22 +1216,25 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                 ),
                               ),
                               const SizedBox(height: 14),
-                              Container(
-                                height: 36,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(18),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    'Shop Now',
-                                    style: TextStyle(
-                                      color: color,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
+                              GestureDetector(
+                                onTap: () => setState(() => _selectedIndex = 1),
+                                child: Container(
+                                  height: 36,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(18),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      'Shop Now',
+                                      style: TextStyle(
+                                        color: color,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -1204,7 +1256,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                             ),
                             child: Center(
                               child: Text(
-                                b['emoji'] as String,
+                                b['emoji'] as String? ?? '\u{1F6CD}\uFE0F',
                                 style: const TextStyle(fontSize: 46),
                               ),
                             ),
@@ -1221,7 +1273,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           // Dots
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(_offerBanners.length, (i) {
+            children: List.generate(_banners.length, (i) {
               return AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
                 margin: const EdgeInsets.symmetric(horizontal: 3),
@@ -1403,57 +1455,52 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     final cats = _categories.where((c) => c != 'All').toList();
     final safeTop = MediaQuery.of(context).padding.top;
 
-    final catMeta = <String, Map<String, dynamic>>{
+    const catMetaFallback = <String, Map<String, dynamic>>{
       'Fresh Dairy': {
-        'image':
-            'https://placehold.co/200x200/FFF3E0/E65100?text=Milk&font=raleway',
         'gradient': [0xFFFFF3E0, 0xFFFFE0B2],
-        'badge': 'HOT',
         'emoji': '\u{1F95B}',
       },
       'Rice & Grocery': {
-        'image':
-            'https://placehold.co/200x200/FFF8E1/F57F17?text=Rice&font=raleway',
         'gradient': [0xFFFFF8E1, 0xFFFFECB3],
-        'badge': 'BESTSELLER',
         'emoji': '\u{1F35E}',
       },
       'Dals': {
-        'image':
-            'https://placehold.co/200x200/FFF3E0/E65100?text=Dals&font=raleway',
         'gradient': [0xFFFFF3E0, 0xFFFFCC80],
-        'badge': null,
         'emoji': '\u{1F330}',
       },
       'Oils': {
-        'image':
-            'https://placehold.co/200x200/FFF3E0/E65100?text=Oils&font=raleway',
         'gradient': [0xFFFFF3E0, 0xFFFFCC80],
-        'badge': null,
         'emoji': '\u{1F6ED}',
       },
       'Masala': {
-        'image':
-            'https://placehold.co/200x200/FBE9E7/D32F2F?text=Masala&font=raleway',
         'gradient': [0xFFFBE9E7, 0xFFFFCDD2],
-        'badge': 'NEW',
         'emoji': '\u{1F336}\uFE0F',
       },
       'Tea & Beverages': {
-        'image':
-            'https://placehold.co/200x200/FFF3E0/E65100?text=Tea&font=raleway',
         'gradient': [0xFFFFF3E0, 0xFFFFE0B2],
-        'badge': 'HOT',
         'emoji': '\u2615',
       },
       'Bathroom & Personal Care': {
-        'image':
-            'https://placehold.co/200x200/FCE4EC/AD1457?text=Care&font=raleway',
         'gradient': [0xFFFCE4EC, 0xFFF8BBD0],
-        'badge': null,
         'emoji': '\u{1F9F4}',
       },
     };
+
+    Map<String, dynamic> catMeta(Map<String, dynamic> catData) {
+      final name = catData['name'] as String;
+      final fallback = catMetaFallback[name] ?? catMetaFallback.values.first;
+      return <String, dynamic>{
+        'image': catData['image'] as String?,
+        'gradient': fallback['gradient'],
+        'emoji': fallback['emoji'],
+      };
+    }
+
+    final catMetaMap = <String, Map<String, dynamic>>{};
+    for (final catData in _categoriesData) {
+      final name = catData['name'] as String;
+      catMetaMap[name] = catMeta(catData);
+    }
 
     final catCounts = <String, int>{};
     for (final p in _allProducts) {
@@ -1611,14 +1658,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               itemBuilder: (_, i) {
                 final cat = topOrdered[i];
                 final meta =
-                    catMeta[cat] ??
+                    catMetaMap[cat] ??
                     <String, dynamic>{
                       'emoji': '\u{1F6D2}',
                       'gradient': [0xFFFFF3E0, 0xFFFFE0B2],
-                      'badge': null,
                     };
                 final gradients = meta['gradient'] as List<int>;
-                final badge = meta['badge'] as String?;
+                final badge = null;
                 return GestureDetector(
                   onTap: () {
                     HapticFeedback.lightImpact();
@@ -1736,13 +1782,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 controller: _catCarouselController,
                 onPageChanged: (i) =>
                     setState(() => _currentCatCarouselPage = i),
-                itemCount: _offerBanners.length,
+                itemCount: _banners.length,
                 itemBuilder: (_, i) {
-                  final banner = _offerBanners[i];
+                  final banner = _banners[i];
                   final title = banner['title'] as String;
                   final subtitle = banner['subtitle'] as String;
                   final color = banner['color'] as int;
-                  final emoji = banner['emoji'] as String;
+                  final emoji = banner['emoji'] as String? ?? '\u{1F6CD}\uFE0F';
                   return Container(
                     margin: const EdgeInsets.only(right: 0),
                     padding: const EdgeInsets.all(16),
@@ -1789,21 +1835,24 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Text(
-                                  'Shop Now \u2192',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
+                              GestureDetector(
+                                onTap: () => setState(() => _selectedIndex = 1),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Text(
+                                    'Shop Now \u2192',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -1834,7 +1883,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             // Dots indicator
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(_offerBanners.length, (i) {
+              children: List.generate(_banners.length, (i) {
                 return AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
                   margin: const EdgeInsets.symmetric(horizontal: 2.5),
@@ -2030,11 +2079,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     itemBuilder: (_, i) {
                       final cat = cats[i];
                       final meta =
-                          catMeta[cat] ??
+                          catMetaMap[cat] ??
                           <String, dynamic>{
-                            'image': '',
+                            'image': null,
                             'gradient': [0xFFF5F5F5, 0xFFEEEEEE],
-                            'badge': null,
                             'emoji': '\u{1F6D2}',
                           };
                       return buildCategoryCard(cat, meta);

@@ -21,7 +21,6 @@ class PaymentsPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          _paymentTile(Icons.money_outlined, 'Cash on Delivery', 'Pay when you receive your order'),
           _paymentTile(Icons.credit_card_outlined, 'Online Payment', 'Credit/Debit Card, UPI, Net Banking'),
         ],
       ),

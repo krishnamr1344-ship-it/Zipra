@@ -214,12 +214,14 @@ class Payment(Base):
     gateway_payment_id = Column(String(100), nullable=True)
     gateway_signature = Column(String(500), nullable=True)
     failure_reason = Column(String(1000), nullable=True)
+    intent_id = Column(UUID(as_uuid=True), ForeignKey("payment_intents.id"), nullable=True)
     is_deleted = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
 
     order = relationship("Order", back_populates="payment")
     user = relationship("User", back_populates="payments")
+    payment_intent = relationship("PaymentIntent", back_populates="payment")
 
     __table_args__ = (
         Index("ix_payments_gateway_order_id", "gateway_order_id"),
@@ -317,6 +319,39 @@ class PasswordResetCode(Base):
     used_at = Column(DateTime(timezone=True), nullable=True)
     is_deleted = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+
+class Banner(Base):
+    __tablename__ = "banners"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    title = Column(String(200), nullable=False)
+    subtitle = Column(String(500), nullable=True)
+    image_url = Column(String(500), nullable=True)
+    link = Column(String(500), nullable=True)
+    color = Column(String(20), default="FF6B00", nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    sort_order = Column(Integer, default=0, nullable=False)
+    is_deleted = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+
+
+class PaymentIntent(Base):
+    __tablename__ = "payment_intents"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    razorpay_order_id = Column(String(100), unique=True, nullable=True)
+    amount = Column(Numeric(10, 2), nullable=False)
+    status = Column(String(20), default="pending", nullable=False, index=True)
+    cart_data = Column(Text, nullable=True)
+    address_id = Column(UUID(as_uuid=True), nullable=True)
+    phone = Column(String(20), nullable=True)
+    is_deleted = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+
+    user = relationship("User")
+    payment = relationship("Payment", back_populates="payment_intent", uselist=False, cascade="all, delete-orphan")
 
 
 class Notification(Base):

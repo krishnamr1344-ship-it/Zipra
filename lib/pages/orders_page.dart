@@ -288,7 +288,7 @@ class _OrderCard extends StatelessWidget {
                   child: ElevatedButton.icon(
                     onPressed: onPayNow,
                     icon: const Icon(Icons.payment_rounded, size: 18),
-                    label: Text(status == 'Failed' ? 'Pay Now' : 'Pay Now',
+                    label: Text(status == 'Failed' ? 'Retry Payment' : 'Pay Now',
                         style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,

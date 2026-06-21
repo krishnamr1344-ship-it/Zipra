@@ -1,20 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import '../constants/theme.dart';
-import '../models/cart_model.dart';
 import '../services/api_service.dart';
 import '../widgets/app_snackbar.dart';
 import 'orders_page.dart';
 
 class PaymentGatewayScreen extends StatefulWidget {
-  final String orderId;
+  final String? orderId;
+  final String? intentId;
   final int total;
+  final String? razorpayOrderId;
+  final String? razorpayKeyId;
+  final int? razorpayAmount;
   final VoidCallback? onPaymentSuccess;
 
   const PaymentGatewayScreen({
     super.key,
-    required this.orderId,
+    this.orderId,
+    this.intentId,
     required this.total,
+    this.razorpayOrderId,
+    this.razorpayKeyId,
+    this.razorpayAmount,
     this.onPaymentSuccess,
   });
 
@@ -44,18 +51,44 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
     super.dispose();
   }
 
+  String get _refLabel {
+    if (widget.intentId != null) return widget.intentId!.substring(0, 8);
+    return widget.orderId?.substring(0, 8) ?? '';
+  }
+
   Future<void> _openCheckout() async {
     setState(() => _initializing = true);
 
     try {
-      final result = await _api.createRazorpayOrder(widget.orderId);
+      String keyId;
+      int amount;
+      String razorpayOrderId;
+
+      // New flow: use pre-created PaymentIntent data
+      if (widget.intentId != null &&
+          widget.razorpayOrderId != null &&
+          widget.razorpayKeyId != null &&
+          widget.razorpayAmount != null) {
+        keyId = widget.razorpayKeyId!;
+        amount = widget.razorpayAmount!;
+        razorpayOrderId = widget.razorpayOrderId!;
+      } else if (widget.orderId != null) {
+        // Retry flow: fetch Razorpay order from existing order
+        final result = await _api.createRazorpayOrder(widget.orderId!);
+        keyId = result['key_id'] as String;
+        amount = result['amount'] as int;
+        razorpayOrderId = result['razorpay_order_id'] as String;
+      } else {
+        throw Exception('Missing payment reference');
+      }
+
       final options = {
-        'key': result['key_id'],
-        'amount': result['amount'],
-        'order_id': result['razorpay_order_id'],
+        'key': keyId,
+        'amount': amount,
+        'order_id': razorpayOrderId,
         'currency': 'INR',
         'name': 'Zipra',
-        'description': 'Order #${widget.orderId.substring(0, 8)}',
+        'description': 'Order #$_refLabel',
         'theme': {'color': '#FF6B35'},
       };
 
@@ -81,9 +114,18 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
     _verifyPayment(response.paymentId!, response.signature!);
   }
 
-  void _handleError(PaymentFailureResponse response) {
+  Future<void> _handleError(PaymentFailureResponse response) async {
     if (!mounted) return;
     setState(() => _checkoutOpen = false);
+
+    // Cancel intent to create Failed order (new flow only)
+    if (widget.intentId != null) {
+      try {
+        await _api.cancelPaymentIntent(widget.intentId!);
+      } catch (_) {}
+    }
+
+    if (!mounted) return;
     AppSnackbar.show(
       context,
       'Payment failed: ${response.message}',
@@ -99,7 +141,22 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
 
   Future<void> _verifyPayment(String paymentId, String signature) async {
     try {
-      await _api.verifyRazorpayPayment(widget.orderId, paymentId, signature);
+      if (widget.intentId != null) {
+        await _api.verifyRazorpayPayment(
+          intentId: widget.intentId,
+          paymentId: paymentId,
+          signature: signature,
+        );
+      } else if (widget.orderId != null) {
+        await _api.verifyRazorpayPayment(
+          orderId: widget.orderId,
+          paymentId: paymentId,
+          signature: signature,
+        );
+      } else {
+        throw Exception('Missing payment reference');
+      }
+
       widget.onPaymentSuccess?.call();
       if (!mounted) return;
       Navigator.pushReplacement(
@@ -117,6 +174,19 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
     }
   }
 
+  Future<void> _handleBack() async {
+    _razorpay?.clear();
+
+    // Cancel intent to create Failed order (new flow only)
+    if (widget.intentId != null) {
+      try {
+        await _api.cancelPaymentIntent(widget.intentId!);
+      } catch (_) {}
+    }
+
+    if (mounted) Navigator.pop(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -126,10 +196,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
         foregroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            _razorpay?.clear();
-            Navigator.pop(context);
-          },
+          onPressed: _handleBack,
         ),
       ),
       body: Center(

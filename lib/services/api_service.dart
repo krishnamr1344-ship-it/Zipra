@@ -284,6 +284,12 @@ class ApiService {
     return _handleListResponse(res);
   }
 
+  Future<List<dynamic>> getBanners() async {
+    final headers = await _authHeaders();
+    final res = await http.get(Uri.parse('$_baseUrl/api/banners'), headers: headers).timeout(const Duration(seconds: 60));
+    return _handleListResponse(res);
+  }
+
   Future<Map<String, dynamic>> createOrder(List<Map<String, dynamic>> items, String paymentMethod, {String? addressId}) async {
     final headers = await _authHeaders(required: true);
     final bodyMap = <String, dynamic>{
@@ -458,12 +464,53 @@ class ApiService {
     return _handleResponse(res);
   }
 
-  Future<Map<String, dynamic>> verifyRazorpayPayment(String orderId, String paymentId, String signature) async {
+  Future<Map<String, dynamic>> createPaymentIntent(
+    List<Map<String, dynamic>> cartItems,
+    String? addressId, {
+    String? phone,
+  }) async {
     final headers = await _authHeaders(required: true);
+    final body = <String, dynamic>{
+      'cart_items': cartItems,
+    };
+    if (addressId != null) body['address_id'] = addressId;
+    if (phone != null) body['phone'] = phone;
+    final res = await http.post(
+      Uri.parse('$_baseUrl/api/payments/create-order'),
+      headers: headers,
+      body: jsonEncode(body),
+    ).timeout(const Duration(seconds: 15));
+    if (_checkAndHandleUnauthorized(res.statusCode)) return {};
+    return _handleResponse(res);
+  }
+
+  Future<Map<String, dynamic>> verifyRazorpayPayment({
+    String? orderId,
+    String? intentId,
+    required String paymentId,
+    required String signature,
+  }) async {
+    final headers = await _authHeaders(required: true);
+    final body = <String, dynamic>{
+      'razorpay_payment_id': paymentId,
+      'razorpay_signature': signature,
+    };
+    if (orderId != null) body['order_id'] = orderId;
+    if (intentId != null) body['intent_id'] = intentId;
     final res = await http.post(
       Uri.parse('$_baseUrl/api/payments/verify'),
       headers: headers,
-      body: jsonEncode({'order_id': orderId, 'razorpay_payment_id': paymentId, 'razorpay_signature': signature}),
+      body: jsonEncode(body),
+    ).timeout(const Duration(seconds: 15));
+    if (_checkAndHandleUnauthorized(res.statusCode)) return {};
+    return _handleResponse(res);
+  }
+
+  Future<Map<String, dynamic>> cancelPaymentIntent(String intentId) async {
+    final headers = await _authHeaders(required: true);
+    final res = await http.post(
+      Uri.parse('$_baseUrl/api/payments/cancel/$intentId'),
+      headers: headers,
     ).timeout(const Duration(seconds: 15));
     if (_checkAndHandleUnauthorized(res.statusCode)) return {};
     return _handleResponse(res);

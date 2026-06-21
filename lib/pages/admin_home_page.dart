@@ -10,6 +10,8 @@ import 'admin_orders_page.dart';
 import 'admin_users_page.dart';
 import 'admin_delivery_zone_page.dart';
 import 'admin_combo_packs_page.dart';
+import 'admin_banners_page.dart';
+import 'admin_notifications_page.dart';
 
 class AdminHomePage extends StatefulWidget {
   const AdminHomePage({super.key});
@@ -211,91 +213,13 @@ class _AdminHomePageState extends State<AdminHomePage> {
                   _menuCard(Colors.blue, Icons.people, 'Users', 'Manage accounts', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminUsersPage()))),
                   _menuCard(Colors.deepPurple, Icons.map, 'Delivery Zones', 'Set service areas', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminDeliveryZonePage()))),
                   _menuCard(AppColors.primary, Icons.inventory_2, 'Combo Packs', 'Monthly Needs packs', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminComboPacksPage())).then((_) => _load())),
+                  _menuCard(Colors.orange, Icons.palette, 'Banners', 'Manage promotions', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminBannersPage())).then((_) => _load())),
+                  _menuCard(Colors.red, Icons.notifications, 'Notifications', 'Send & manage', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminNotificationsPage()))),
                 ]),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-                child: Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: BorderSide(color: Colors.grey.withValues(alpha: 0.3))),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    leading: Container(
-                      width: 44, height: 44,
-                      decoration: BoxDecoration(color: Colors.amber.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(14)),
-                      child: const Icon(Icons.bar_chart, color: Colors.amber, size: 22),
-                    ),
-                    title: const Text('Reports', style: TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: const Text('Sales & revenue overview'),
-                    trailing: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
-                      child: const Icon(Icons.chevron_right, size: 18, color: Colors.grey),
-                    ),
-                    onTap: () {
-                      showModalBottomSheet(
-                        context: context,
-                        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-                        builder: (ctx) => Padding(
-                          padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 44, height: 44,
-                                    decoration: BoxDecoration(color: Colors.amber.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(14)),
-                                    child: const Icon(Icons.bar_chart, color: Colors.amber, size: 22),
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Text('Revenue Report', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
-                                ],
-                              ),
-                              const SizedBox(height: 24),
-                              _reportRow(Icons.inventory_2, 'Total Products', '${_stats['products'] ?? 0}', primary),
-                              const SizedBox(height: 14),
-                              _reportRow(Icons.receipt_long, 'Total Orders', '${_stats['orders'] ?? 0}', primary),
-                              const SizedBox(height: 14),
-                              _reportRow(Icons.people, 'Total Users', '${_stats['users'] ?? 0}', primary),
-                              const SizedBox(height: 14),
-                              const Divider(),
-                              const SizedBox(height: 14),
-                              _reportRow(Icons.currency_rupee, 'Total Revenue', '₹${_stats['revenue']?.toStringAsFixed(2) ?? '0.00'}', Colors.amber),
-                              const SizedBox(height: 14),
-                              _reportRow(Icons.shopping_cart, 'Categories', '${_stats['categories'] ?? 0}', Colors.green),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _reportRow(IconData icon, String label, String value, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: color),
-          const SizedBox(width: 12),
-          Expanded(child: Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500))),
-          Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
-        ],
       ),
     );
   }
