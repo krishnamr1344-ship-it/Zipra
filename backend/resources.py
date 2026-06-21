@@ -1441,23 +1441,6 @@ def process_payment(body: PaymentProcessRequest, request: Request, db: Session =
     return _payment_to_response(payment)
 
 
-@router.get("/payments/debug-razorpay")
-def debug_razorpay():
-    """Debug endpoint: test Razorpay API connectivity."""
-    import urllib.request, urllib.error, json as _json
-    try:
-        req = urllib.request.Request(
-            "https://api.razorpay.com/v1/orders",
-            method="GET",
-            headers={"Authorization": f"Basic {__import__('base64').b64encode(f'{RAZORPAY_KEY_ID}:{RAZORPAY_KEY_SECRET}'.encode()).decode()}"},
-        )
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            data = resp.read().decode()
-        return {"status": "ok", "response": data[:500], "key_id_prefix": RAZORPAY_KEY_ID[:8]}
-    except Exception as e:
-        return {"status": "error", "error": str(e), "key_id_prefix": RAZORPAY_KEY_ID[:8]}
-
-
 @router.get("/payments/{order_id}", response_model=PaymentResponse)
 def get_payment(order_id: str, request: Request, db: Session = Depends(get_db)):
     user_id = _get_user_id(request)
@@ -1573,13 +1556,13 @@ def _create_intent_from_cart(body: RazorpayCreateOrderRequest, user_id: str, db:
     try:
         razorpay_order = _razorpay_create_order(
             amount_paise,
-            f"intent_{intent.id}",
+            f"i_{intent.id}",
             {"intent_id": str(intent.id), "user_id": user_id},
         )
     except Exception as e:
         db.rollback()
         logger.error("Razorpay order creation failed: %s", e)
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Payment gateway error (key_id={RAZORPAY_KEY_ID[:8]}...): {e}")
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Payment gateway error")
 
     razorpay_order_id = razorpay_order.get("id")
     if not razorpay_order_id:
