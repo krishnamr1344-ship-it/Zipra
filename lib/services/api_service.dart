@@ -131,11 +131,13 @@ class ApiService {
       try {
         await http.post(
           Uri.parse('$_baseUrl/api/auth/logout'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'token': token}),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
         ).timeout(const Duration(seconds: 60));
       } catch (e) {
-        debugPrint('ApiService.logout: request failed: $e');
+        if (kDebugMode) debugPrint('ApiService.logout: request failed');
       }
     }
     await _clearToken();

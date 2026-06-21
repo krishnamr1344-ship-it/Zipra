@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'pages/home_page.dart';
 import 'pages/admin_home_page.dart';
@@ -133,8 +135,22 @@ class _AppEntryState extends State<_AppEntry> with WidgetsBindingObserver {
   Future<void> _checkTokenOnResume() async {
     final token = await _api.getToken();
     if (token != null && mounted) {
-      // Token exists - optionally validate it with a lightweight check
-      debugPrint('App resumed: token present');
+      final parts = token.split('.');
+      if (parts.length == 3) {
+        try {
+          final payload = jsonDecode(
+            utf8.decode(base64.decode(base64.normalize(parts[1]))),
+          ) as Map<String, dynamic>;
+          final exp = payload['exp'] as int?;
+          if (exp != null && DateTime.fromMillisecondsSinceEpoch(exp * 1000).isBefore(DateTime.now())) {
+            await _api.logout();
+            if (mounted) Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const HomePage()),
+              (route) => false,
+            );
+          }
+        } catch (_) {}
+      }
     }
   }
 

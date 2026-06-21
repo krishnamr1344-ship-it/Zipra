@@ -12,6 +12,8 @@ import logging
 import hashlib
 import smtplib
 import ssl
+import threading
+import time
 from email.message import EmailMessage
 logger = logging.getLogger(__name__)
 import os
@@ -27,7 +29,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import User, TokenBlacklist, PasswordResetCode
-from schemas import RegisterRequest, LoginRequest, LogoutRequest, UpdateProfileRequest, ForgotPasswordRequest, ResetPasswordRequest
+from schemas import RegisterRequest, LoginRequest, UpdateProfileRequest, ForgotPasswordRequest, ResetPasswordRequest
 
 JWT_SECRET = os.getenv("JWT_SECRET")
 JWT_EXPIRY_MINUTES = int(os.getenv("JWT_EXPIRY_MINUTES", "1440"))
@@ -45,6 +47,41 @@ SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", SMTP_USERNAME)
 
 RESET_CODE_EXPIRY_MINUTES = 15
+
+# ─── Per-account login rate limiting ─────────────────────────────
+_LOGIN_ATTEMPTS: dict[str, list[float]] = {}
+_LOGIN_LOCK = threading.Lock()
+_LOGIN_MAX_ATTEMPTS = 5
+_LOGIN_WINDOW_SECONDS = 300  # 5 minutes
+
+
+def _check_login_rate_limit(email: str):
+    """Track failed login attempts per email. Block after 5 failures in 5 minutes."""
+    now = time.time()
+    with _LOGIN_LOCK:
+        attempts = _LOGIN_ATTEMPTS.get(email, [])
+        attempts = [t for t in attempts if now - t < _LOGIN_WINDOW_SECONDS]
+        if len(attempts) >= _LOGIN_MAX_ATTEMPTS:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too many login attempts. Try again in 5 minutes.",
+            )
+        _LOGIN_ATTEMPTS[email] = attempts
+
+
+def _record_login_failure(email: str):
+    now = time.time()
+    with _LOGIN_LOCK:
+        attempts = _LOGIN_ATTEMPTS.get(email, [])
+        attempts = [t for t in attempts if now - t < _LOGIN_WINDOW_SECONDS]
+        attempts.append(now)
+        _LOGIN_ATTEMPTS[email] = attempts
+
+
+def _clear_login_rate_limit(email: str):
+    with _LOGIN_LOCK:
+        _LOGIN_ATTEMPTS.pop(email, None)
+
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -188,15 +225,20 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
       - Constant-time password comparison.
       - Generic error for any failure.
       - Token expires in 30 minutes.
+      - Per-email rate limiting (5 attempts per 5 minutes).
     """
+    _check_login_rate_limit(body.email)
+
     user = db.query(User).filter(
         User.email == body.email,
         User.is_deleted == False,
     ).first()
 
     if not user or not _verify_password(body.password, user.password_hash):
+        _record_login_failure(body.email)
         raise _generic_error()
 
+    _clear_login_rate_limit(body.email)
     token, jti, expires = _create_jwt(str(user.id), user.role)
 
     return {
@@ -207,15 +249,19 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/logout", status_code=status.HTTP_200_OK)
-def logout(body: LogoutRequest, db: Session = Depends(get_db)):
+def logout(request: Request, db: Session = Depends(get_db)):
     """
     Logout: blacklist the JWT so it can never be used again.
     Security:
-      - Token decoded and validated first.
+      - Token extracted from Authorization header (never request body).
       - JTI saved to blacklist table.
       - Blacklisted tokens rejected on all protected routes.
     """
-    payload = decode_jwt(body.token)
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authorization header")
+    token = auth_header.split(" ", 1)[1]
+    payload = decode_jwt(token)
     jti = payload.get("jti")
     exp = payload.get("exp")
 
