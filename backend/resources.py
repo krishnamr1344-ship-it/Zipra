@@ -1441,20 +1441,6 @@ def process_payment(body: PaymentProcessRequest, request: Request, db: Session =
     return _payment_to_response(payment)
 
 
-@router.get("/payments/{order_id}", response_model=PaymentResponse)
-def get_payment(order_id: str, request: Request, db: Session = Depends(get_db)):
-    user_id = _get_user_id(request)
-    _validate_uuid(order_id)
-    payment = db.query(Payment).filter(
-        Payment.order_id == order_id,
-        Payment.user_id == user_id,
-        Payment.is_deleted == False,
-    ).order_by(Payment.created_at.desc()).first()
-    if not payment:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found")
-    return _payment_to_response(payment)
-
-
 @router.get("/payments/debug-razorpay")
 def debug_razorpay():
     """Debug endpoint: test Razorpay API connectivity."""
@@ -1470,6 +1456,20 @@ def debug_razorpay():
         return {"status": "ok", "response": data[:500], "key_id_prefix": RAZORPAY_KEY_ID[:8]}
     except Exception as e:
         return {"status": "error", "error": str(e), "key_id_prefix": RAZORPAY_KEY_ID[:8]}
+
+
+@router.get("/payments/{order_id}", response_model=PaymentResponse)
+def get_payment(order_id: str, request: Request, db: Session = Depends(get_db)):
+    user_id = _get_user_id(request)
+    _validate_uuid(order_id)
+    payment = db.query(Payment).filter(
+        Payment.order_id == order_id,
+        Payment.user_id == user_id,
+        Payment.is_deleted == False,
+    ).order_by(Payment.created_at.desc()).first()
+    if not payment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found")
+    return _payment_to_response(payment)
 
 
 # ─── RAZORPAY ─────────────────────────────────────────────────────
