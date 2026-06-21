@@ -1539,7 +1539,7 @@ def _create_intent_from_cart(body: RazorpayCreateOrderRequest, user_id: str, db:
     except Exception as e:
         db.rollback()
         logger.error("Razorpay order creation failed: %s", e)
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Payment gateway error")
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Payment gateway error: {e}")
 
     razorpay_order_id = razorpay_order.get("id")
     if not razorpay_order_id:
