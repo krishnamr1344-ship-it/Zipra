@@ -1441,6 +1441,33 @@ def process_payment(body: PaymentProcessRequest, request: Request, db: Session =
     return _payment_to_response(payment)
 
 
+@router.get("/payments/debug-order")
+def debug_order(request: Request, db: Session = Depends(get_db)):
+    """Debug endpoint for legacy flow."""
+    user_id = _get_user_id(request)
+    order = db.query(Order).filter(
+        Order.user_id == user_id,
+        Order.is_deleted == False,
+    ).order_by(Order.created_at.desc()).first()
+    if not order:
+        return {"error": "no order"}
+    try:
+        from decimal import Decimal
+        amount_paise = int(order.total_amount * 100)
+        receipt = str(order.id)
+        return {
+            "order_id": str(order.id),
+            "total_amount": str(order.total_amount),
+            "amount_paise": amount_paise,
+            "receipt": receipt,
+            "receipt_len": len(receipt),
+            "payment_method": order.payment_method,
+            "status": order.status,
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @router.get("/payments/{order_id}", response_model=PaymentResponse)
 def get_payment(order_id: str, request: Request, db: Session = Depends(get_db)):
     user_id = _get_user_id(request)
@@ -1631,53 +1658,53 @@ def razorpay_create_order(body: RazorpayCreateOrderRequest, request: Request, db
     if not body.order_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Provide order_id (retry) or cart_items (new order)")
 
-    _validate_uuid(body.order_id)
-    order = db.query(Order).filter(
-        Order.id == body.order_id,
-        Order.user_id == user_id,
-        Order.is_deleted == False,
-    ).first()
-    if not order:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
-
-    if order.payment_method != "Razorpay":
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order is not set for Razorpay payment")
-
-    if order.status not in ("Pending", "Failed"):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order already paid")
-
-    items = db.query(OrderItem).filter(
-        OrderItem.order_id == order.id,
-        OrderItem.is_deleted == False,
-    ).all()
-    for oi in items:
-        product = _get_product_or_404(str(oi.product_id), db, for_update=True)
-        if product.stock < oi.quantity:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Insufficient stock for {product.name}. Please try again later.",
-            )
-
-    existing_success = db.query(Payment).filter(
-        Payment.order_id == order.id,
-        Payment.status == "success",
-        Payment.is_deleted == False,
-    ).first()
-    if existing_success:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order already paid")
-
-    old_payments = db.query(Payment).filter(
-        Payment.order_id == order.id,
-        Payment.status != "success",
-        Payment.is_deleted == False,
-    ).all()
-    for p in old_payments:
-        db.delete(p)
-    db.flush()
-
-    amount_paise = int(order.total_amount * 100)
-
     try:
+        _validate_uuid(body.order_id)
+        order = db.query(Order).filter(
+            Order.id == body.order_id,
+            Order.user_id == user_id,
+            Order.is_deleted == False,
+        ).first()
+        if not order:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+
+        if order.payment_method != "Razorpay":
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order is not set for Razorpay payment")
+
+        if order.status not in ("Pending", "Failed"):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order already paid")
+
+        items = db.query(OrderItem).filter(
+            OrderItem.order_id == order.id,
+            OrderItem.is_deleted == False,
+        ).all()
+        for oi in items:
+            product = _get_product_or_404(str(oi.product_id), db, for_update=True)
+            if product.stock < oi.quantity:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Insufficient stock for {product.name}. Please try again later.",
+                )
+
+        existing_success = db.query(Payment).filter(
+            Payment.order_id == order.id,
+            Payment.status == "success",
+            Payment.is_deleted == False,
+        ).first()
+        if existing_success:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order already paid")
+
+        old_payments = db.query(Payment).filter(
+            Payment.order_id == order.id,
+            Payment.status != "success",
+            Payment.is_deleted == False,
+        ).all()
+        for p in old_payments:
+            db.delete(p)
+        db.flush()
+
+        amount_paise = int(order.total_amount * 100)
+
         razorpay_order = _razorpay_create_order(
             amount_paise,
             str(order.id),
@@ -1686,8 +1713,8 @@ def razorpay_create_order(body: RazorpayCreateOrderRequest, request: Request, db
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Razorpay order creation failed: %s", e)
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Payment gateway error: {e}")
+        logger.error("Legacy Razorpay flow failed: %s", e)
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Legacy flow error: {e}")
 
     razorpay_order_id = razorpay_order.get("id")
     if not razorpay_order_id:
