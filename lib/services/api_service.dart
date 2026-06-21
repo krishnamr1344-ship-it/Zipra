@@ -223,7 +223,7 @@ class ApiService {
     final res = await http.delete(Uri.parse('$_baseUrl/api/addresses/$addressId'), headers: headers).timeout(const Duration(seconds: 60));
     if (_checkAndHandleUnauthorized(res.statusCode)) return;
     if (res.statusCode != 200) {
-      if (kDebugMode) debugPrint('API Error ${res.statusCode}: ${res.body}');
+      if (kDebugMode) debugPrint('API Error ${res.statusCode}');
       throw ApiException(_tryDecodeDetail(res.body) ?? 'Failed to delete address');
     }
   }

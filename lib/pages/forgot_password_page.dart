@@ -38,7 +38,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       setState(() => _showResetForm = true);
     } catch (e) {
       if (!mounted) return;
-      AppSnackbar.show(context, 'Failed: $e', type: SnackbarType.error);
+      AppSnackbar.show(context, 'Failed to send reset code. Please try again.', type: SnackbarType.error);
       setState(() => _sent = false);
     }
   }
@@ -56,7 +56,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
-      AppSnackbar.show(context, '$e', type: SnackbarType.error);
+      AppSnackbar.show(context, 'Invalid or expired reset code. Please try again.', type: SnackbarType.error);
     } finally {
       if (mounted) setState(() => _resetting = false);
     }

@@ -140,7 +140,7 @@ class _PaymentPageState extends State<PaymentPage> {
       if (!mounted) return;
       AppSnackbar.show(
         context,
-        'Failed to place order. $e',
+        'Failed to place order. Please try again.',
         type: SnackbarType.error,
       );
     }

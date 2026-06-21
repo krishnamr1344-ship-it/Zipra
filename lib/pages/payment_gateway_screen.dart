@@ -101,7 +101,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
       if (!mounted) return;
       AppSnackbar.show(
         context,
-        'Failed to initialize payment: $e',
+        'Failed to initialize payment. Please try again.',
         type: SnackbarType.error,
       );
       Navigator.pop(context);

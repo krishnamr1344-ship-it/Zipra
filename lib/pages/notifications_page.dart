@@ -118,7 +118,10 @@ class _NotificationCard extends StatelessWidget {
 
   void _onTap(BuildContext context) {
     if (notification.link != null && notification.link!.isNotEmpty) {
-      launchUrl(Uri.parse(notification.link!), mode: LaunchMode.externalApplication);
+      final uri = Uri.parse(notification.link!);
+      if (uri.scheme == 'https') {
+        launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
     } else if (notification.imageUrl != null && notification.imageUrl!.isNotEmpty) {
       showDialog(
         context: context,

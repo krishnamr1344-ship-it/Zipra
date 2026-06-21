@@ -941,6 +941,28 @@ class BannerCreate(BaseModel):
             raise ValueError("Invalid color value")
         return v
 
+    @field_validator("link")
+    @classmethod
+    def valid_link(cls, v):
+        if v:
+            v = v.strip()
+            if not v.startswith("https://"):
+                raise ValueError("Link must be an HTTPS URL")
+            if len(v) > 2000:
+                raise ValueError("Link must not exceed 2000 characters")
+            return v
+        return v
+
+    @field_validator("image_url")
+    @classmethod
+    def valid_image_url(cls, v):
+        if v:
+            v = v.strip()
+            if not v.startswith("https://"):
+                raise ValueError("Image URL must be an HTTPS URL")
+            return v
+        return v
+
 
 class BannerUpdate(BaseModel):
     title: Optional[str] = None
@@ -950,6 +972,28 @@ class BannerUpdate(BaseModel):
     color: Optional[str] = None
     is_active: Optional[bool] = None
     sort_order: Optional[int] = None
+
+    @field_validator("link")
+    @classmethod
+    def valid_link(cls, v):
+        if v:
+            v = v.strip()
+            if not v.startswith("https://"):
+                raise ValueError("Link must be an HTTPS URL")
+            if len(v) > 2000:
+                raise ValueError("Link must not exceed 2000 characters")
+            return v
+        return v
+
+    @field_validator("image_url")
+    @classmethod
+    def valid_image_url(cls, v):
+        if v:
+            v = v.strip()
+            if not v.startswith("https://"):
+                raise ValueError("Image URL must be an HTTPS URL")
+            return v
+        return v
 
 
 class BannerResponse(BaseModel):
@@ -998,6 +1042,28 @@ class NotificationCreate(BaseModel):
         allowed = {"offer", "promo", "update", "info"}
         if v not in allowed:
             raise ValueError(f"Type must be one of: {', '.join(sorted(allowed))}")
+        return v
+
+    @field_validator("link")
+    @classmethod
+    def valid_link(cls, v):
+        if v:
+            v = v.strip()
+            if not v.startswith("https://"):
+                raise ValueError("Link must be an HTTPS URL")
+            if len(v) > 2000:
+                raise ValueError("Link must not exceed 2000 characters")
+            return v
+        return v
+
+    @field_validator("image_url")
+    @classmethod
+    def valid_image_url(cls, v):
+        if v:
+            v = v.strip()
+            if not v.startswith("https://"):
+                raise ValueError("Image URL must be an HTTPS URL")
+            return v
         return v
 
 

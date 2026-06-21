@@ -1448,33 +1448,6 @@ def process_payment(body: PaymentProcessRequest, request: Request, db: Session =
     return _payment_to_response(payment)
 
 
-@router.get("/payments/debug-order")
-def debug_order(request: Request, db: Session = Depends(get_db)):
-    """Debug endpoint for legacy flow."""
-    user_id = _get_user_id(request)
-    order = db.query(Order).filter(
-        Order.user_id == user_id,
-        Order.is_deleted == False,
-    ).order_by(Order.created_at.desc()).first()
-    if not order:
-        return {"error": "no order"}
-    try:
-        from decimal import Decimal
-        amount_paise = int(order.total_amount * 100)
-        receipt = str(order.id)
-        return {
-            "order_id": str(order.id),
-            "total_amount": str(order.total_amount),
-            "amount_paise": amount_paise,
-            "receipt": receipt,
-            "receipt_len": len(receipt),
-            "payment_method": order.payment_method,
-            "status": order.status,
-        }
-    except Exception as e:
-        return {"error": str(e)}
-
-
 @router.get("/payments/{order_id}", response_model=PaymentResponse)
 def get_payment(order_id: str, request: Request, db: Session = Depends(get_db)):
     user_id = _get_user_id(request)
@@ -1517,10 +1490,10 @@ def _razorpay_create_order(amount_paise: int, receipt: str, notes: dict) -> dict
     except urllib.error.HTTPError as e:
         body = e.read().decode()
         logger.error("Razorpay HTTP %s: %s", e.code, body)
-        raise Exception(f"HTTP {e.code}: {body}")
+        raise Exception("Payment gateway error")
     except urllib.error.URLError as e:
         logger.error("Razorpay URL error: %s", e.reason)
-        raise Exception(f"URL error: {e.reason}")
+        raise Exception("Payment gateway error")
 
 
 def _create_intent_from_cart(body: RazorpayCreateOrderRequest, user_id: str, db: Session) -> tuple[PaymentIntent, int]:
@@ -1721,7 +1694,7 @@ def razorpay_create_order(body: RazorpayCreateOrderRequest, request: Request, db
         raise
     except Exception as e:
         logger.error("Legacy Razorpay flow failed: %s", e)
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Legacy flow error: {e}")
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Payment gateway error")
 
     razorpay_order_id = razorpay_order.get("id")
     if not razorpay_order_id:

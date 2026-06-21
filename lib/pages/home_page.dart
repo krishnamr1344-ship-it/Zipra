@@ -170,12 +170,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         } else {
           msg = 'Set Location';
         }
-        if (mounted)
+        if (mounted) {
           setState(() {
             _locationArea = msg;
             _locationDetail = '';
             _zoneChecked = true;
           });
+        }
         return;
       }
 

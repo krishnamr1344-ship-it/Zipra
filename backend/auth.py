@@ -291,7 +291,7 @@ def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
     ).update({"is_deleted": True})
     db.commit()
 
-    code = ''.join(secrets.choice(string.digits) for _ in range(6))
+    code = ''.join(secrets.choice(string.ascii_lowercase + string.digits) for _ in range(8))
     code_hash = hashlib.sha256(code.encode()).hexdigest()
     reset_code = PasswordResetCode(
         email=body.email,

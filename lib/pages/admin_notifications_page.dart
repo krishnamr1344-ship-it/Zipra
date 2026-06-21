@@ -79,7 +79,7 @@ class _AdminNotificationsPageState extends State<AdminNotificationsPage> {
               TextField(controller: messageCtl, decoration: InputDecoration(labelText: 'Message', border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)), contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14)), maxLines: 3),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: selectedType,
+                initialValue: selectedType,
                 decoration: InputDecoration(labelText: 'Type', border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)), contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14)),
                 items: const [
                   DropdownMenuItem(value: 'offer', child: Text('Offer')),
