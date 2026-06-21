@@ -1452,10 +1452,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   // ---------------------------------------------------------------------------
 
   Widget _buildCategoriesTab() {
-    final cats = _categories.where((c) => c != 'All').toList();
+    final cats = List<String>.from(_categories);
     final safeTop = MediaQuery.of(context).padding.top;
 
     const catMetaFallback = <String, Map<String, dynamic>>{
+      'All': {
+        'gradient': [0xFFE8F5E9, 0xFFC8E6C9],
+        'emoji': '\u{1F4CB}',
+      },
       'Fresh Dairy': {
         'gradient': [0xFFFFF3E0, 0xFFFFE0B2],
         'emoji': '\u{1F95B}',
@@ -1501,6 +1505,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       final name = catData['name'] as String;
       catMetaMap[name] = catMeta(catData);
     }
+    catMetaMap['All'] = const <String, dynamic>{
+      'image': null,
+      'gradient': [0xFFE8F5E9, 0xFFC8E6C9],
+      'emoji': '\u{1F4CB}',
+    };
 
     final catCounts = <String, int>{};
     for (final p in _allProducts) {
@@ -1516,6 +1525,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     Widget buildCategoryCard(String cat, Map<String, dynamic> meta) {
       final gradients = meta['gradient'] as List<int>;
       final imageUrl = meta['image'] as String? ?? '';
+      final emoji = meta['emoji'] as String? ?? '\u{1F6D2}';
 
       return GestureDetector(
         onTap: () {
@@ -1531,7 +1541,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: SizedBox(
-                width: 72,
+                width: double.infinity,
                 height: 72,
                 child: imageUrl.isNotEmpty
                     ? Image.network(
@@ -1552,7 +1562,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                 ),
                                 child: Center(
                                   child: Text(
-                                    meta['emoji'] as String,
+                                    emoji,
                                     style: const TextStyle(fontSize: 28),
                                   ),
                                 ),
@@ -1570,7 +1580,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                           ),
                           child: Center(
                             child: Text(
-                              meta['emoji'] as String,
+                              emoji,
                               style: const TextStyle(fontSize: 28),
                             ),
                           ),
@@ -1586,7 +1596,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                         ),
                         child: Center(
                           child: Text(
-                            meta['emoji'] as String,
+                            emoji,
                             style: const TextStyle(fontSize: 28),
                           ),
                         ),
@@ -1594,18 +1604,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               ),
             ),
             const SizedBox(height: 6),
-            SizedBox(
-              width: 72,
-              child: Text(
-                cat,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF333333),
-                ),
+            Text(
+              cat,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF333333),
               ),
             ),
           ],
@@ -2067,26 +2074,32 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 ),
               ),
 
-              // Horizontal category list
+              // Category grid (4 per row)
               SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 110,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.only(left: 20, right: 16),
-                    itemCount: cats.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 16),
-                    itemBuilder: (_, i) {
-                      final cat = cats[i];
-                      final meta =
-                          catMetaMap[cat] ??
-                          <String, dynamic>{
-                            'image': null,
-                            'gradient': [0xFFF5F5F5, 0xFFEEEEEE],
-                            'emoji': '\u{1F6D2}',
-                          };
-                      return buildCategoryCard(cat, meta);
-                    },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      for (final cat in cats)
+                        SizedBox(
+                          width:
+                              (MediaQuery.of(context).size.width - 60) / 4,
+                          child: buildCategoryCard(
+                            cat,
+                            catMetaMap[cat] ??
+                                <String, dynamic>{
+                                  'image': null,
+                                  'gradient': [
+                                    0xFFF5F5F5,
+                                    0xFFEEEEEE,
+                                  ],
+                                  'emoji': '\u{1F6D2}',
+                                },
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),
