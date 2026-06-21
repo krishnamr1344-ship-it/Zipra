@@ -1457,19 +1457,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         'gradient': [0xFFE8F5E9, 0xFFC8E6C9],
         'emoji': '\u{1F4CB}',
       },
-      'Fresh Dairy': {
+      'Dairy': {
         'gradient': [0xFFFFF3E0, 0xFFFFE0B2],
         'emoji': '\u{1F95B}',
       },
-      'Rice & Grocery': {
+      'Rice 🌾': {
         'gradient': [0xFFFFF8E1, 0xFFFFECB3],
         'emoji': '\u{1F35E}',
       },
-      'Dals': {
-        'gradient': [0xFFFFF3E0, 0xFFFFCC80],
-        'emoji': '\u{1F330}',
-      },
-      'Oils': {
+      '\u{1FAD2}Oil & Ghee': {
         'gradient': [0xFFFFF3E0, 0xFFFFCC80],
         'emoji': '\u{1F6ED}',
       },
@@ -1497,7 +1493,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Widget _buildCategoryCard(String cat, Map<String, dynamic> meta) {
-    final gradients = meta['gradient'] as List<int>;
     final imageUrl = meta['image'] as String? ?? '';
     final emoji = meta['emoji'] as String? ?? '\u{1F6D2}';
 
@@ -1515,40 +1510,31 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(gradients[0]), Color(gradients[1])],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: imageUrl.isNotEmpty
-                    ? Image.network(
-                        imageUrl,
-                        fit: BoxFit.contain,
-                        loadingBuilder: (_, child, chunk) => chunk == null
-                            ? child
-                            : Center(
-                                child: Text(
-                                  emoji,
-                                  style: const TextStyle(fontSize: 28),
-                                ),
+              child: imageUrl.isNotEmpty
+                  ? Image.network(
+                      imageUrl,
+                      fit: BoxFit.contain,
+                      loadingBuilder: (_, child, chunk) => chunk == null
+                          ? child
+                          : Center(
+                              child: Text(
+                                emoji,
+                                style: const TextStyle(fontSize: 28),
                               ),
-                        errorBuilder: (_, _, _) => Center(
-                          child: Text(
-                            emoji,
-                            style: const TextStyle(fontSize: 28),
-                          ),
-                        ),
-                      )
-                    : Center(
+                            ),
+                      errorBuilder: (_, _, _) => Center(
                         child: Text(
                           emoji,
                           style: const TextStyle(fontSize: 28),
                         ),
                       ),
-              ),
+                    )
+                  : Center(
+                      child: Text(
+                        emoji,
+                        style: const TextStyle(fontSize: 28),
+                      ),
+                    ),
             ),
           ),
           const SizedBox(height: 6),
@@ -1652,19 +1638,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         'gradient': [0xFFE8F5E9, 0xFFC8E6C9],
         'emoji': '\u{1F4CB}',
       },
-      'Fresh Dairy': {
+      'Dairy': {
         'gradient': [0xFFFFF3E0, 0xFFFFE0B2],
         'emoji': '\u{1F95B}',
       },
-      'Rice & Grocery': {
+      'Rice 🌾': {
         'gradient': [0xFFFFF8E1, 0xFFFFECB3],
         'emoji': '\u{1F35E}',
       },
-      'Dals': {
-        'gradient': [0xFFFFF3E0, 0xFFFFCC80],
-        'emoji': '\u{1F330}',
-      },
-      'Oils': {
+      '\u{1FAD2}Oil & Ghee': {
         'gradient': [0xFFFFF3E0, 0xFFFFCC80],
         'emoji': '\u{1F6ED}',
       },
