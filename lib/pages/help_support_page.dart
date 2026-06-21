@@ -51,7 +51,7 @@ class HelpSupportPage extends StatelessWidget {
           _faqTile('How do I place an order?',
               'Browse products, add items to your cart, proceed to checkout, enter your delivery address, and confirm your order.'),
           _faqTile('What payment methods are accepted?',
-              'We accept Cash on Delivery (COD) and Online Payment (Card, UPI, Net Banking).'),
+              'We accept Online Payment via Credit / Debit card, UPI, and Net Banking.'),
           _faqTile('How long does delivery take?',
               'Delivery typically takes 1-3 business days within our serviceable areas.'),
           _faqTile('Can I cancel my order?',

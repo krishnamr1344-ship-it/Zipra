@@ -16,24 +16,6 @@ def _valid_signature(order_id, payment_id, secret):
 class TestStockDeduction:
     """Stock deduction and restoration tests."""
 
-    def test_stock_deducted_on_cod_payment(self, client, db_session, auth_headers, test_user, test_product, test_address):
-        initial_stock = test_product.stock
-        from models import CartItem
-        db_session.add(CartItem(user_id=test_user.id, product_id=test_product.id, quantity=3))
-        db_session.flush()
-
-        resp = client.post("/api/orders", json={
-            "address_id": str(test_address.id),
-            "payment_method": "COD",
-        }, headers=auth_headers)
-        order_id = resp.json()["id"]
-
-        client.post("/api/payments/process", json={"order_id": order_id, "method": "COD"}, headers=auth_headers)
-
-        db_session.expire_all()
-        prod = db_session.query(type(test_product)).filter(type(test_product).id == test_product.id).first()
-        assert prod.stock == initial_stock - 3
-
     def test_stock_deducted_on_razorpay_verify(self, client, db_session, auth_headers, test_user, test_product, test_address, mock_razorpay_client):
         initial_stock = test_product.stock
         import resources
@@ -76,7 +58,7 @@ class TestStockDeduction:
         order = Order(
             user_id=test_user.id, address_id=test_address.id,
             status="Confirmed", total_amount=Decimal(str(90 * qty)),
-            payment_method="COD", delivery_otp="123456",
+            payment_method="Razorpay", delivery_otp="123456",
         )
         db_session.add(order)
         db_session.flush()
@@ -110,7 +92,7 @@ class TestStockDeduction:
 
         resp = client.post("/api/orders", json={
             "address_id": str(test_address.id),
-            "payment_method": "COD",
+            "payment_method": "Razorpay",
         }, headers=auth_headers)
         assert resp.status_code == 201
 
@@ -145,7 +127,7 @@ class TestStockDeduction:
 
         resp = client.post("/api/orders", json={
             "address_id": str(test_address.id),
-            "payment_method": "COD",
+            "payment_method": "Razorpay",
         }, headers=auth_headers)
         assert resp.status_code == 400
         assert "stock" in resp.json()["detail"].lower()
@@ -191,11 +173,13 @@ class TestStockDeduction:
 
         resp1 = client.post("/api/orders", json={
             "address_id": str(address_id),
-            "payment_method": "COD",
+            "payment_method": "Razorpay",
         }, headers=auth_headers)
         if resp1.status_code == 201:
             oid1 = resp1.json()["id"]
-            r1 = client.post("/api/payments/process", json={"order_id": oid1, "method": "COD"}, headers=auth_headers)
+            import resources
+            with patch.multiple(resources, RAZORPAY_ENABLED=True, RAZORPAY_KEY_ID="key", RAZORPAY_KEY_SECRET="secret"):
+                r1 = client.post("/api/payments/create-order", json={"order_id": oid1}, headers=auth_headers)
 
         db_session.expire_all()
         prod = db_session.query(type(low_stock_product)).filter(type(low_stock_product).id == product_id).first()
@@ -212,6 +196,6 @@ class TestStockDeduction:
 
         resp2 = client.post("/api/orders", json={
             "address_id": str(address_id),
-            "payment_method": "COD",
+            "payment_method": "Razorpay",
         }, headers=auth_headers)
         assert resp2.status_code == 400

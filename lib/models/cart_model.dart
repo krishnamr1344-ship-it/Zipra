@@ -244,6 +244,6 @@ class OrderData {
     DateTime? date,
     this.deliveryAddress,
     this.deliveryOtp,
-    this.paymentMethod = 'COD',
+    this.paymentMethod = 'Razorpay',
   }) : date = date ?? DateTime.now();
 }

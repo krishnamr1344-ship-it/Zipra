@@ -211,7 +211,7 @@ def test_order(db_session, test_user, test_product, test_address):
         address_id=test_address.id,
         status="Pending",
         total_amount=Decimal("90.00"),
-        payment_method="COD",
+        payment_method="Razorpay",
     )
     db_session.add(order)
     db_session.flush()

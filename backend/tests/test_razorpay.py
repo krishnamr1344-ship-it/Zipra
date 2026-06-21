@@ -70,15 +70,13 @@ class TestRazorpayCreateOrder:
     def test_create_order_wrong_method(self, client, db_session, auth_headers, test_user, test_product, test_address):
         import resources
         with patch.multiple(resources, RAZORPAY_ENABLED=True, RAZORPAY_KEY_ID="key", RAZORPAY_KEY_SECRET="secret"):
+            # Payment method must be 'Razorpay' — "invalid" is rejected at validation
             resp = client.post("/api/orders/direct", json={
                 "items": [{"product_id": str(test_product.id), "quantity": 1}],
-                "payment_method": "COD",
+                "payment_method": "invalid",
                 "address_id": str(test_address.id),
             }, headers=auth_headers)
-            order_id = resp.json()["id"]
-
-            resp2 = client.post("/api/payments/create-order", json={"order_id": order_id}, headers=auth_headers)
-            assert resp2.status_code == 400
+            assert resp.status_code == 422
 
     def test_create_order_already_paid(self, client, db_session, auth_headers, test_user, test_product, test_address, mock_razorpay_client):
         import resources

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/theme.dart';
 import '../models/cart_model.dart';
+import 'payment_gateway_screen.dart';
 
 class OrderDetailPage extends StatelessWidget {
   final OrderData order;
@@ -33,6 +34,39 @@ class OrderDetailPage extends StatelessWidget {
             _InfoBox(order: order),
             const SizedBox(height: 16),
             _ItemsBox(order: order),
+            if (order.status == 'Pending' || order.status == 'Failed') ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PaymentGatewayScreen(
+                          orderId: order.id,
+                          total: order.total,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.payment_rounded, size: 20),
+                  label: Text(
+                    order.status == 'Failed' ? 'Retry Payment' : 'Pay Now',
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -259,7 +293,7 @@ class _InfoBox extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: _infoItem(Icons.payment, 'Payment', order.paymentMethod == 'Razorpay' ? 'Online Payment' : 'Cash on Delivery')),
+              Expanded(child: _infoItem(Icons.payment, 'Payment', 'Online Payment')),
               const SizedBox(width: 12),
               Expanded(child: _infoItem(Icons.shopping_bag, 'Items', '${order.items.length} item${order.items.length > 1 ? 's' : ''}')),
             ],

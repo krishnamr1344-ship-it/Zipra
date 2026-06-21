@@ -1312,10 +1312,6 @@ def create_order_direct(body: OrderDirectCreateRequest, request: Request, db: Se
             db.add(oi)
         db.flush()
 
-        if body.payment_method == "COD":
-            _confirm_order_payment(order, user_id, body.payment_method, db)
-            order.status = "Confirmed"
-
         db.commit()
     except Exception:
         db.rollback()
@@ -1328,7 +1324,7 @@ def create_order_direct(body: OrderDirectCreateRequest, request: Request, db: Se
 def _confirm_order_payment(order: Order, user_id: str, method: str, db: Session, existing_payment: Payment = None) -> Payment:
     """Deduct stock, generate OTP, create or update Payment record.
     Called at payment-confirmation time:
-    - For COD: within create_order_direct (creates new Payment)
+    - For direct orders: from create_order_direct (creates new Payment)
     - For cart-based: from process_payment (creates new Payment)
     - For Razorpay: from verify / webhook (updates existing pending Payment)
     """
@@ -1352,7 +1348,7 @@ def _confirm_order_payment(order: Order, user_id: str, method: str, db: Session,
         existing_payment.status = "success"
         existing_payment.method = method
         if not existing_payment.transaction_id:
-            existing_payment.transaction_id = _generate_txn_id(method)
+            existing_payment.transaction_id = _generate_txn_id()
         return existing_payment
 
     payment = Payment(
@@ -1361,20 +1357,19 @@ def _confirm_order_payment(order: Order, user_id: str, method: str, db: Session,
         amount=order.total_amount,
         method=method,
         status="success",
-        transaction_id=_generate_txn_id(method),
+        transaction_id=_generate_txn_id(),
     )
     db.add(payment)
     return payment
 
 
-def _generate_txn_id(method: str) -> str:
-    prefix = "RZP" if method == "Razorpay" else "COD"
-    return prefix + datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S") + str(uuid.uuid4()).split("-")[0]
+def _generate_txn_id() -> str:
+    return "RZP" + datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S") + str(uuid.uuid4()).split("-")[0]
 
 
 # ─── PAYMENTS ─────────────────────────────────────────────────────
 # Security: NEVER accept or store card numbers, CVV, bank details.
-# Only COD (Cash on Delivery) is supported.
+# Razorpay is the only supported payment method.
 
 PAYMENT_TIMEOUT_SECONDS = 60
 
@@ -1489,6 +1484,19 @@ def razorpay_create_order(body: RazorpayCreateOrderRequest, request: Request, db
     if order.status not in ("Pending", "Failed"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order already paid")
 
+    # Re-verify stock availability before creating Razorpay order (prevents retry of out-of-stock orders)
+    items = db.query(OrderItem).filter(
+        OrderItem.order_id == order.id,
+        OrderItem.is_deleted == False,
+    ).all()
+    for oi in items:
+        product = _get_product_or_404(str(oi.product_id), db, for_update=True)
+        if product.stock < oi.quantity:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Insufficient stock for {product.name}. Please try again later.",
+            )
+
     # Check for existing successful payment
     existing_success = db.query(Payment).filter(
         Payment.order_id == order.id,
@@ -1561,7 +1569,7 @@ def razorpay_verify(body: RazorpayVerifyRequest, request: Request, db: Session =
         Order.id == body.order_id,
         Order.user_id == user_id,
         Order.is_deleted == False,
-    ).first()
+    ).with_for_update().first()
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
 

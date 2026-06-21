@@ -9,8 +9,14 @@ import 'orders_page.dart';
 class PaymentGatewayScreen extends StatefulWidget {
   final String orderId;
   final int total;
+  final VoidCallback? onPaymentSuccess;
 
-  const PaymentGatewayScreen({super.key, required this.orderId, required this.total});
+  const PaymentGatewayScreen({
+    super.key,
+    required this.orderId,
+    required this.total,
+    this.onPaymentSuccess,
+  });
 
   @override
   State<PaymentGatewayScreen> createState() => _PaymentGatewayScreenState();
@@ -60,7 +66,11 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
     } catch (e) {
       setState(() => _initializing = false);
       if (!mounted) return;
-      AppSnackbar.show(context, 'Failed to initialize payment: $e', type: SnackbarType.error);
+      AppSnackbar.show(
+        context,
+        'Failed to initialize payment: $e',
+        type: SnackbarType.error,
+      );
       Navigator.pop(context);
     }
   }
@@ -74,7 +84,11 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
   void _handleError(PaymentFailureResponse response) {
     if (!mounted) return;
     setState(() => _checkoutOpen = false);
-    AppSnackbar.show(context, 'Payment failed: ${response.message}', type: SnackbarType.error);
+    AppSnackbar.show(
+      context,
+      'Payment failed: ${response.message}',
+      type: SnackbarType.error,
+    );
     Navigator.pop(context);
   }
 
@@ -86,6 +100,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
   Future<void> _verifyPayment(String paymentId, String signature) async {
     try {
       await _api.verifyRazorpayPayment(widget.orderId, paymentId, signature);
+      widget.onPaymentSuccess?.call();
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
@@ -93,7 +108,11 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      AppSnackbar.show(context, 'Payment verification failed: $e', type: SnackbarType.error);
+      AppSnackbar.show(
+        context,
+        'Payment verification failed: $e',
+        type: SnackbarType.error,
+      );
       Navigator.pop(context);
     }
   }
@@ -120,17 +139,37 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
                 children: [
                   CircularProgressIndicator(),
                   SizedBox(height: 20),
-                  Text('Connecting to payment gateway...', style: TextStyle(fontSize: 16, color: AppColors.textSecondary)),
+                  Text(
+                    'Connecting to payment gateway...',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
                 ],
               )
             : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.check_circle_outline, size: 64, color: AppColors.primary),
+                  const Icon(
+                    Icons.check_circle_outline,
+                    size: 64,
+                    color: AppColors.primary,
+                  ),
                   const SizedBox(height: 16),
-                  const Text('Payment initiated', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                  const Text(
+                    'Payment initiated',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
                   const SizedBox(height: 8),
-                  Text('₹${widget.total}', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                  Text(
+                    '₹${widget.total}',
+                    style: const TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
                   const SizedBox(height: 20),
                   if (!_checkoutOpen)
                     ElevatedButton(
@@ -138,8 +177,13 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 14,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       child: const Text('Retry Payment'),
                     ),
@@ -177,7 +221,7 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (_, __) {
+      onPopInvokedWithResult: (_, _) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const OrdersPage()),
           (route) => false,
@@ -196,12 +240,27 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                     color: AppColors.successLight,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.check_circle, size: 64, color: AppColors.success),
+                  child: const Icon(
+                    Icons.check_circle,
+                    size: 64,
+                    color: AppColors.success,
+                  ),
                 ),
                 const SizedBox(height: 24),
-                const Text('Payment Successful!', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                const Text(
+                  'Payment Successful!',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
                 const SizedBox(height: 8),
-                Text('Your order has been placed and payment confirmed.', style: TextStyle(fontSize: 14, color: Colors.grey[600]), textAlign: TextAlign.center),
+                Text(
+                  'Your order has been placed and payment confirmed.',
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  textAlign: TextAlign.center,
+                ),
                 const SizedBox(height: 32),
                 SizedBox(
                   width: double.infinity,
@@ -217,9 +276,17 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
                       elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
-                    child: const Text('View My Orders', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    child: const Text(
+                      'View My Orders',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
               ],

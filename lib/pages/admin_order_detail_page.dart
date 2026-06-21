@@ -894,8 +894,8 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                             Icon(Icons.check_circle_rounded,
                                 size: 14, color: Colors.green.shade600),
                             const SizedBox(width: 4),
-                            const Text('COD',
-                                style: TextStyle(
+                            Text('${_order['payment_method']?.toUpperCase() ?? ''}',
+                                style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700,
                                     color: Color(0xFF10B981))),

@@ -32,7 +32,6 @@ UNIT_LENGTH = 20
 TRANSACTION_ID_LENGTH = 100
 IMAGE_URL_LENGTH = 1000
 
-VALID_PAYMENT_METHODS = {"cod", "COD", "razorpay", "Razorpay"}
 VALID_ORDER_STATUSES = {"Pending", "Confirmed", "Shipped", "Delivered", "Cancelled", "Failed"}
 VALID_PAYMENT_STATUSES = {"pending", "success", "failed"}
 
@@ -509,9 +508,9 @@ class OrderCreateRequest(BaseModel):
     @classmethod
     def valid_method(cls, v):
         v = v.strip().lower()
-        if v not in VALID_PAYMENT_METHODS:
-            raise ValueError(f"Payment method must be one of: {', '.join(sorted(VALID_PAYMENT_METHODS))}")
-        return "COD" if v == "cod" else "Razorpay"
+        if v not in {"razorpay"}:
+            raise ValueError("Payment method must be 'razorpay'")
+        return "Razorpay"
 
 class OrderDirectCreateRequest(BaseModel):
     items: list[OrderItemInput] = Field(min_length=1)
@@ -523,9 +522,9 @@ class OrderDirectCreateRequest(BaseModel):
     @classmethod
     def valid_method(cls, v):
         v = v.strip().lower()
-        if v not in VALID_PAYMENT_METHODS:
-            raise ValueError(f"Payment method must be one of: {', '.join(sorted(VALID_PAYMENT_METHODS))}")
-        return "COD" if v == "cod" else "Razorpay"
+        if v not in {"razorpay"}:
+            raise ValueError("Payment method must be 'razorpay'")
+        return "Razorpay"
 
 
 class OrderItemResponse(BaseModel):
@@ -580,9 +579,9 @@ class PaymentProcessRequest(BaseModel):
     @classmethod
     def valid_method(cls, v):
         v = v.strip().lower()
-        if v not in VALID_PAYMENT_METHODS:
-            raise ValueError(f"Payment method must be one of: {', '.join(sorted(VALID_PAYMENT_METHODS))}")
-        return "COD" if v == "cod" else "Razorpay"
+        if v not in {"razorpay"}:
+            raise ValueError("Payment method must be 'razorpay'")
+        return "Razorpay"
 
 
 class PaymentResponse(BaseModel):

@@ -5,6 +5,7 @@ import '../services/api_service.dart';
 import '../widgets/state_widgets.dart';
 import 'login_page.dart';
 import 'order_detail_page.dart';
+import 'payment_gateway_screen.dart';
 
 class OrdersPage extends StatefulWidget {
   const OrdersPage({super.key});
@@ -91,6 +92,7 @@ class _OrdersPageState extends State<OrdersPage> {
                           date: DateTime.tryParse(o['created_at'] ?? '') ?? DateTime.now(),
                           items: ((o['items'] as List?)?.cast<Map<String, dynamic>>() ?? []).map((i) => _OrderItemPreview(name: i['product_name'] ?? '', qty: i['quantity'] ?? 1, price: ((i['product_price'] ?? 0) as num).toDouble().round())).toList(),
                           onTap: () => _openApiDetail(context, o),
+                          onPayNow: () => _openPayment(o['id']?.toString() ?? '', ((o['total_amount'] ?? 0) as num).toDouble().round()),
                         )),
                       ],
 
@@ -115,7 +117,7 @@ class _OrdersPageState extends State<OrdersPage> {
       status: o['status'] ?? 'Pending',
       date: DateTime.tryParse(o['created_at'] ?? '') ?? DateTime.now(),
       deliveryAddress: addr,
-      paymentMethod: o['payment_method'] ?? 'COD',
+      paymentMethod: o['payment_method'] ?? 'Razorpay',
       items: items.map((i) => CartItem(
         id: i['product_id'] ?? '',
         productId: i['product_id'] ?? '',
@@ -128,6 +130,15 @@ class _OrdersPageState extends State<OrdersPage> {
       )).toList(),
     );
     Navigator.push(context, MaterialPageRoute(builder: (_) => OrderDetailPage(order: orderData)));
+  }
+
+  void _openPayment(String orderId, int total) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PaymentGatewayScreen(orderId: orderId, total: total),
+      ),
+    );
   }
 }
 
@@ -146,7 +157,8 @@ class _OrderCard extends StatelessWidget {
   final DateTime date;
   final List<_OrderItemPreview> items;
   final VoidCallback onTap;
-  const _OrderCard({required this.id, required this.status, required this.total, required this.itemCount, required this.date, required this.items, required this.onTap});
+  final VoidCallback? onPayNow;
+  const _OrderCard({required this.id, required this.status, required this.total, required this.itemCount, required this.date, required this.items, required this.onTap, this.onPayNow});
 
   Color _color(String s) {
     switch (s) {
@@ -267,6 +279,30 @@ class _OrderCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
+            if (onPayNow != null && (status == 'Pending' || status == 'Failed'))
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: ElevatedButton.icon(
+                    onPressed: onPayNow,
+                    icon: const Icon(Icons.payment_rounded, size: 18),
+                    label: Text(status == 'Failed' ? 'Pay Now' : 'Pay Now',
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            if (onPayNow != null && (status == 'Pending' || status == 'Failed'))
+              const SizedBox(height: 10),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
               decoration: BoxDecoration(
