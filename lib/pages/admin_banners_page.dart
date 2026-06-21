@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../constants/theme.dart';
 import '../services/admin_api_service.dart';
+import '../services/cloudinary_service.dart';
 import '../widgets/state_widgets.dart';
 
 class AdminBannersPage extends StatefulWidget {
@@ -40,11 +42,12 @@ class _AdminBannersPageState extends State<AdminBannersPage> {
   void _showForm([Map<String, dynamic>? banner]) {
     final titleCtl = TextEditingController(text: banner?['title'] ?? '');
     final subtitleCtl = TextEditingController(text: banner?['subtitle'] ?? '');
-    final imageUrlCtl = TextEditingController(text: banner?['image_url'] ?? '');
+    String? imageUrl = banner?['image_url'] as String?;
     final linkCtl = TextEditingController(text: banner?['link'] ?? '');
     final colorCtl = TextEditingController(text: banner?['color'] ?? 'FF6B00');
     final sortOrderCtl = TextEditingController(text: banner != null ? '${banner['sort_order'] ?? 0}' : '0');
     bool isActive = banner?['is_active'] ?? true;
+    bool uploading = false;
 
     bool saving = false;
     String? titleError;
@@ -76,7 +79,60 @@ class _AdminBannersPageState extends State<AdminBannersPage> {
               const SizedBox(height: 12),
               TextField(controller: subtitleCtl, decoration: InputDecoration(labelText: 'Subtitle', border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)), contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14))),
               const SizedBox(height: 12),
-              TextField(controller: imageUrlCtl, decoration: InputDecoration(labelText: 'Image URL (optional)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)), contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14))),
+              GestureDetector(
+                onTap: uploading ? null : () async {
+                  final picker = ImagePicker();
+                  final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+                  if (picked == null) return;
+                  setSheetState(() => uploading = true);
+                  try {
+                    final url = await CloudinaryService.uploadImage(picked.path);
+                    setSheetState(() { imageUrl = url; uploading = false; });
+                  } catch (e) {
+                    setSheetState(() => uploading = false);
+                    if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+                  }
+                },
+                child: Container(
+                  width: double.infinity,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+                  ),
+                  child: uploading
+                      ? const Center(child: CircularProgressIndicator())
+                      : imageUrl != null && imageUrl!.isNotEmpty
+                          ? Stack(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: Image.network(imageUrl!, width: double.infinity, height: 120, fit: BoxFit.cover),
+                                ),
+                                Positioned(
+                                  top: 4, right: 4,
+                                  child: GestureDetector(
+                                    onTap: () => setSheetState(() => imageUrl = null),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                                      child: const Icon(Icons.close, size: 16, color: Colors.white),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.cloud_upload_outlined, size: 32, color: Colors.grey.shade400),
+                                const SizedBox(height: 6),
+                                Text('Tap to upload image', style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+                              ],
+                            ),
+                ),
+              ),
               const SizedBox(height: 12),
               TextField(controller: linkCtl, decoration: InputDecoration(labelText: 'Link (optional)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)), contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14))),
               const SizedBox(height: 12),
@@ -129,7 +185,7 @@ class _AdminBannersPageState extends State<AdminBannersPage> {
                       final body = {
                         'title': titleCtl.text.trim(),
                         'subtitle': subtitleCtl.text.trim().isEmpty ? null : subtitleCtl.text.trim(),
-                        'image_url': imageUrlCtl.text.trim().isEmpty ? null : imageUrlCtl.text.trim(),
+                        'image_url': (imageUrl != null && imageUrl!.isNotEmpty) ? imageUrl : null,
                         'link': linkCtl.text.trim().isEmpty ? null : linkCtl.text.trim(),
                         'color': colorCtl.text.trim().isEmpty ? 'FF6B00' : colorCtl.text.trim(),
                         'is_active': isActive,

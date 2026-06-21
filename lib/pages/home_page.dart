@@ -78,6 +78,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     wishlistNotifier.load();
     notificationService.load();
     _startCarouselTimer();
+    _requestNotificationPermission();
   }
 
   @override
@@ -117,6 +118,35 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         }
       } catch (_) {}
     });
+  }
+
+  Future<void> _requestNotificationPermission() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool('notification_permission_shown') == true) return;
+    if (!mounted) return;
+    await prefs.setBool('notification_permission_shown', true);
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Enable Notifications'),
+        content: const Text('Get notified about offers, order updates, and promotions.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Not Now'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: _orange, foregroundColor: Colors.white),
+            child: const Text('Allow'),
+          ),
+        ],
+      ),
+    );
+    if (result == true) {
+      notificationService.load();
+    }
   }
 
   Future<void> _checkAndDetectLocation() async {
@@ -406,7 +436,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
     final pages = [
       _buildHome(initial, name),
-      _buildCategoriesTab(),
+      _buildCategoriesTab(initial, name),
       const OffersPage(),
       CartPage(onBrowse: () => setState(() => _selectedIndex = 0)),
       _buildAccount(initial, name),
@@ -1629,9 +1659,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   // CATEGORIES TAB
   // ---------------------------------------------------------------------------
 
-  Widget _buildCategoriesTab() {
+  Widget _buildCategoriesTab(String initial, String name) {
     final cats = List<String>.from(_categories);
-    final safeTop = MediaQuery.of(context).padding.top;
 
     const catMetaFallback = <String, Map<String, dynamic>>{
       'All': {
@@ -2084,33 +2113,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         else
           CustomScrollView(
             slivers: [
-              // Sticky search header
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: _SearchHeaderDelegate(
-                  safeTop: safeTop,
-                  searchController: _searchController,
-                  locationArea: _locationArea,
-                  onLocationTap: _showLocationPicker,
-                  cartItemCount: cartNotifier.itemCount,
-                  onSearchChanged: (_) => setState(() {}),
-                  onNotificationTap: () {
-                    HapticFeedback.lightImpact();
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const NotificationsPage(),
-                      ),
-                    );
-                  },
-                  onCartTap: () async {
-                    HapticFeedback.lightImpact();
-                    if (!await _requireLogin()) return;
-                    if (!mounted) return;
-                    setState(() => _selectedIndex = 3);
-                  },
-                ),
-              ),
+              // Compact header (same as Home tab)
+              SliverToBoxAdapter(child: _buildCompactHeader(initial, name)),
 
               // Most Ordered section
               if (topOrdered.isNotEmpty)

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../constants/theme.dart';
 import '../services/admin_api_service.dart';
+import '../services/cloudinary_service.dart';
 import '../widgets/state_widgets.dart';
 import '../services/notification_service.dart';
 
@@ -41,9 +43,10 @@ class _AdminNotificationsPageState extends State<AdminNotificationsPage> {
   void _showCreateForm() {
     final titleCtl = TextEditingController();
     final messageCtl = TextEditingController();
-    final imageUrlCtl = TextEditingController();
+    String? imageUrl;
     final linkCtl = TextEditingController();
     String selectedType = 'offer';
+    bool uploading = false;
 
     bool saving = false;
     String? titleError;
@@ -87,7 +90,60 @@ class _AdminNotificationsPageState extends State<AdminNotificationsPage> {
                 onChanged: (v) { if (v != null) setSheetState(() => selectedType = v); },
               ),
               const SizedBox(height: 12),
-              TextField(controller: imageUrlCtl, decoration: InputDecoration(labelText: 'Image URL (optional)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)), contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14))),
+              GestureDetector(
+                onTap: uploading ? null : () async {
+                  final picker = ImagePicker();
+                  final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+                  if (picked == null) return;
+                  setSheetState(() => uploading = true);
+                  try {
+                    final url = await CloudinaryService.uploadImage(picked.path);
+                    setSheetState(() { imageUrl = url; uploading = false; });
+                  } catch (e) {
+                    setSheetState(() => uploading = false);
+                    if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+                  }
+                },
+                child: Container(
+                  width: double.infinity,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+                  ),
+                  child: uploading
+                      ? const Center(child: CircularProgressIndicator())
+                      : (imageUrl?.isNotEmpty == true)
+                          ? Stack(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: Image.network(imageUrl!, width: double.infinity, height: 120, fit: BoxFit.cover),
+                                ),
+                                Positioned(
+                                  top: 4, right: 4,
+                                  child: GestureDetector(
+                                    onTap: () => setSheetState(() => imageUrl = null),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                                      child: const Icon(Icons.close, size: 16, color: Colors.white),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.cloud_upload_outlined, size: 32, color: Colors.grey.shade400),
+                                const SizedBox(height: 6),
+                                Text('Tap to upload image', style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+                              ],
+                            ),
+                ),
+              ),
               const SizedBox(height: 12),
               TextField(controller: linkCtl, decoration: InputDecoration(labelText: 'Link (optional)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)), contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14))),
               const SizedBox(height: 16),
@@ -106,7 +162,7 @@ class _AdminNotificationsPageState extends State<AdminNotificationsPage> {
                         'title': titleCtl.text.trim(),
                         'message': messageCtl.text.trim().isEmpty ? null : messageCtl.text.trim(),
                         'type': selectedType,
-                        'image_url': imageUrlCtl.text.trim().isEmpty ? null : imageUrlCtl.text.trim(),
+                        'image_url': (imageUrl?.isNotEmpty == true) ? imageUrl : null,
                         'link': linkCtl.text.trim().isEmpty ? null : linkCtl.text.trim(),
                       };
                       await _api.createNotification(body);
@@ -287,6 +343,19 @@ class _AdminNotificationsPageState extends State<AdminNotificationsPage> {
                                   ),
                                 ],
                               ),
+                              if (notif['image_url'] != null && (notif['image_url'] as String).isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Image.network(
+                                    notif['image_url'],
+                                    height: 100,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, _, _) => Container(height: 80, color: Colors.grey.withValues(alpha: 0.15), child: const Center(child: Icon(Icons.broken_image, color: Colors.grey))),
+                                  ),
+                                ),
+                              ],
                               const Divider(height: 16),
                               Align(
                                 alignment: Alignment.centerRight,
@@ -306,3 +375,4 @@ class _AdminNotificationsPageState extends State<AdminNotificationsPage> {
     );
   }
 }
+
