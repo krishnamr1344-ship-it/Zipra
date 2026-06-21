@@ -1455,19 +1455,55 @@ def get_payment(order_id: str, request: Request, db: Session = Depends(get_db)):
     return _payment_to_response(payment)
 
 
+@router.get("/payments/debug-razorpay")
+def debug_razorpay():
+    """Debug endpoint: test Razorpay API connectivity."""
+    import urllib.request, urllib.error, json as _json
+    try:
+        req = urllib.request.Request(
+            "https://api.razorpay.com/v1/orders",
+            method="GET",
+            headers={"Authorization": f"Basic {__import__('base64').b64encode(f'{RAZORPAY_KEY_ID}:{RAZORPAY_KEY_SECRET}'.encode()).decode()}"},
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = resp.read().decode()
+        return {"status": "ok", "response": data[:500], "key_id_prefix": RAZORPAY_KEY_ID[:8]}
+    except Exception as e:
+        return {"status": "error", "error": str(e), "key_id_prefix": RAZORPAY_KEY_ID[:8]}
+
+
 # ─── RAZORPAY ─────────────────────────────────────────────────────
 # Security: HMAC compare_digest verification, amount from DB only.
 # No secrets stored in client. Webhook always returns 200.
 
 def _razorpay_create_order(amount_paise: int, receipt: str, notes: dict) -> dict:
-    resp = httpx.post(
+    import base64, urllib.request, urllib.parse, urllib.error
+    data = urllib.parse.urlencode({
+        "amount": amount_paise,
+        "currency": "INR",
+        "receipt": receipt,
+        **{f"notes[{k}]": v for k, v in notes.items()},
+    }).encode()
+    auth = base64.b64encode(f"{RAZORPAY_KEY_ID}:{RAZORPAY_KEY_SECRET}".encode()).decode()
+    req = urllib.request.Request(
         "https://api.razorpay.com/v1/orders",
-        auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET),
-        json={"amount": amount_paise, "currency": "INR", "receipt": receipt, "notes": notes},
-        timeout=httpx.Timeout(30.0),
+        data=data,
+        headers={
+            "Authorization": f"Basic {auth}",
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+        method="POST",
     )
-    resp.raise_for_status()
-    return resp.json()
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return json.loads(resp.read().decode())
+    except urllib.error.HTTPError as e:
+        body = e.read().decode()
+        logger.error("Razorpay HTTP %s: %s", e.code, body)
+        raise Exception(f"HTTP {e.code}: {body}")
+    except urllib.error.URLError as e:
+        logger.error("Razorpay URL error: %s", e.reason)
+        raise Exception(f"URL error: {e.reason}")
 
 
 def _create_intent_from_cart(body: RazorpayCreateOrderRequest, user_id: str, db: Session) -> tuple[PaymentIntent, int]:
@@ -1543,7 +1579,7 @@ def _create_intent_from_cart(body: RazorpayCreateOrderRequest, user_id: str, db:
     except Exception as e:
         db.rollback()
         logger.error("Razorpay order creation failed: %s", e)
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Payment gateway error")
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Payment gateway error (key_id={RAZORPAY_KEY_ID[:8]}...): {e}")
 
     razorpay_order_id = razorpay_order.get("id")
     if not razorpay_order_id:
