@@ -579,9 +579,9 @@ class PaymentProcessRequest(BaseModel):
     @classmethod
     def valid_method(cls, v):
         v = v.strip().lower()
-        if v not in {"razorpay"}:
-            raise ValueError("Payment method must be 'razorpay'")
-        return "Razorpay"
+        if v not in {"cod"}:
+            raise ValueError("Payment method must be 'cod'")
+        return "COD"
 
 
 class PaymentResponse(BaseModel):

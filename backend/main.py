@@ -162,6 +162,8 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
+    response.headers["Referrer-Policy"] = "no-referrer"
     return response
 
 
@@ -222,9 +224,8 @@ async def csrf_origin_check(request: Request, call_next):
 
 
 # ─── CORS ───────────────────────────────────────────────────────
-if FRONTEND_URL == "*":
-    import warnings
-    warnings.warn("FRONTEND_URL is set to '*' — CORS allow_credentials=True will be invalid per spec")
+# Mobile app does not use browser CORS. This config is for web admin access.
+# FRONTEND_URL is validated as required at startup.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[FRONTEND_URL],

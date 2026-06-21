@@ -100,7 +100,8 @@ def _normalize_mime(filename: str, content_type: str | None) -> str:
 
 
 @router.post("/upload")
-async def upload_image(file: UploadFile = FastAPIFile(...)):
+async def upload_image(request: Request, file: UploadFile = FastAPIFile(...)):
+    _get_user_id(request)
     if file.size is not None and file.size > _MAX_UPLOAD_SIZE:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
@@ -1413,6 +1414,12 @@ def process_payment(body: PaymentProcessRequest, request: Request, db: Session =
 
     if order.status not in ("Pending", "Failed"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Payment already processed")
+
+    if order.payment_method == "Razorpay":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Razorpay orders must be paid via Razorpay checkout. Use /payments/verify instead.",
+        )
 
     existing_payment = db.query(Payment).filter(
         Payment.order_id == order.id,
