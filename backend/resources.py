@@ -2185,7 +2185,6 @@ def get_latest_app_version(db: Session = Depends(get_db)):
 
 @router.get("/banners", response_model=list[BannerResponse])
 def list_banners(request: Request, db: Session = Depends(get_db)):
-    _get_user_id(request)
     banners = db.query(Banner).filter(
         Banner.is_deleted == False,
         Banner.is_active == True,

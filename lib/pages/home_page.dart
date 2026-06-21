@@ -1029,8 +1029,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 ),
                 const Spacer(),
                 if (_categories.length > 1)
-                  GestureDetector(
-                    onTap: () => setState(() => _selectedIndex = 1),
+                              GestureDetector(
+                                onTap: () async {
+                                  if (!await _requireLogin()) return;
+                                  if (!mounted) return;
+                                  setState(() => _selectedIndex = 1);
+                                },
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
