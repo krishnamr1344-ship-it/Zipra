@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "571924388974",
+    "project_id": "zipra-b3c72",
+    "storage_bucket": "zipra-b3c72.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:571924388974:android:81a8de4abd077237aa9a7f",
+        "android_client_info": {
+          "package_name": "com.jvs.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "571924388974-vlbelgu5j2sd278srf8mfmsoahi7o1p4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.jvs.app",
+            "certificate_hash": "79643b59eb552823ca4fd2169a64371dea3dcadc"
+          }
+        },
+        {
+          "client_id": "571924388974-mgkut52fl8s64jloq6h1s53ol5tjfoa1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDhfzgKf91S_52lDWkPdEZA4GSMbE8CIvk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "571924388974-mgkut52fl8s64jloq6h1s53ol5tjfoa1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,215 +1,89 @@
 """
 auth.py
-Purpose: /register, /login, /logout, /change-email endpoints.
+Purpose: Google Sign-In auth only — /google-login, /logout, /me, /profile.
 Security:
-  - Passwords hashed with bcrypt (12 rounds) before storage.
+  - Firebase ID token verified using Google public keys.
   - JWT tokens with configurable expiry (default 1440 min).
   - On /logout, token JTI saved to blacklist table.
-  - Generic error messages only — never leak DB or stack details.
-  - Password reset codes sent via SMTP email (configurable via env).
-  - Email change requires: current password + OTP to current email + OTP to new email.
-  - Phone change requires: current password.
 """
 import logging
-import hashlib
-import hmac
-import smtplib
-import ssl
-import threading
 import time
 from typing import Optional
-from email.message import EmailMessage
 logger = logging.getLogger(__name__)
 import os
-import secrets
-import string
 import uuid
 from datetime import datetime, timedelta, timezone
 
-import bcrypt
 import jwt
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, TokenBlacklist, PasswordResetCode
-from schemas import RegisterRequest, LoginRequest, UpdateProfileRequest, ForgotPasswordRequest, ResetPasswordRequest, InitiateEmailChangeRequest, CompleteEmailChangeRequest, VerifyRegistrationRequest
-from config import SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY
-
-# Auth key for Supabase — prefer ANON_KEY but fall back to SERVICE_KEY
-_SUPABASE_AUTH_KEY: str = SUPABASE_ANON_KEY or SUPABASE_SERVICE_KEY
+from models import User, TokenBlacklist
+from schemas import GoogleLoginRequest, UpdateProfileRequest, UpdatePhoneRequest
 
 JWT_SECRET = os.getenv("JWT_SECRET")
 JWT_EXPIRY_MINUTES = int(os.getenv("JWT_EXPIRY_MINUTES", "1440"))
-BCRYPT_ROUNDS = int(os.getenv("BCRYPT_ROUNDS", "12"))
 
 if not JWT_SECRET:
     raise RuntimeError("JWT_SECRET not set in environment variables")
 if len(JWT_SECRET) < 32:
     raise RuntimeError(f"JWT_SECRET is only {len(JWT_SECRET)} characters long (minimum: 32)")
 
-SMTP_HOST = os.getenv("SMTP_HOST")
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USERNAME = os.getenv("SMTP_USERNAME")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
-SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", SMTP_USERNAME)
+FIREBASE_PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID")
+if not FIREBASE_PROJECT_ID:
+    raise RuntimeError("FIREBASE_PROJECT_ID not set in environment variables")
 
-RESET_CODE_EXPIRY_MINUTES = 15
+FIREBASE_CERTS_URL = "https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com"
+FIREBASE_ISSUER = f"https://securetoken.google.com/{FIREBASE_PROJECT_ID}"
 
-# ─── Pending email changes (in-memory state machine) ─────────────
-# user_id -> {"new_email": str, "current_otp_hash": str|None, "current_otp_expires": float|None,
-#             "new_otp_hash": str|None, "new_otp_expires": float|None}
-_PENDING_EMAIL_CHANGES: dict[str, dict] = {}
-_EMAIL_CHANGE_LOCK = threading.Lock()
-
-# ─── Pending registrations (email -> {name, password_hash, phone, expires}) ──
-_PENDING_REGISTRATIONS: dict[str, dict] = {}
-_REGISTRATION_LOCK = threading.Lock()
+_cached_keys: dict[str, str] = {}
+_cached_keys_expiry: float = 0
 
 
-# ─── OTP helpers (Supabase Auth primary, SMTP fallback) ──────────
-def _send_otp_email(email: str, purpose: str = "Email Change") -> Optional[str]:
-    """Send OTP to email. Uses Supabase Auth if available, falls back to SMTP.
-    Returns the OTP code (for SMTP/local fallback) or None (Supabase handles it)."""
-    if SUPABASE_URL and _SUPABASE_AUTH_KEY:
-        try:
-            from supabase import create_client
-            supabase = create_client(SUPABASE_URL, _SUPABASE_AUTH_KEY)
-            supabase.auth.sign_in_with_otp({"email": email})
-            logger.info("Supabase OTP sent to %s", email)
-            return None
-        except Exception as e:
-            err_str = str(e).lower()
-            if "otp_disabled" in err_str:
-                logger.warning("Supabase OTP disabled, using local OTP for %s", email)
-            else:
-                logger.warning("Supabase OTP failed for %s: %s", email, e)
-    if SMTP_HOST and SMTP_USERNAME and SMTP_PASSWORD:
-        code = ''.join(secrets.choice(string.digits) for _ in range(6))
-        try:
-            msg = EmailMessage()
-            msg["Subject"] = f"Your {purpose} Verification Code"
-            msg["From"] = SMTP_FROM_EMAIL
-            msg["To"] = email
-            msg.set_content(
-                f"Your {purpose.lower()} verification code is: {code}\n\n"
-                f"This code expires in 15 minutes.\n"
-                f"If you did not request this, please ignore this email."
-            )
-            context = ssl.create_default_context()
-            with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as server:
-                server.starttls(context=context)
-                server.login(SMTP_USERNAME, SMTP_PASSWORD)
-                server.send_message(msg)
-            logger.info("SMTP OTP sent to %s", email)
-            return None  # SMTP handles delivery — don't leak OTP in response
-        except Exception as e:
-            logger.warning("Failed to send SMTP OTP to %s: %s", email, e)
-    # Fallback: generate local OTP (no email service available)
-    code = ''.join(secrets.choice(string.digits) for _ in range(6))
-    logger.info("Local OTP for %s (%s): %s", email, purpose, code)
-    return code
-
-
-def _verify_otp(email: str, otp: str, stored_hash: Optional[str] = None) -> bool:
-    """Verify OTP. Uses Supabase Auth if available, otherwise compares with stored hash."""
-    if SUPABASE_URL and _SUPABASE_AUTH_KEY:
-        try:
-            from supabase import create_client
-            supabase = create_client(SUPABASE_URL, _SUPABASE_AUTH_KEY)
-            supabase.auth.verify_otp({"email": email, "token": otp, "type": "email"})
-            return True
-        except Exception:
-            return False
-    if stored_hash:
-        return hmac.compare_digest(stored_hash, hashlib.sha256(otp.encode()).hexdigest())
-    return False
-
-
-# ─── Per-account login rate limiting ─────────────────────────────
-_LOGIN_ATTEMPTS: dict[str, list[float]] = {}
-_LOGIN_LOCK = threading.Lock()
-_LOGIN_MAX_ATTEMPTS = 5
-_LOGIN_WINDOW_SECONDS = 300  # 5 minutes
-
-
-def _check_login_rate_limit(email: str):
-    """Track failed login attempts per email. Block after 5 failures in 5 minutes."""
+def _get_firebase_keys() -> dict[str, str]:
+    global _cached_keys, _cached_keys_expiry
     now = time.time()
-    with _LOGIN_LOCK:
-        attempts = _LOGIN_ATTEMPTS.get(email, [])
-        attempts = [t for t in attempts if now - t < _LOGIN_WINDOW_SECONDS]
-        if len(attempts) >= _LOGIN_MAX_ATTEMPTS:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Too many login attempts. Try again in 5 minutes.",
-            )
-        _LOGIN_ATTEMPTS[email] = attempts
-
-
-def _record_login_failure(email: str):
-    now = time.time()
-    with _LOGIN_LOCK:
-        attempts = _LOGIN_ATTEMPTS.get(email, [])
-        attempts = [t for t in attempts if now - t < _LOGIN_WINDOW_SECONDS]
-        attempts.append(now)
-        _LOGIN_ATTEMPTS[email] = attempts
-
-
-def _clear_login_rate_limit(email: str):
-    with _LOGIN_LOCK:
-        _LOGIN_ATTEMPTS.pop(email, None)
-
-
-router = APIRouter(prefix="/api/auth", tags=["auth"])
-
-
-def _send_reset_email(recipient: str, code: str):
-    """Send password reset code via SMTP. Raises if SMTP not configured."""
-    if not SMTP_HOST or not SMTP_USERNAME or not SMTP_PASSWORD:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Password reset is currently unavailable. Contact support.",
-        )
+    if _cached_keys and now < _cached_keys_expiry:
+        return _cached_keys
     try:
-        msg = EmailMessage()
-        msg["Subject"] = "Your Password Reset Code"
-        msg["From"] = SMTP_FROM_EMAIL
-        msg["To"] = recipient
-        msg.set_content(
-            f"Your password reset code is: {code}\n\n"
-            f"This code expires in {RESET_CODE_EXPIRY_MINUTES} minutes.\n"
-            f"If you did not request this, please ignore this email."
-        )
-        context = ssl.create_default_context()
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            server.starttls(context=context)
-            server.login(SMTP_USERNAME, SMTP_PASSWORD)
-            server.send_message(msg)
-        logger.info("Reset code sent to %s", recipient)
+        resp = httpx.get(FIREBASE_CERTS_URL, timeout=10)
+        resp.raise_for_status()
+        _cached_keys = resp.json()
+        _cached_keys_expiry = now + 3600
     except Exception as e:
-        logger.warning("Failed to send reset email to %s: %s", recipient, e)
+        logger.warning("Failed to fetch Firebase public keys: %s", e)
+        if not _cached_keys:
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Unable to verify authentication")
+    return _cached_keys
 
 
-def _generic_error():
-    """
-    Security: Return only a generic message on any auth failure.
-    Never reveal whether the email exists or the password was wrong.
-    """
-    return HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid credentials",
-    )
-
-
-def _hash_password(plain: str) -> str:
-    """Security: bcrypt with configurable rounds. Never reversible."""
-    return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt(rounds=BCRYPT_ROUNDS)).decode("utf-8")
-
-
-def _verify_password(plain: str, hashed: str) -> bool:
-    """Constant-time comparison — resists timing attacks."""
-    return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
+def verify_firebase_token(token: str) -> dict:
+    keys = _get_firebase_keys()
+    try:
+        header = jwt.get_unverified_header(token)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token format")
+    kid = header.get("kid")
+    if not kid or kid not in keys:
+        keys = _get_firebase_keys()
+        if not kid or kid not in keys:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    public_key = keys[kid]
+    try:
+        decoded = jwt.decode(
+            token,
+            public_key,
+            algorithms=["RS256"],
+            audience=FIREBASE_PROJECT_ID,
+            issuer=FIREBASE_ISSUER,
+        )
+        return decoded
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
 
 def _create_jwt(user_id: str, role: str = "user", token_version: int = 0) -> tuple[str, str, datetime]:
@@ -229,10 +103,6 @@ def _create_jwt(user_id: str, role: str = "user", token_version: int = 0) -> tup
 
 
 def decode_jwt(token: str) -> dict:
-    """
-    Decode and validate a JWT.
-    Raises HTTPException on expiry, bad signature, or blacklisted token.
-    """
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
     except jwt.ExpiredSignatureError:
@@ -242,131 +112,61 @@ def decode_jwt(token: str) -> dict:
     return payload
 
 
-# ─── ENDPOINTS ───────────────────────────────────────────────────
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "").lower().strip()
+
+router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
-@router.post("/register", status_code=status.HTTP_200_OK)
-def register(body: RegisterRequest, db: Session = Depends(get_db)):
-    """
-    Step 1: Validate and send OTP to email. User must call /verify-registration to complete.
-    Security:
-      - Input validated by Pydantic before DB access.
-      - Duplicate email returns generic error (don't reveal if email exists).
-    """
-    email = body.email.lower().strip()
-
-    # Security: check for existing user.
-    existing_email = db.query(User).filter(User.email == email).first()
-    if existing_email and not existing_email.is_deleted:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
-
-    existing_phone = db.query(User).filter(User.phone == body.phone).first()
-    if existing_phone and not existing_phone.is_deleted:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Phone number already registered")
-
-    # Send OTP via Supabase Auth
-    otp = _send_otp_email(email, purpose="Registration")
-
-    # Store pending registration (15 min expiry)
-    with _REGISTRATION_LOCK:
-        _PENDING_REGISTRATIONS[email] = {
-            "name": body.name.strip(),
-            "password_hash": _hash_password(body.password),
-            "phone": body.phone.strip(),
-            "expires_at": time.time() + 900,
-        }
-
-    resp: dict[str, object] = {"message": "Verification code sent to your email"}
-    if otp is not None:
-        resp["otp"] = otp
-    return resp
-
-
-@router.post("/verify-registration", status_code=status.HTTP_201_CREATED)
-def verify_registration(body: VerifyRegistrationRequest, db: Session = Depends(get_db)):
-    """
-    Step 2: Verify OTP and complete registration.
-    Security:
-      - OTP verified via Supabase Auth.
-      - Pending data cleared after use or expiry.
-    """
-    email = body.email.lower().strip()
-
-    with _REGISTRATION_LOCK:
-        pending = _PENDING_REGISTRATIONS.get(email)
-        if not pending:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No pending registration. Use /register first.")
-        if time.time() > pending["expires_at"]:
-            _PENDING_REGISTRATIONS.pop(email, None)
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Verification code expired. Register again.")
-
-    # Verify OTP via Supabase Auth
-    if not _verify_otp(email, body.otp):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid verification code")
-
-    # Create user
-    user = User(
-        email=email,
-        password_hash=pending["password_hash"],
-        name=pending["name"],
-        phone=pending["phone"],
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-
-    with _REGISTRATION_LOCK:
-        _PENDING_REGISTRATIONS.pop(email, None)
-
-    token, jti, expires = _create_jwt(str(user.id), user.role, user.token_version)
-
-    return {
-        "message": "Registration successful",
-        "token": token,
-        "user": {"id": str(user.id), "name": user.name, "email": user.email, "role": user.role},
-    }
-
-
-@router.post("/login")
-def login(body: LoginRequest, db: Session = Depends(get_db)):
-    """
-    Authenticate user and return JWT.
-    Security:
-      - Constant-time password comparison.
-      - Generic error for any failure.
-      - Token expires in 30 minutes.
-      - Per-email rate limiting (5 attempts per 5 minutes).
-    """
-    _check_login_rate_limit(body.email)
+@router.post("/google-login")
+def google_login(body: GoogleLoginRequest, db: Session = Depends(get_db)):
+    decoded = verify_firebase_token(body.id_token)
+    firebase_uid = decoded.get("uid")
+    email = decoded.get("email", "")
+    name = decoded.get("name", email.split("@")[0])
+    if not firebase_uid or not email:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid token payload")
 
     user = db.query(User).filter(
-        User.email == body.email,
+        User.firebase_uid == firebase_uid,
         User.is_deleted == False,
     ).first()
 
-    if not user or not _verify_password(body.password, user.password_hash):
-        _record_login_failure(body.email)
-        raise _generic_error()
+    if not user:
+        user = db.query(User).filter(
+            User.email == email,
+            User.is_deleted == False,
+        ).first()
+        if user:
+            user.firebase_uid = firebase_uid
+        else:
+            role = "admin" if email.lower() == ADMIN_EMAIL else "user"
+            user = User(
+                firebase_uid=firebase_uid,
+                email=email,
+                name=name,
+                role=role,
+            )
+            db.add(user)
+        db.commit()
+        db.refresh(user)
 
-    _clear_login_rate_limit(body.email)
     token, jti, expires = _create_jwt(str(user.id), user.role, user.token_version)
 
     return {
         "message": "Login successful",
         "token": token,
-        "user": {"id": str(user.id), "name": user.name, "email": user.email, "role": user.role},
+        "user": {
+            "id": str(user.id),
+            "name": user.name,
+            "email": user.email,
+            "phone": user.phone,
+            "role": user.role,
+        },
     }
 
 
 @router.post("/logout", status_code=status.HTTP_200_OK)
 def logout(request: Request, db: Session = Depends(get_db)):
-    """
-    Logout: blacklist the JWT so it can never be used again.
-    Security:
-      - Token extracted from Authorization header (never request body).
-      - JTI saved to blacklist table.
-      - Blacklisted tokens rejected on all protected routes.
-    """
     auth_header = request.headers.get("Authorization", "")
     if not auth_header.startswith("Bearer "):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authorization header")
@@ -378,7 +178,6 @@ def logout(request: Request, db: Session = Depends(get_db)):
     if not jti:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid token")
 
-    # Security: prevent double-blacklist (idempotent).
     already = db.query(TokenBlacklist).filter(
         TokenBlacklist.token_jti == jti,
         TokenBlacklist.is_deleted == False,
@@ -396,109 +195,23 @@ def logout(request: Request, db: Session = Depends(get_db)):
     return {"message": "Logged out successfully"}
 
 
-@router.post("/request-email-change")
-def initiate_email_change(body: InitiateEmailChangeRequest, request: Request, db: Session = Depends(get_db)):
-    """Step 1: Verify password + send OTP to CURRENT email."""
+@router.get("/me")
+def get_profile(request: Request, db: Session = Depends(get_db)):
     user_id = getattr(request.state, "user_id", None)
     if not user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-
-    # H2: Verify current password
-    if not _verify_password(body.current_password, user.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid password")
-
-    new_email = body.new_email
-    if new_email == user.email:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="New email is same as current email")
-    existing_user = db.query(User).filter(User.email == new_email, User.id != user_id, User.is_deleted == False).first()
-    if existing_user:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already in use")
-
-    # H1: Send OTP to CURRENT email, not new email
-    code = _send_otp_email(user.email, purpose="Email Change")
-
-    now = time.time()
-    with _EMAIL_CHANGE_LOCK:
-        _PENDING_EMAIL_CHANGES[user_id] = {
-            "new_email": new_email,
-            "current_otp_hash": hashlib.sha256(code.encode()).hexdigest() if code else None,
-            "current_otp_expires": now + 900 if code else None,
-            "new_otp_hash": None,
-            "new_otp_expires": None,
-        }
-
-    return {"message": "Verification code sent to your current email address"}
-
-
-@router.post("/complete-email-change")
-def complete_email_change(body: CompleteEmailChangeRequest, request: Request, db: Session = Depends(get_db)):
-    """Step 2: Verify OTP from current email + send/verify OTP to new email."""
-    user_id = getattr(request.state, "user_id", None)
-    if not user_id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
-    user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-
-    with _EMAIL_CHANGE_LOCK:
-        pending = _PENDING_EMAIL_CHANGES.get(user_id)
-
-    if not pending:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No email change in progress. Use /request-email-change first.")
-
-    new_email = pending["new_email"]
-    now = time.time()
-
-    # Verify OTP from current email
-    if pending["current_otp_hash"] is not None and pending["current_otp_expires"] is not None:
-        # SMTP fallback path
-        if now > pending["current_otp_expires"]:
-            with _EMAIL_CHANGE_LOCK:
-                _PENDING_EMAIL_CHANGES.pop(user_id, None)
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Verification code has expired. Start over.")
-        if not hmac.compare_digest(pending["current_otp_hash"], hashlib.sha256(body.current_email_otp.encode()).hexdigest()):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid verification code")
-    else:
-        # Supabase Auth path
-        if not _verify_otp(user.email, body.current_email_otp):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid verification code")
-
-    # If new_email_otp is also provided, verify new email and complete
-    if body.new_email_otp:
-        if pending["new_otp_hash"] is not None and pending["new_otp_expires"] is not None:
-            if now > pending["new_otp_expires"]:
-                with _EMAIL_CHANGE_LOCK:
-                    _PENDING_EMAIL_CHANGES.pop(user_id, None)
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="New email verification code has expired. Start over.")
-            if not hmac.compare_digest(pending["new_otp_hash"], hashlib.sha256(body.new_email_otp.encode()).hexdigest()):
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid new email verification code")
-        else:
-            if not _verify_otp(new_email, body.new_email_otp):
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid new email verification code")
-
-        # Both verified — update email
-        user.email = new_email
-        db.commit()
-        db.refresh(user)
-        with _EMAIL_CHANGE_LOCK:
-            _PENDING_EMAIL_CHANGES.pop(user_id, None)
-
-        return {
-            "message": "Email changed successfully",
-            "user": {"id": str(user.id), "name": user.name, "email": user.email, "phone": user.phone, "role": user.role},
-        }
-
-    # Current email verified. Send OTP to new email.
-    new_code = _send_otp_email(new_email, purpose="New Email Verification")
-
-    with _EMAIL_CHANGE_LOCK:
-        _PENDING_EMAIL_CHANGES[user_id]["new_otp_hash"] = hashlib.sha256(new_code.encode()).hexdigest() if new_code else None
-        _PENDING_EMAIL_CHANGES[user_id]["new_otp_expires"] = now + 900 if new_code else None
-
-    return {"message": "Current email verified. Verification code sent to new email."}
+    return {
+        "user": {
+            "id": str(user.id),
+            "name": user.name,
+            "email": user.email,
+            "phone": user.phone,
+            "role": user.role,
+        },
+    }
 
 
 @router.put("/profile")
@@ -510,22 +223,9 @@ def update_profile(body: UpdateProfileRequest, request: Request, db: Session = D
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    # Security: Email changes must use the dedicated /request-email-change + /complete-email-change flow
-    if body.email is not None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email changes must use /api/auth/request-email-change and /api/auth/complete-email-change endpoints",
-        )
-
     if body.name is not None:
         user.name = body.name.strip()
-
-    # H2: require current password for phone changes
     if body.phone is not None:
-        if not body.current_password:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Current password is required to change phone number")
-        if not _verify_password(body.current_password, user.password_hash):
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid password")
         user.phone = body.phone.strip()
 
     db.commit()
@@ -536,69 +236,18 @@ def update_profile(body: UpdateProfileRequest, request: Request, db: Session = D
     }
 
 
-@router.post("/forgot-password")
-def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
-    # Check SMTP availability early to avoid leaking generated codes
-    if not SMTP_HOST or not SMTP_USERNAME or not SMTP_PASSWORD:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Password reset is currently unavailable. Contact support.",
-        )
-
-    user = db.query(User).filter(
-        User.email == body.email,
-        User.is_deleted == False,
-    ).first()
-    if not user:
-        # Don't reveal whether email exists — always return same message
-        return {"message": "If this email is registered, a reset code has been generated"}
-
-    # Invalidate any previous unused codes for this email
-    db.query(PasswordResetCode).filter(
-        PasswordResetCode.email == body.email,
-        PasswordResetCode.used_at.is_(None),
-        PasswordResetCode.is_deleted == False,
-    ).update({"is_deleted": True})
-    db.commit()
-
-    code = ''.join(secrets.choice(string.ascii_lowercase + string.digits) for _ in range(8))
-    code_hash = hashlib.sha256(code.encode()).hexdigest()
-    reset_code = PasswordResetCode(
-        email=body.email,
-        code_hash=code_hash,
-        expires_at=datetime.now(timezone.utc) + timedelta(minutes=RESET_CODE_EXPIRY_MINUTES),
-    )
-    db.add(reset_code)
-    db.commit()
-    _send_reset_email(body.email, code)
-    return {
-        "message": "If this email is registered, a reset code has been generated",
-    }
-
-
-@router.post("/reset-password")
-def reset_password(body: ResetPasswordRequest, db: Session = Depends(get_db)):
-    now = datetime.now(timezone.utc)
-    code_hash = hashlib.sha256(body.code.encode()).hexdigest()
-    record = db.query(PasswordResetCode).filter(
-        PasswordResetCode.email == body.email,
-        PasswordResetCode.code_hash == code_hash,
-        PasswordResetCode.used_at.is_(None),
-        PasswordResetCode.expires_at > now,
-        PasswordResetCode.is_deleted == False,
-    ).first()
-    if not record:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired reset code")
-
-    user = db.query(User).filter(
-        User.email == body.email,
-        User.is_deleted == False,
-    ).first()
+@router.put("/profile/phone")
+def update_phone(body: UpdatePhoneRequest, request: Request, db: Session = Depends(get_db)):
+    user_id = getattr(request.state, "user_id", None)
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-
-    user.password_hash = _hash_password(body.new_password)
-    user.token_version += 1
-    record.used_at = now
+    user.phone = body.phone.strip()
     db.commit()
-    return {"message": "Password reset successful"}
+    db.refresh(user)
+    return {
+        "message": "Phone number saved",
+        "user": {"id": str(user.id), "name": user.name, "email": user.email, "phone": user.phone, "role": user.role},
+    }

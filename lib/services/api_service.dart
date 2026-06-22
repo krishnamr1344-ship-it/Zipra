@@ -14,10 +14,9 @@ class ApiService {
   static const _userEmailKey = 'user_email';
   static const _userPhoneKey = 'user_phone';
   static const _userRoleKey = 'user_role';
+  static const _userIdKey = 'user_id';
 
   final _secureStorage = const FlutterSecureStorage();
-
-  // ─── Token Management ──────────────────────────────────────────
 
   Future<String?> getToken() async {
     return await _secureStorage.read(key: _tokenKey);
@@ -33,9 +32,8 @@ class ApiService {
     await _secureStorage.delete(key: _userEmailKey);
     await _secureStorage.delete(key: _userPhoneKey);
     await _secureStorage.delete(key: _userRoleKey);
+    await _secureStorage.delete(key: _userIdKey);
   }
-
-  // ─── API Calls ─────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> _handleResponse(http.Response res) async {
     if (res.statusCode >= 200 && res.statusCode < 300) {
@@ -73,7 +71,6 @@ class ApiService {
         final detail = map['detail'];
         if (detail is String) return detail;
         if (detail is List && detail.isNotEmpty) {
-          // FastAPI 422 returns list of error objects
           final first = detail.first;
           if (first is Map && first['msg'] is String) {
             return first['msg'] as String;
@@ -95,32 +92,11 @@ class ApiService {
     return false;
   }
 
-  Future<Map<String, dynamic>> register(String name, String email, String phone, String password) async {
+  Future<Map<String, dynamic>> googleLogin(String idToken) async {
     final res = await http.post(
-      Uri.parse('$_baseUrl/api/auth/register'),
+      Uri.parse('$_baseUrl/api/auth/google-login'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'name': name, 'email': email, 'phone': phone, 'password': password}),
-    ).timeout(const Duration(seconds: 60));
-    return _handleResponse(res);
-  }
-
-  Future<Map<String, dynamic>> verifyRegistration(String email, String otp) async {
-    final res = await http.post(
-      Uri.parse('$_baseUrl/api/auth/verify-registration'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'otp': otp}),
-    ).timeout(const Duration(seconds: 60));
-    final body = await _handleResponse(res);
-    await _saveToken(body['token']);
-    await _saveUserLocally((body['user'] as Map<String, dynamic>?)?['name'] as String? ?? '', (body['user'] as Map<String, dynamic>?)?['email'] as String? ?? '', '', (body['user'] as Map<String, dynamic>?)?['role'] as String? ?? 'user');
-    return body;
-  }
-
-  Future<Map<String, dynamic>> login(String email, String password) async {
-    final res = await http.post(
-      Uri.parse('$_baseUrl/api/auth/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'password': password}),
+      body: jsonEncode({'id_token': idToken}),
     ).timeout(const Duration(seconds: 60));
     final body = await _handleResponse(res);
     await _saveToken(body['token']);
@@ -130,6 +106,7 @@ class ApiService {
       userMap?['email'] as String? ?? '',
       userMap?['phone'] as String? ?? '',
       userMap?['role'] as String? ?? 'user',
+      userMap?['id'] as String? ?? '',
     );
     return body;
   }
@@ -152,22 +129,22 @@ class ApiService {
     await _clearToken();
   }
 
-  // ─── Local User Storage (fallback) ─────────────────────────────
-
   Future<Map<String, dynamic>> getSavedUser() async {
     return {
       'name': await _secureStorage.read(key: _userNameKey) ?? 'User',
       'email': await _secureStorage.read(key: _userEmailKey) ?? '',
       'phone': await _secureStorage.read(key: _userPhoneKey) ?? '',
       'role': await _secureStorage.read(key: _userRoleKey) ?? 'user',
+      'id': await _secureStorage.read(key: _userIdKey) ?? '',
     };
   }
 
-  Future<void> _saveUserLocally(String name, String email, String phone, [String role = 'user']) async {
+  Future<void> _saveUserLocally(String name, String email, String phone, [String role = 'user', String id = '']) async {
     await _secureStorage.write(key: _userNameKey, value: name);
     await _secureStorage.write(key: _userEmailKey, value: email);
     await _secureStorage.write(key: _userPhoneKey, value: phone);
     await _secureStorage.write(key: _userRoleKey, value: role);
+    if (id.isNotEmpty) await _secureStorage.write(key: _userIdKey, value: id);
   }
 
   Future<Map<String, dynamic>> updateProfile(String name, String email, {String phone = ''}) async {
@@ -175,11 +152,46 @@ class ApiService {
     final res = await http.put(
       Uri.parse('$_baseUrl/api/auth/profile'),
       headers: headers,
-      body: jsonEncode({'name': name, 'email': email, 'phone': phone}),
+      body: jsonEncode({'name': name, 'phone': phone}),
     ).timeout(const Duration(seconds: 60));
     final body = await _handleResponse(res);
-    await _saveUserLocally((body['user'] as Map<String, dynamic>?)?['name'] as String? ?? '', (body['user'] as Map<String, dynamic>?)?['email'] as String? ?? '', phone, (body['user'] as Map<String, dynamic>?)?['role'] as String? ?? 'user');
+    final u = body['user'] as Map<String, dynamic>?;
+    await _saveUserLocally(
+      u?['name'] as String? ?? '',
+      u?['email'] as String? ?? '',
+      u?['phone'] as String? ?? '',
+      u?['role'] as String? ?? 'user',
+      u?['id'] as String? ?? '',
+    );
     return body;
+  }
+
+  Future<Map<String, dynamic>> updatePhone(String phone) async {
+    final headers = await _authHeaders(required: true);
+    final res = await http.put(
+      Uri.parse('$_baseUrl/api/auth/profile/phone'),
+      headers: headers,
+      body: jsonEncode({'phone': phone}),
+    ).timeout(const Duration(seconds: 60));
+    final body = await _handleResponse(res);
+    final u = body['user'] as Map<String, dynamic>?;
+    await _saveUserLocally(
+      u?['name'] as String? ?? '',
+      u?['email'] as String? ?? '',
+      u?['phone'] as String? ?? '',
+      u?['role'] as String? ?? 'user',
+      u?['id'] as String? ?? '',
+    );
+    return body;
+  }
+
+  Future<Map<String, dynamic>> getMe() async {
+    final headers = await _authHeaders(required: true);
+    final res = await http.get(
+      Uri.parse('$_baseUrl/api/auth/me'),
+      headers: headers,
+    ).timeout(const Duration(seconds: 60));
+    return _handleResponse(res);
   }
 
   Future<void> saveUser(String name, String email, {String phone = ''}) async {
@@ -199,7 +211,43 @@ class ApiService {
     };
   }
 
+  Future<Map<String, dynamic>> forgotPassword(String email) async {
+    throw ApiException('Password reset is not available. Use Google Sign-In.');
+  }
+
+  Future<Map<String, dynamic>> resetPassword(String email, String code, String newPassword) async {
+    throw ApiException('Password reset is not available. Use Google Sign-In.');
+  }
+
+  Future<Map<String, dynamic>> login(String email, String password) async {
+    throw ApiException('Email/password login removed. Use Google Sign-In.');
+  }
+
+  Future<Map<String, dynamic>> register(String name, String email, String phone, String password) async {
+    throw ApiException('Registration removed. Use Google Sign-In.');
+  }
+
+  Future<Map<String, dynamic>> verifyRegistration(String email, String otp) async {
+    throw ApiException('Registration removed. Use Google Sign-In.');
+  }
+
   // ─── Addresses ──────────────────────────────────────────────────
+
+  Future<List<dynamic>> getAddresses() async {
+    final headers = await _authHeaders(required: true);
+    final res = await http.get(Uri.parse('$_baseUrl/api/addresses'), headers: headers).timeout(const Duration(seconds: 60));
+    return _handleListResponse(res);
+  }
+
+  Future<Map<String, dynamic>> addAddress(Map<String, dynamic> data) async {
+    final headers = await _authHeaders(required: true);
+    final res = await http.post(Uri.parse('$_baseUrl/api/addresses'), headers: headers, body: jsonEncode(data)).timeout(const Duration(seconds: 60));
+    return _handleResponse(res);
+  }
+
+  Future<Map<String, dynamic>> createAddress(Map<String, dynamic> data) async {
+    return addAddress(data);
+  }
 
   Future<Map<String, dynamic>> createGpsAddress(double latitude, double longitude, {String? landmark, String? addressType, String? houseNumber, String? floorNumber}) async {
     final headers = await _authHeaders(required: true);
@@ -213,156 +261,52 @@ class ApiService {
     return _handleResponse(res);
   }
 
-  Future<Map<String, dynamic>> createAddress(Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> updateAddress(String id, Map<String, dynamic> data) async {
     final headers = await _authHeaders(required: true);
-    final res = await http.post(Uri.parse('$_baseUrl/api/addresses'), headers: headers, body: jsonEncode(data)).timeout(const Duration(seconds: 60));
-    if (_checkAndHandleUnauthorized(res.statusCode)) return {};
+    final res = await http.put(Uri.parse('$_baseUrl/api/addresses/$id'), headers: headers, body: jsonEncode(data)).timeout(const Duration(seconds: 60));
     return _handleResponse(res);
   }
 
-  Future<List<dynamic>> getAddresses() async {
-    final headers = await _authHeaders();
-    if (headers['Authorization'] == null) return [];
-    final res = await http.get(Uri.parse('$_baseUrl/api/addresses'), headers: headers).timeout(const Duration(seconds: 60));
-    if (_checkAndHandleUnauthorized(res.statusCode)) return [];
+  Future<void> deleteAddress(String id) async {
+    final headers = await _authHeaders(required: true);
+    await http.delete(Uri.parse('$_baseUrl/api/addresses/$id'), headers: headers).timeout(const Duration(seconds: 60));
+  }
+
+  Future<Map<String, dynamic>> setDefaultAddress(String id) async {
+    final headers = await _authHeaders(required: true);
+    final res = await http.put(Uri.parse('$_baseUrl/api/addresses/$id/default'), headers: headers).timeout(const Duration(seconds: 60));
+    return _handleResponse(res);
+  }
+
+  // ─── Places ─────────────────────────────────────────────────────
+
+  Future<List<dynamic>> searchPlaces(String query) async {
+    final res = await http.get(Uri.parse('$_baseUrl/api/places/search?q=$query'), headers: await _authHeaders()).timeout(const Duration(seconds: 60));
     return _handleListResponse(res);
-  }
-
-  Future<void> deleteAddress(String addressId) async {
-    final headers = await _authHeaders();
-    if (headers['Authorization'] == null) throw ApiException('Login required');
-    final res = await http.delete(Uri.parse('$_baseUrl/api/addresses/$addressId'), headers: headers).timeout(const Duration(seconds: 60));
-    if (_checkAndHandleUnauthorized(res.statusCode)) return;
-    if (res.statusCode != 200) {
-      if (kDebugMode) debugPrint('API Error ${res.statusCode}');
-      throw ApiException(_tryDecodeDetail(res.body) ?? 'Failed to delete address');
-    }
-  }
-
-  Future<Map<String, dynamic>> updateAddress(String addressId, Map<String, dynamic> data) async {
-    final headers = await _authHeaders();
-    if (headers['Authorization'] == null) throw ApiException('Login required');
-    final res = await http.put(Uri.parse('$_baseUrl/api/addresses/$addressId'), headers: headers, body: jsonEncode(data)).timeout(const Duration(seconds: 60));
-    if (_checkAndHandleUnauthorized(res.statusCode)) return {};
-    return _handleResponse(res);
   }
 
   Future<Map<String, dynamic>> reverseGeocode(double lat, double lng) async {
-    try {
-      final headers = await _authHeaders();
-      final res = await http.get(
-        Uri.parse('$_baseUrl/api/places/reverse?lat=$lat&lng=$lng'),
-        headers: headers,
-      ).timeout(const Duration(seconds: 60));
-      if (res.statusCode != 200) {
-        if (_checkAndHandleUnauthorized(res.statusCode)) return {};
-        return {};
-      }
-      return jsonDecode(res.body) as Map<String, dynamic>;
-    } catch (e) {
-      debugPrint('ApiService.reverseGeocode: request failed: $e');
-      return {};
-    }
+    final res = await http.get(Uri.parse('$_baseUrl/api/places/reverse?lat=$lat&lng=$lng'), headers: await _authHeaders()).timeout(const Duration(seconds: 60));
+    return _handleResponse(res);
   }
 
-  Future<List<dynamic>> searchPlaces(String query) async {
-    try {
-      final headers = await _authHeaders();
-      final res = await http.get(
-        Uri.parse('$_baseUrl/api/places/search?q=${Uri.encodeQueryComponent(query)}'),
-        headers: headers,
-      ).timeout(const Duration(seconds: 60));
-      if (res.statusCode != 200) return [];
-      if (_checkAndHandleUnauthorized(res.statusCode)) return [];
-      return jsonDecode(res.body) as List<dynamic>;
-    } catch (e) {
-      debugPrint('ApiService.searchPlaces: request failed: $e');
-      return [];
-    }
-  }
-
-  // ─── Products & Categories (user-facing) ───────────────────────
+  // ─── Categories ─────────────────────────────────────────────────
 
   Future<List<dynamic>> getCategories() async {
-    final headers = await _authHeaders();
-    final res = await http.get(Uri.parse('$_baseUrl/api/categories'), headers: headers).timeout(const Duration(seconds: 60));
+    final res = await http.get(Uri.parse('$_baseUrl/api/categories')).timeout(const Duration(seconds: 60));
     return _handleListResponse(res);
   }
 
-  Future<List<dynamic>> getProducts() async {
-    final headers = await _authHeaders();
-    final res = await http.get(Uri.parse('$_baseUrl/api/products'), headers: headers).timeout(const Duration(seconds: 60));
+  // ─── Products ───────────────────────────────────────────────────
+
+  Future<List<dynamic>> getProducts({String? categoryId, String? search, int page = 1, int limit = 50}) async {
+    final params = <String, String>{'page': '$page', 'limit': '$limit'};
+    if (categoryId != null) params['category_id'] = categoryId;
+    if (search != null) params['search'] = search;
+    final uri = Uri.parse('$_baseUrl/api/products').replace(queryParameters: params);
+    final res = await http.get(uri).timeout(const Duration(seconds: 60));
     return _handleListResponse(res);
   }
-
-  Future<List<dynamic>> getBanners() async {
-    final headers = await _authHeaders();
-    final res = await http.get(Uri.parse('$_baseUrl/api/banners'), headers: headers).timeout(const Duration(seconds: 60));
-    return _handleListResponse(res);
-  }
-
-  Future<Map<String, dynamic>> createOrder(List<Map<String, dynamic>> items, String paymentMethod, {String? addressId}) async {
-    final headers = await _authHeaders(required: true);
-    final bodyMap = <String, dynamic>{
-      'items': items,
-      'payment_method': paymentMethod,
-    };
-    if (addressId != null) bodyMap['address_id'] = addressId;
-    final res = await http.post(Uri.parse('$_baseUrl/api/orders/direct'), headers: headers, body: jsonEncode(bodyMap)).timeout(const Duration(seconds: 60));
-    if (_checkAndHandleUnauthorized(res.statusCode)) return {};
-    return _handleResponse(res);
-  }
-
-  Future<List<dynamic>> getOrders() async {
-    final headers = await _authHeaders();
-    if (headers['Authorization'] == null) return [];
-    final res = await http.get(Uri.parse('$_baseUrl/api/orders'), headers: headers).timeout(const Duration(seconds: 60));
-    if (_checkAndHandleUnauthorized(res.statusCode)) return [];
-    return _handleListResponse(res);
-  }
-
-  Future<Map<String, dynamic>> getOrderById(String orderId) async {
-    final headers = await _authHeaders(required: true);
-    final res = await http.get(Uri.parse('$_baseUrl/api/orders/$orderId'), headers: headers).timeout(const Duration(seconds: 60));
-    if (_checkAndHandleUnauthorized(res.statusCode)) return {};
-    return _handleResponse(res);
-  }
-
-  // ─── Combo Packs ──────────────────────────────────────────────────
-
-  Future<List<dynamic>> getComboPacks() async {
-    try {
-      final res = await http.get(Uri.parse('$_baseUrl/api/combo-packs')).timeout(const Duration(seconds: 60));
-      if (res.statusCode != 200) return [];
-      final decoded = jsonDecode(res.body);
-      if (decoded is List<dynamic>) return decoded;
-      } catch (e) {
-        debugPrint('ApiService.getComboPacks: request failed: $e');
-      }
-    return [];
-  }
-
-  // ─── Forgot Password ────────────────────────────────────────────
-
-  Future<Map<String, dynamic>> forgotPassword(String email) async {
-    final res = await http.post(
-      Uri.parse('$_baseUrl/api/auth/forgot-password'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email}),
-    ).timeout(const Duration(seconds: 60));
-    return _handleResponse(res);
-  }
-
-  Future<Map<String, dynamic>> resetPassword(String email, String code, String newPassword) async {
-    final res = await http.post(
-      Uri.parse('$_baseUrl/api/auth/reset-password'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'code': code, 'new_password': newPassword}),
-    ).timeout(const Duration(seconds: 60));
-    return _handleResponse(res);
-  }
-
-  // ─── Cart ────────────────────────────────────────────────────────
 
   Future<List<dynamic>> getCart() async {
     final headers = await _authHeaders();
@@ -372,182 +316,191 @@ class ApiService {
     return _handleListResponse(res);
   }
 
-  Future<Map<String, dynamic>> addToCart(String productId, {int quantity = 1}) async {
-    final headers = await _authHeaders(required: true);
-    final res = await http.post(
-      Uri.parse('$_baseUrl/api/cart'),
-      headers: headers,
-      body: jsonEncode({'product_id': productId, 'quantity': quantity}),
-    ).timeout(const Duration(seconds: 60));
-    if (_checkAndHandleUnauthorized(res.statusCode)) return {};
-    return _handleResponse(res);
-  }
-
-  Future<void> updateCartItem(String itemId, int quantity) async {
-    final headers = await _authHeaders(required: true);
-    final res = await http.put(
-      Uri.parse('$_baseUrl/api/cart/$itemId'),
-      headers: headers,
-      body: jsonEncode({'quantity': quantity}),
-    ).timeout(const Duration(seconds: 60));
-    if (_checkAndHandleUnauthorized(res.statusCode)) return;
-    if (res.statusCode >= 200 && res.statusCode < 300) return;
-    throw ApiException('Failed to update cart');
-  }
-
-  Future<void> removeCartItem(String itemId) async {
-    final headers = await _authHeaders(required: true);
-    final res = await http.delete(Uri.parse('$_baseUrl/api/cart/$itemId'), headers: headers).timeout(const Duration(seconds: 60));
-    if (_checkAndHandleUnauthorized(res.statusCode)) return;
-    if (res.statusCode >= 200 && res.statusCode < 300) return;
-    throw ApiException('Failed to remove cart item');
-  }
-
   Future<void> clearCart() async {
     final headers = await _authHeaders(required: true);
     final res = await http.delete(Uri.parse('$_baseUrl/api/cart'), headers: headers).timeout(const Duration(seconds: 60));
     if (_checkAndHandleUnauthorized(res.statusCode)) return;
   }
 
-  // ─── Wishlist ────────────────────────────────────────────────────
+  // ─── Cart ───────────────────────────────────────────────────────
+
+  Future<List<dynamic>> getCartItems() async {
+    final headers = await _authHeaders(required: true);
+    final res = await http.get(Uri.parse('$_baseUrl/api/cart'), headers: headers).timeout(const Duration(seconds: 60));
+    return _handleListResponse(res);
+  }
+
+  Future<Map<String, dynamic>> addToCart(String productId, {int quantity = 1}) async {
+    final headers = await _authHeaders(required: true);
+    final res = await http.post(Uri.parse('$_baseUrl/api/cart'), headers: headers, body: jsonEncode({'product_id': productId, 'quantity': quantity})).timeout(const Duration(seconds: 60));
+    return _handleResponse(res);
+  }
+
+  Future<Map<String, dynamic>> updateCartItem(String itemId, int quantity) async {
+    final headers = await _authHeaders(required: true);
+    final res = await http.put(Uri.parse('$_baseUrl/api/cart/$itemId'), headers: headers, body: jsonEncode({'quantity': quantity})).timeout(const Duration(seconds: 60));
+    return _handleResponse(res);
+  }
+
+  Future<void> removeCartItem(String itemId) async {
+    final headers = await _authHeaders(required: true);
+    await http.delete(Uri.parse('$_baseUrl/api/cart/$itemId'), headers: headers).timeout(const Duration(seconds: 60));
+  }
+
+  // ─── Orders ─────────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> createOrder(Map<String, dynamic> data) async {
+    final headers = await _authHeaders(required: true);
+    final res = await http.post(Uri.parse('$_baseUrl/api/orders'), headers: headers, body: jsonEncode(data)).timeout(const Duration(seconds: 120));
+    return _handleResponse(res);
+  }
+
+  Future<List<dynamic>> getOrders() async {
+    final headers = await _authHeaders(required: true);
+    final res = await http.get(Uri.parse('$_baseUrl/api/orders'), headers: headers).timeout(const Duration(seconds: 60));
+    return _handleListResponse(res);
+  }
+
+  Future<Map<String, dynamic>> getOrder(String id) async {
+    final headers = await _authHeaders(required: true);
+    final res = await http.get(Uri.parse('$_baseUrl/api/orders/$id'), headers: headers).timeout(const Duration(seconds: 60));
+    return _handleResponse(res);
+  }
+
+  // ─── Wishlist ───────────────────────────────────────────────────
+
+  Future<List<dynamic>> getWishlistItems() async {
+    final headers = await _authHeaders(required: true);
+    final res = await http.get(Uri.parse('$_baseUrl/api/wishlist'), headers: headers).timeout(const Duration(seconds: 60));
+    return _handleListResponse(res);
+  }
 
   Future<List<dynamic>> getWishlist() async {
-    final headers = await _authHeaders();
-    if (headers['Authorization'] == null) return [];
-    final res = await http.get(Uri.parse('$_baseUrl/api/wishlist'), headers: headers).timeout(const Duration(seconds: 60));
-    if (_checkAndHandleUnauthorized(res.statusCode)) return [];
-    return _handleListResponse(res);
+    return getWishlistItems();
   }
 
   Future<Map<String, dynamic>> addToWishlist(String productId) async {
     final headers = await _authHeaders(required: true);
-    final res = await http.post(
-      Uri.parse('$_baseUrl/api/wishlist'),
-      headers: headers,
-      body: jsonEncode({'product_id': productId}),
-    ).timeout(const Duration(seconds: 60));
-    if (_checkAndHandleUnauthorized(res.statusCode)) return {};
+    final res = await http.post(Uri.parse('$_baseUrl/api/wishlist'), headers: headers, body: jsonEncode({'product_id': productId})).timeout(const Duration(seconds: 60));
     return _handleResponse(res);
   }
 
-  Future<void> removeFromWishlist(String productId) async {
+  Future<void> removeFromWishlist(String itemId) async {
     final headers = await _authHeaders(required: true);
-    final res = await http.delete(Uri.parse('$_baseUrl/api/wishlist/$productId'), headers: headers).timeout(const Duration(seconds: 60));
-    if (_checkAndHandleUnauthorized(res.statusCode)) return;
-    if (res.statusCode >= 200 && res.statusCode < 300) return;
-    throw ApiException('Failed to remove from wishlist');
+    await http.delete(Uri.parse('$_baseUrl/api/wishlist/$itemId'), headers: headers).timeout(const Duration(seconds: 60));
   }
 
-  // ─── Suggest Product ─────────────────────────────────────────────
+  // ─── Payments ───────────────────────────────────────────────────
 
-  Future<Map<String, dynamic>> suggestProduct(String productName, String reason) async {
-    final headers = await _authHeaders();
-    final res = await http.post(
-      Uri.parse('$_baseUrl/api/suggest-product'),
-      headers: headers,
-      body: jsonEncode({'product_name': productName, 'reason': reason}),
-    ).timeout(const Duration(seconds: 60));
-    if (_checkAndHandleUnauthorized(res.statusCode)) return {};
-    return _handleResponse(res);
-  }
-
-  Future<Map<String, dynamic>> addPackToCart(String packId) async {
+  Future<Map<String, dynamic>> createPaymentOrder(Map<String, dynamic> data) async {
     final headers = await _authHeaders(required: true);
-    final res = await http.post(
-      Uri.parse('$_baseUrl/api/combo-packs/add-to-cart'),
-      headers: headers,
-      body: jsonEncode({'pack_id': packId}),
-    ).timeout(const Duration(seconds: 60));
-    if (_checkAndHandleUnauthorized(res.statusCode)) return {};
+    final res = await http.post(Uri.parse('$_baseUrl/api/payments/create-order'), headers: headers, body: jsonEncode(data)).timeout(const Duration(seconds: 60));
     return _handleResponse(res);
   }
 
-  // ─── Razorpay ─────────────────────────────────────────────────────
+  Future<Map<String, dynamic>> verifyPayment(Map<String, dynamic> data) async {
+    final headers = await _authHeaders(required: true);
+    final res = await http.post(Uri.parse('$_baseUrl/api/payments/verify'), headers: headers, body: jsonEncode(data)).timeout(const Duration(seconds: 60));
+    return _handleResponse(res);
+  }
+
+  Future<Map<String, dynamic>> verifyRazorpayPayment({String? orderId, String? intentId, required String paymentId, required String signature}) async {
+    final headers = await _authHeaders(required: true);
+    final body = <String, dynamic>{'razorpay_payment_id': paymentId, 'razorpay_signature': signature};
+    if (orderId != null) body['order_id'] = orderId;
+    if (intentId != null) body['intent_id'] = intentId;
+    final res = await http.post(Uri.parse('$_baseUrl/api/payments/verify'), headers: headers, body: jsonEncode(body)).timeout(const Duration(seconds: 15));
+    if (_checkAndHandleUnauthorized(res.statusCode)) return {};
+    return _handleResponse(res);
+  }
 
   Future<Map<String, dynamic>> createRazorpayOrder(String orderId) async {
     final headers = await _authHeaders(required: true);
-    final res = await http.post(
-      Uri.parse('$_baseUrl/api/payments/create-order'),
-      headers: headers,
-      body: jsonEncode({'order_id': orderId}),
-    ).timeout(const Duration(seconds: 15));
+    final res = await http.post(Uri.parse('$_baseUrl/api/payments/create-order'), headers: headers, body: jsonEncode({'order_id': orderId})).timeout(const Duration(seconds: 15));
     if (_checkAndHandleUnauthorized(res.statusCode)) return {};
     return _handleResponse(res);
   }
 
-  Future<Map<String, dynamic>> createPaymentIntent(
-    List<Map<String, dynamic>> cartItems,
-    String? addressId, {
-    String? phone,
-  }) async {
+  Future<Map<String, dynamic>> createPaymentIntent(List<Map<String, dynamic>> cartItems, String? addressId, {String? phone}) async {
     final headers = await _authHeaders(required: true);
-    final body = <String, dynamic>{
-      'cart_items': cartItems,
-    };
+    final body = <String, dynamic>{'cart_items': cartItems};
     if (addressId != null) body['address_id'] = addressId;
     if (phone != null) body['phone'] = phone;
-    final res = await http.post(
-      Uri.parse('$_baseUrl/api/payments/create-order'),
-      headers: headers,
-      body: jsonEncode(body),
-    ).timeout(const Duration(seconds: 15));
-    if (_checkAndHandleUnauthorized(res.statusCode)) return {};
-    return _handleResponse(res);
-  }
-
-  Future<Map<String, dynamic>> verifyRazorpayPayment({
-    String? orderId,
-    String? intentId,
-    required String paymentId,
-    required String signature,
-  }) async {
-    final headers = await _authHeaders(required: true);
-    final body = <String, dynamic>{
-      'razorpay_payment_id': paymentId,
-      'razorpay_signature': signature,
-    };
-    if (orderId != null) body['order_id'] = orderId;
-    if (intentId != null) body['intent_id'] = intentId;
-    final res = await http.post(
-      Uri.parse('$_baseUrl/api/payments/verify'),
-      headers: headers,
-      body: jsonEncode(body),
-    ).timeout(const Duration(seconds: 15));
+    final res = await http.post(Uri.parse('$_baseUrl/api/payments/create-order'), headers: headers, body: jsonEncode(body)).timeout(const Duration(seconds: 15));
     if (_checkAndHandleUnauthorized(res.statusCode)) return {};
     return _handleResponse(res);
   }
 
   Future<Map<String, dynamic>> cancelPaymentIntent(String intentId) async {
     final headers = await _authHeaders(required: true);
-    final res = await http.post(
-      Uri.parse('$_baseUrl/api/payments/cancel/$intentId'),
-      headers: headers,
-    ).timeout(const Duration(seconds: 15));
+    final res = await http.post(Uri.parse('$_baseUrl/api/payments/cancel/$intentId'), headers: headers).timeout(const Duration(seconds: 15));
     if (_checkAndHandleUnauthorized(res.statusCode)) return {};
     return _handleResponse(res);
   }
 
+  // ─── Combo Packs ────────────────────────────────────────────────
+
+  Future<List<dynamic>> getComboPacks() async {
+    final res = await http.get(Uri.parse('$_baseUrl/api/combo-packs')).timeout(const Duration(seconds: 60));
+    return _handleListResponse(res);
+  }
+
+  Future<Map<String, dynamic>> addPackToCart(String packId) async {
+    final headers = await _authHeaders(required: true);
+    final res = await http.post(Uri.parse('$_baseUrl/api/combo-packs/add-to-cart'), headers: headers, body: jsonEncode({'pack_id': packId})).timeout(const Duration(seconds: 60));
+    if (_checkAndHandleUnauthorized(res.statusCode)) return {};
+    return _handleResponse(res);
+  }
+
+  // ─── Banners ───────────────────────────────────────────────────
+
+  Future<List<dynamic>> getBanners() async {
+    final res = await http.get(Uri.parse('$_baseUrl/api/banners')).timeout(const Duration(seconds: 60));
+    return _handleListResponse(res);
+  }
+
+  // ─── Delivery Zone ──────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> checkZone(double lat, double lng) async {
+    final res = await http.post(Uri.parse('$_baseUrl/api/check-zone'), headers: {'Content-Type': 'application/json'}, body: jsonEncode({'latitude': lat, 'longitude': lng})).timeout(const Duration(seconds: 60));
+    return _handleResponse(res);
+  }
+
+  // ─── App Version ────────────────────────────────────────────────
+
   Future<Map<String, dynamic>> getAppVersion() async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/api/app-version'),
-    ).timeout(const Duration(seconds: 15));
+    final res = await http.get(Uri.parse('$_baseUrl/api/app-version')).timeout(const Duration(seconds: 60));
+    return _handleResponse(res);
+  }
+
+  // ─── Notifications ─────────────────────────────────────────────
+
+  Future<List<dynamic>> getNotifications() async {
+    final headers = await _authHeaders();
+    final res = await http.get(Uri.parse('$_baseUrl/api/notifications'), headers: headers).timeout(const Duration(seconds: 60));
+    return _handleListResponse(res);
+  }
+
+  // ─── Product Suggestions ────────────────────────────────────────
+
+  Future<Map<String, dynamic>> suggestProduct(String name, String reason) async {
+    final headers = await _authHeaders(required: true);
+    final res = await http.post(Uri.parse('$_baseUrl/api/suggest-product'), headers: headers, body: jsonEncode({'product_name': name, 'reason': reason})).timeout(const Duration(seconds: 60));
     return _handleResponse(res);
   }
 
   Future<void> warmUp() async {
     try {
-      await http.get(
-        Uri.parse('$_baseUrl/api/app-version'),
-      ).timeout(const Duration(seconds: 20));
-      } catch (e) {
-        debugPrint('ApiService.warmUp: request failed: $e');
-      }
+      await http.get(Uri.parse('$_baseUrl/api/app-version')).timeout(const Duration(seconds: 20));
+    } catch (e) {
+      debugPrint('ApiService.warmUp: request failed: $e');
+    }
   }
 }
 
 class ApiException implements Exception {
   final String message;
-  ApiException(this.message);
+  const ApiException(this.message);
   @override
   String toString() => message;
 }

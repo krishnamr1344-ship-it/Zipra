@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'pages/home_page.dart';
 import 'pages/admin_home_page.dart';
 import 'services/api_service.dart';
@@ -16,9 +17,10 @@ void main() async {
     debugPrint('FATAL: ${details.exception}');
   };
 
-    await AppInfo.load();
+  await Firebase.initializeApp();
+  await AppInfo.load();
 
-    runApp(const MyApp());
+  runApp(const MyApp());
 }
 
 class NoGlowScrollBehavior extends ScrollBehavior {
@@ -127,7 +129,6 @@ class _AppEntryState extends State<_AppEntry> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // Refresh token validity check when app returns from background
       _checkTokenOnResume();
     }
   }
@@ -159,10 +160,15 @@ class _AppEntryState extends State<_AppEntry> with WidgetsBindingObserver {
     if (token != null) {
       final user = await _api.getSavedUser();
       final role = user['role'] as String? ?? 'user';
+      final phone = user['phone'] as String? ?? '';
       if (mounted) {
-        setState(() {
-          _startPage = role == 'admin' ? const AdminHomePage() : const HomePage();
-        });
+        if (phone.isEmpty && role != 'admin') {
+          setState(() => _startPage = const HomePage());
+        } else {
+          setState(() {
+            _startPage = role == 'admin' ? const AdminHomePage() : const HomePage();
+          });
+        }
       }
     } else {
       if (mounted) {

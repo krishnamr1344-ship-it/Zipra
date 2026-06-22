@@ -49,7 +49,6 @@ import uuid
 from decimal import Decimal
 from datetime import datetime, timezone
 
-import bcrypt
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -67,7 +66,6 @@ FRONTEND_URL = os.getenv("FRONTEND_URL")
 API_KEY = os.getenv("API_KEY")
 
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
 
 # Crash on startup if critical env vars are missing (never fall back to defaults).
 _missing = []
@@ -342,21 +340,23 @@ def _seed_data():
             logger.warning("Notification cleanup failed: %s", e)
             db.rollback()
 
-        # Add role column if not exists (for existing DB).
-        try:
-            db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'user'"))
-            db.commit()
-        except Exception as e:
-            logger.warning("ALTER TABLE users rollback: %s", e)
-            db.rollback()
+        # Add missing columns for existing DB.
+        for col_sql in [
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'user'",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS firebase_uid VARCHAR(255) UNIQUE",
+        ]:
+            try:
+                db.execute(text(col_sql))
+                db.commit()
+            except Exception as e:
+                logger.warning("ALTER TABLE failed: %s", e)
+                db.rollback()
 
-        # Create admin user if not exists – credentials from .env (already validated at module level).
+        # Create admin user if not exists – admin signs in via Firebase Google.
         admin = db.query(User).filter(User.email == ADMIN_EMAIL).first()
         if not admin:
-            hashed = bcrypt.hashpw(ADMIN_PASSWORD.encode("utf-8"), bcrypt.gensalt(rounds=12)).decode("utf-8")
             admin = User(
                 email=ADMIN_EMAIL,
-                password_hash=hashed,
                 name="Admin",
                 phone="0000000000",
                 role="admin",

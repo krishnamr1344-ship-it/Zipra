@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
-import '../constants/theme.dart';
+import 'package:flutter/gestures.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../services/api_service.dart';
 import '../services/location_service.dart';
 import '../services/delivery_zone_service.dart';
 import '../models/cart_model.dart';
 import '../widgets/app_snackbar.dart';
-import 'signup_page.dart';
-import 'forgot_password_page.dart';
 import 'home_page.dart';
 import 'admin_home_page.dart';
+import 'complete_profile_page.dart';
+import 'terms_page.dart';
+
+final _googleSignIn = GoogleSignIn();
+final _firebaseAuth = FirebaseAuth.instance;
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -17,41 +22,33 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixin {
-  final _emailCtl = TextEditingController();
-  final _passCtl = TextEditingController();
+class _LoginPageState extends State<LoginPage> {
   bool _loading = false;
-  bool _obscurePass = true;
-  String? _emailError;
-  String? _passError;
 
-  bool _validate() {
-    setState(() {
-      _emailError = _emailCtl.text.trim().isEmpty ? 'Email is required' : null;
-      _passError = _passCtl.text.isEmpty ? 'Password is required' : null;
-    });
-    return _emailError == null && _passError == null;
-  }
-  late AnimationController _animCtl;
-  late Animation<double> _fadeAnim;
-  late Animation<Offset> _slideAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _animCtl = AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
-    _fadeAnim = CurvedAnimation(parent: _animCtl, curve: Curves.easeOut);
-    _slideAnim = Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero).animate(CurvedAnimation(parent: _animCtl, curve: Curves.easeOutCubic));
-    _animCtl.forward();
-  }
-
-  Future<void> _login() async {
-    if (!_validate()) return;
+  Future<void> _signInWithGoogle() async {
     setState(() => _loading = true);
     try {
-      final resp = await ApiService().login(_emailCtl.text.trim(), _passCtl.text);
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        if (mounted) setState(() => _loading = false);
+        return;
+      }
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(accessToken: googleAuth.accessToken, idToken: googleAuth.idToken);
+      final userCredential = await _firebaseAuth.signInWithCredential(credential);
+      final idToken = await userCredential.user?.getIdToken();
+      if (idToken == null) throw Exception('Failed to get ID token');
+
+      final resp = await ApiService().googleLogin(idToken);
       if (!mounted) return;
-      final role = resp['user']?['role'] ?? 'user';
+      final userMap = resp['user'] as Map<String, dynamic>?;
+      final phone = userMap?['phone'] as String? ?? '';
+      final role = userMap?['role'] ?? 'user';
+
+      if (phone.isEmpty && role != 'admin') {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const CompleteProfilePage()));
+        return;
+      }
 
       if (role != 'admin') {
         try {
@@ -63,19 +60,18 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                 AppSnackbar.show(context, zoneCheck.message ?? 'Sorry, delivery not available in your area', type: SnackbarType.error);
               }
             } catch (e) {
-        debugPrint("pages.login_page: $e");
-              if (mounted) {
-                AppSnackbar.show(context, 'Could not verify delivery area. Please try again.', type: SnackbarType.warning);
-              }
+              debugPrint("login_page: $e");
+              if (mounted) AppSnackbar.show(context, 'Could not verify delivery area. Please try again.', type: SnackbarType.warning);
             }
             try {
               await LocationService().saveLocationToServer(locResult.latitude, locResult.longitude);
             } catch (e) {
-              debugPrint("pages.login_page - saveLocationToServer: $e");
+              debugPrint("login_page - saveLocationToServer: $e");
             }
           }
         } catch (e) {
-        debugPrint("pages.login_page: $e");}
+          debugPrint("login_page: $e");
+        }
       }
 
       if (!mounted) return;
@@ -87,185 +83,138 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       } else {
         nav.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const HomePage()), (route) => false);
       }
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      AppSnackbar.show(context, e.message ?? 'Sign in failed', type: SnackbarType.error);
     } on ApiException catch (e) {
       if (!mounted) return;
       AppSnackbar.show(context, e.message, type: SnackbarType.error);
     } catch (e) {
       if (!mounted) return;
-      AppSnackbar.show(context, 'Connection failed. Check server.', type: SnackbarType.error);
+      AppSnackbar.show(context, 'Sign in failed. Please try again.', type: SnackbarType.error);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
   @override
-  void dispose() {
-    _emailCtl.dispose();
-    _passCtl.dispose();
-    _animCtl.dispose();
-    super.dispose();
-  }
-
-  InputDecoration _fieldStyle(String label, IconData icon, {Widget? suffix}) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14, fontWeight: FontWeight.w500),
-      floatingLabelStyle: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
-      prefixIcon: Icon(icon, size: 20, color: Colors.grey.shade400),
-      prefixIconConstraints: const BoxConstraints(minWidth: 40),
-      suffixIcon: suffix,
-      border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey.shade300)),
-      enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey.shade200)),
-      focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary, width: 2)),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 20),
-    );
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            SingleChildScrollView(
-          child: Column(
+    final children = <Widget>[
+      Image.asset(
+        'login/IMG_20260623_030259.png',
+        width: double.infinity,
+        height: double.infinity,
+        fit: BoxFit.cover,
+      ),
+      // Google Sign-In button overlay
+      Positioned(
+        left: MediaQuery.of(context).size.width * 0.08,
+        right: MediaQuery.of(context).size.width * 0.08,
+        bottom: MediaQuery.of(context).size.height * 0.40,
+        height: 56,
+        child: ElevatedButton(
+          onPressed: _loading ? null : _signInWithGoogle,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: const Color(0xFF3C4043),
+            elevation: 3,
+            shadowColor: Colors.black.withValues(alpha: 0.15),
+            side: BorderSide(color: Colors.grey.shade200, width: 1.2),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(28, 50, 28, 60),
-                decoration: const BoxDecoration(
-                  gradient: AppColors.headerGradient,
-                  borderRadius: BorderRadius.only(bottomRight: Radius.circular(60)),
-                ),
-                child: Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
-                      ),
-                      child: const Icon(Icons.shopping_bag_rounded, size: 36, color: Colors.white),
-                    ),
-                    const SizedBox(height: 22),
-                    const Text('Welcome Back!', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: -0.5)),
-                    const SizedBox(height: 8),
-                    Text('Sign in to continue shopping', style: TextStyle(fontSize: 15, color: Colors.white.withValues(alpha: 0.8), letterSpacing: 0.2)),
-                  ],
+              SizedBox(
+                width: 22, height: 22,
+                child: CustomPaint(
+                  painter: _GoogleGPainter(),
                 ),
               ),
-              FadeTransition(
-                opacity: _fadeAnim,
-                child: SlideTransition(
-                  position: _slideAnim,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Transform.translate(
-                      offset: const Offset(0, -20),
-                      child: Container(
-                        padding: const EdgeInsets.fromLTRB(28, 36, 28, 28),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(28),
-                          boxShadow: [
-                            BoxShadow(color: AppColors.shadow, blurRadius: 40, offset: const Offset(0, 15)),
-                            BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 5)),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            TextField(
-                              controller: _emailCtl,
-                              keyboardType: TextInputType.emailAddress,
-                              decoration: _fieldStyle('Email', Icons.email_outlined).copyWith(errorText: _emailError),
-                              onChanged: (_) { if (_emailError != null) setState(() => _emailError = null); },
-                            ),
-                            if (_emailError != null)
-                              Padding(
-                                padding: const EdgeInsets.only(left: 4, top: 2),
-                                child: Text(_emailError!, style: const TextStyle(fontSize: 11, color: AppColors.error)),
-                              ),
-                            const SizedBox(height: 12),
-                            TextField(
-                              controller: _passCtl,
-                              obscureText: _obscurePass,
-                              decoration: _fieldStyle('Password', Icons.lock_outlined,
-                                suffix: IconButton(
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(),
-                                  icon: Icon(_obscurePass ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20, color: Colors.grey.shade400),
-                                  onPressed: () => setState(() => _obscurePass = !_obscurePass),
-                                ),
-                              ).copyWith(errorText: _passError),
-                              onChanged: (_) { if (_passError != null) setState(() => _passError = null); },
-                            ),
-                            if (_passError != null)
-                              Padding(
-                                padding: const EdgeInsets.only(left: 4, top: 2),
-                                child: Text(_passError!, style: const TextStyle(fontSize: 11, color: AppColors.error)),
-                              ),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton(
-                                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ForgotPasswordPage())),
-                                style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 8)),
-                                child: const Text('Forgot Password?', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 13)),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 54,
-                              child: ElevatedButton(
-                                onPressed: _loading ? null : _login,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primary,
-                                  foregroundColor: Colors.white,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                  shadowColor: AppColors.primary.withValues(alpha: 0.3),
-                                ),
-                                child: _loading
-                                    ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                                    : const Text('Sign In', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.3)),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+              const SizedBox(width: 14),
+              const Text(
+                'Continue with Google',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.2, color: Color(0xFF3C4043)),
               ),
-              const SizedBox(height: 16),
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Text("Don't have an account? ", style: TextStyle(color: Colors.grey.shade500, fontSize: 14)),
-                GestureDetector(
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SignupPage())),
-                  child: const Text('Sign Up', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700, fontSize: 14)),
-                ),
-              ]),
-              const SizedBox(height: 30),
             ],
           ),
         ),
-            if (Navigator.canPop(context))
-              Positioned(
-                top: 4,
-                left: 4,
-                child: IconButton(
-                  icon: Icon(Icons.arrow_back, color: Colors.white.withValues(alpha: 0.9)),
-                  onPressed: () => Navigator.pop(context),
-                  style: IconButton.styleFrom(
-                    backgroundColor: Colors.black.withValues(alpha: 0.1),
-                  ),
-                ),
-              ),
-          ],
+      ),
+      // Terms text below Google button
+      Positioned(
+        left: MediaQuery.of(context).size.width * 0.08,
+        right: MediaQuery.of(context).size.width * 0.08,
+        bottom: MediaQuery.of(context).size.height * 0.10,
+        child: RichText(
+          textAlign: TextAlign.center,
+          text: TextSpan(
+            style: const TextStyle(fontSize: 12, color: Colors.grey, height: 1.5),
+            children: [
+              const TextSpan(text: 'By continuing, you agree to our\n'),
+              TextSpan(text: 'Terms of Service', style: const TextStyle(color: Color(0xFFE65100), fontWeight: FontWeight.w600), recognizer: TapGestureRecognizer()..onTap = () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TermsPage()))),
+              const TextSpan(text: ' and '),
+              TextSpan(text: 'Privacy Policy', style: const TextStyle(color: Color(0xFFE65100), fontWeight: FontWeight.w600), recognizer: TapGestureRecognizer()..onTap = () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TermsPage()))),
+            ],
+          ),
         ),
       ),
+    ];
+    if (_loading) {
+      children.insert(1,
+        Positioned.fill(
+          child: Container(
+            color: Colors.black.withValues(alpha: 0.3),
+            child: const Center(child: CircularProgressIndicator(color: Colors.white)),
+          ),
+        ),
+      );
+    }
+    return Scaffold(
+      body: Stack(children: children),
     );
   }
+}
+
+class _GoogleGPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    final r = size.width / 2;
+
+    // White circle background
+    canvas.drawCircle(Offset(cx, cy), r, Paint()..color = Colors.white);
+
+    // Multi-color G using Google brand colors
+    const googleColors = [
+      Color(0xFF4285F4), // Blue
+      Color(0xFFEA4335), // Red
+      Color(0xFFFBBC05), // Yellow
+      Color(0xFF34A853), // Green
+    ];
+
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: 'G',
+        style: TextStyle(
+          fontSize: size.width * 0.85,
+          fontWeight: FontWeight.w700,
+          foreground: Paint()
+            ..shader = LinearGradient(
+              colors: googleColors,
+              stops: const [0.0, 0.4, 0.7, 1.0],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ).createShader(Rect.fromLTWH(0, 0, size.width, size.height)),
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    );
+    textPainter.layout();
+    textPainter.paint(canvas, Offset(cx - textPainter.width / 2, cy - textPainter.height / 2));
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

@@ -36,52 +36,12 @@ VALID_ORDER_STATUSES = {"Pending", "Confirmed", "Shipped", "Delivered", "Cancell
 VALID_PAYMENT_STATUSES = {"pending", "success", "failed"}
 
 
-class RegisterRequest(BaseModel):
-    """Validation schema for /register."""
-    name: str
-    email: str
+class GoogleLoginRequest(BaseModel):
+    id_token: str
+
+
+class UpdatePhoneRequest(BaseModel):
     phone: str
-    password: str
-
-    # Security: Enforce minimum password strength.
-    @field_validator("password")
-    @classmethod
-    def password_strength(cls, v):
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters")
-        if len(v) > MAX_PASSWORD_LENGTH:
-            raise ValueError(f"Password must not exceed {MAX_PASSWORD_LENGTH} characters")
-        if not re.search(r"[A-Z]", v):
-            raise ValueError("Password must contain an uppercase letter")
-        if not re.search(r"[a-z]", v):
-            raise ValueError("Password must contain a lowercase letter")
-        if not re.search(r"\d", v):
-            raise ValueError("Password must contain a digit")
-        return v
-
-    @field_validator("email")
-    @classmethod
-    def valid_email(cls, v):
-        v = v.strip()
-        if not v:
-            raise ValueError("Email is required")
-        if len(v) > MAX_EMAIL_LENGTH:
-            raise ValueError(f"Email must not exceed {MAX_EMAIL_LENGTH} characters")
-        if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", v):
-            raise ValueError("Invalid email format")
-        return v.lower()
-
-    @field_validator("name")
-    @classmethod
-    def name_nonempty(cls, v):
-        v = v.strip()
-        if not v:
-            raise ValueError("Name is required")
-        if len(v) > MAX_NAME_LENGTH:
-            raise ValueError(f"Name must not exceed {MAX_NAME_LENGTH} characters")
-        if not re.match(NAME_REGEX, v):
-            raise ValueError(NAME_REGEX_MSG)
-        return v
 
     @field_validator("phone")
     @classmethod
@@ -93,66 +53,6 @@ class RegisterRequest(BaseModel):
             raise ValueError(f"Phone must not exceed {MAX_PHONE_LENGTH} characters")
         if not re.match(r"^\+?[1-9]\d{9,14}$", v):
             raise ValueError("Invalid phone number format (10-15 digits, optional + prefix)")
-        return v
-
-
-class VerifyRegistrationRequest(BaseModel):
-    email: str
-    otp: str
-
-    @field_validator("otp")
-    @classmethod
-    def valid_otp(cls, v):
-        if not v or len(v) != 6 or not v.isdigit():
-            raise ValueError("OTP must be exactly 6 digits")
-        return v
-
-    @field_validator("email")
-    @classmethod
-    def valid_email(cls, v):
-        v = v.strip()
-        if not v:
-            raise ValueError("Email is required")
-        return v.lower()
-
-
-class LoginRequest(BaseModel):
-    """Validation schema for /login."""
-    email: str
-    password: str
-
-    @field_validator("email")
-    @classmethod
-    def valid_email(cls, v):
-        v = v.strip()
-        if not v:
-            raise ValueError("Email is required")
-        if len(v) > MAX_EMAIL_LENGTH:
-            raise ValueError(f"Email must not exceed {MAX_EMAIL_LENGTH} characters")
-        return v.lower()
-
-    @field_validator("password")
-    @classmethod
-    def nonempty(cls, v):
-        if not v:
-            raise ValueError("Password is required")
-        if len(v) > MAX_PASSWORD_LENGTH:
-            raise ValueError(f"Password must not exceed {MAX_PASSWORD_LENGTH} characters")
-        return v
-
-
-class LogoutRequest(BaseModel):
-    """Validation schema for /logout."""
-    token: str
-
-    @field_validator("token")
-    @classmethod
-    def nonempty(cls, v):
-        v = v.strip()
-        if not v:
-            raise ValueError("Token is required")
-        if len(v) > MAX_TOKEN_LENGTH:
-            raise ValueError(f"Token must not exceed {MAX_TOKEN_LENGTH} characters")
         return v
 
 
@@ -825,9 +725,7 @@ class MessageResponse(BaseModel):
 
 class UpdateProfileRequest(BaseModel):
     name: Optional[str] = None
-    email: Optional[str] = None
     phone: Optional[str] = None
-    current_password: Optional[str] = None
 
     @field_validator("name")
     @classmethod
@@ -839,17 +737,6 @@ class UpdateProfileRequest(BaseModel):
             if len(v) > MAX_NAME_LENGTH:
                 raise ValueError(f"Name must not exceed {MAX_NAME_LENGTH} characters")
         return v
-
-    @field_validator("email")
-    @classmethod
-    def valid_email(cls, v):
-        if v:
-            v = v.strip()
-            if not v:
-                raise ValueError("Email cannot be empty")
-            if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", v):
-                raise ValueError("Invalid email format")
-        return v.lower() if v else v
 
 
 class InitiateEmailChangeRequest(BaseModel):

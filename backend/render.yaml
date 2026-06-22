@@ -47,6 +47,8 @@ services:
         sync: false
       - key: SMTP_FROM_EMAIL
         sync: false
+      - key: FIREBASE_PROJECT_ID
+        value: zipra-b3c72
 
 databases:
   - name: delivery-db
