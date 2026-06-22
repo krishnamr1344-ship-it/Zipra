@@ -97,7 +97,7 @@ def _send_otp_email(email: str, purpose: str = "Email Change") -> Optional[str]:
                 f"If you did not request this, please ignore this email."
             )
             context = ssl.create_default_context()
-            with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as server:
                 server.starttls(context=context)
                 server.login(SMTP_USERNAME, SMTP_PASSWORD)
                 server.send_message(msg)
