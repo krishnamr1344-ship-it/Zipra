@@ -33,8 +33,11 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import User, TokenBlacklist, PasswordResetCode
-from schemas import RegisterRequest, LoginRequest, UpdateProfileRequest, ForgotPasswordRequest, ResetPasswordRequest, InitiateEmailChangeRequest, CompleteEmailChangeRequest
-from config import SUPABASE_URL, SUPABASE_ANON_KEY
+from schemas import RegisterRequest, LoginRequest, UpdateProfileRequest, ForgotPasswordRequest, ResetPasswordRequest, InitiateEmailChangeRequest, CompleteEmailChangeRequest, VerifyRegistrationRequest
+from config import SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY
+
+# Auth key for Supabase — prefer ANON_KEY but fall back to SERVICE_KEY
+_SUPABASE_AUTH_KEY: str = SUPABASE_ANON_KEY or SUPABASE_SERVICE_KEY
 
 JWT_SECRET = os.getenv("JWT_SECRET")
 JWT_EXPIRY_MINUTES = int(os.getenv("JWT_EXPIRY_MINUTES", "1440"))
@@ -59,15 +62,19 @@ RESET_CODE_EXPIRY_MINUTES = 15
 _PENDING_EMAIL_CHANGES: dict[str, dict] = {}
 _EMAIL_CHANGE_LOCK = threading.Lock()
 
+# ─── Pending registrations (email -> {name, password_hash, phone, expires}) ──
+_PENDING_REGISTRATIONS: dict[str, dict] = {}
+_REGISTRATION_LOCK = threading.Lock()
+
 
 # ─── OTP helpers (Supabase Auth primary, SMTP fallback) ──────────
 def _send_otp_email(email: str, purpose: str = "Email Change") -> Optional[str]:
     """Send OTP to email. Uses Supabase Auth if available, falls back to SMTP.
     Returns the OTP code (for SMTP fallback) or None (Supabase handles it)."""
-    if SUPABASE_URL and SUPABASE_ANON_KEY:
+    if SUPABASE_URL and _SUPABASE_AUTH_KEY:
         try:
             from supabase import create_client
-            supabase = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+            supabase = create_client(SUPABASE_URL, _SUPABASE_AUTH_KEY)
             supabase.auth.sign_in_with_otp({"email": email})
             logger.info("Supabase OTP sent to %s", email)
             return None
@@ -106,10 +113,10 @@ def _send_otp_email(email: str, purpose: str = "Email Change") -> Optional[str]:
 
 def _verify_otp(email: str, otp: str, stored_hash: Optional[str] = None) -> bool:
     """Verify OTP. Uses Supabase Auth if available, otherwise compares with stored hash."""
-    if SUPABASE_URL and SUPABASE_ANON_KEY:
+    if SUPABASE_URL and _SUPABASE_AUTH_KEY:
         try:
             from supabase import create_client
-            supabase = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+            supabase = create_client(SUPABASE_URL, _SUPABASE_AUTH_KEY)
             supabase.auth.verify_otp({"email": email, "token": otp, "type": "email"})
             return True
         except Exception:
@@ -238,48 +245,75 @@ def decode_jwt(token: str) -> dict:
 # ─── ENDPOINTS ───────────────────────────────────────────────────
 
 
-@router.post("/register", status_code=status.HTTP_201_CREATED)
+@router.post("/register", status_code=status.HTTP_200_OK)
 def register(body: RegisterRequest, db: Session = Depends(get_db)):
     """
-    Register a new user.
+    Step 1: Validate and send OTP to email. User must call /verify-registration to complete.
     Security:
       - Input validated by Pydantic before DB access.
-      - Password bcrypt-hashed immediately.
       - Duplicate email returns generic error (don't reveal if email exists).
     """
+    email = body.email.lower().strip()
+
     # Security: check for existing user.
-    existing_email = db.query(User).filter(User.email == body.email).first()
-    if existing_email:
-        if existing_email.is_deleted:
-            # Reactivate soft-deleted user and update details.
-            existing_email.is_deleted = False
-            existing_email.token_version += 1
-            existing_email.name = body.name
-            existing_email.phone = body.phone
-            existing_email.password_hash = _hash_password(body.password)
-            db.commit()
-            db.refresh(existing_email)
-            token, jti, expires = _create_jwt(str(existing_email.id), existing_email.role, existing_email.token_version)
-            return {
-                "message": "Registration successful",
-                "token": token,
-                "user": {"id": str(existing_email.id), "name": existing_email.name, "email": existing_email.email, "role": existing_email.role},
-            }
+    existing_email = db.query(User).filter(User.email == email).first()
+    if existing_email and not existing_email.is_deleted:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
 
     existing_phone = db.query(User).filter(User.phone == body.phone).first()
     if existing_phone and not existing_phone.is_deleted:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Phone number already registered")
 
+    # Send OTP via Supabase Auth
+    _send_otp_email(email, purpose="Registration")
+
+    # Store pending registration (15 min expiry)
+    with _REGISTRATION_LOCK:
+        _PENDING_REGISTRATIONS[email] = {
+            "name": body.name.strip(),
+            "password_hash": _hash_password(body.password),
+            "phone": body.phone.strip(),
+            "expires_at": time.time() + 900,
+        }
+
+    return {"message": "Verification code sent to your email"}
+
+
+@router.post("/verify-registration", status_code=status.HTTP_201_CREATED)
+def verify_registration(body: VerifyRegistrationRequest, db: Session = Depends(get_db)):
+    """
+    Step 2: Verify OTP and complete registration.
+    Security:
+      - OTP verified via Supabase Auth.
+      - Pending data cleared after use or expiry.
+    """
+    email = body.email.lower().strip()
+
+    with _REGISTRATION_LOCK:
+        pending = _PENDING_REGISTRATIONS.get(email)
+        if not pending:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No pending registration. Use /register first.")
+        if time.time() > pending["expires_at"]:
+            _PENDING_REGISTRATIONS.pop(email, None)
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Verification code expired. Register again.")
+
+    # Verify OTP via Supabase Auth
+    if not _verify_otp(email, body.otp):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid verification code")
+
+    # Create user
     user = User(
-        email=body.email,
-        password_hash=_hash_password(body.password),
-        name=body.name,
-        phone=body.phone,
+        email=email,
+        password_hash=pending["password_hash"],
+        name=pending["name"],
+        phone=pending["phone"],
     )
     db.add(user)
     db.commit()
     db.refresh(user)
+
+    with _REGISTRATION_LOCK:
+        _PENDING_REGISTRATIONS.pop(email, None)
 
     token, jti, expires = _create_jwt(str(user.id), user.role, user.token_version)
 

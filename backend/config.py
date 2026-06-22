@@ -5,7 +5,8 @@ import os as _os
 
 PUBLIC_PATHS: set[str] = {
     "/", "/docs", "/openapi.json", "/redoc",
-    "/api/auth/register", "/api/auth/login", "/api/auth/logout",
+    "/api/auth/register", "/api/auth/verify-registration",
+    "/api/auth/login", "/api/auth/logout",
     "/api/auth/forgot-password", "/api/auth/reset-password",
     "/api/app-version", "/api/categories", "/api/products",
     "/api/combo-packs", "/api/check-zone", "/api/places/search",

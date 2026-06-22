@@ -96,6 +96,26 @@ class RegisterRequest(BaseModel):
         return v
 
 
+class VerifyRegistrationRequest(BaseModel):
+    email: str
+    otp: str
+
+    @field_validator("otp")
+    @classmethod
+    def valid_otp(cls, v):
+        if not v or len(v) != 6 or not v.isdigit():
+            raise ValueError("OTP must be exactly 6 digits")
+        return v
+
+    @field_validator("email")
+    @classmethod
+    def valid_email(cls, v):
+        v = v.strip()
+        if not v:
+            raise ValueError("Email is required")
+        return v.lower()
+
+
 class LoginRequest(BaseModel):
     """Validation schema for /login."""
     email: str

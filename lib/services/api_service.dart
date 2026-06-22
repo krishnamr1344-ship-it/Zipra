@@ -101,9 +101,18 @@ class ApiService {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'name': name, 'email': email, 'phone': phone, 'password': password}),
     ).timeout(const Duration(seconds: 60));
+    return _handleResponse(res);
+  }
+
+  Future<Map<String, dynamic>> verifyRegistration(String email, String otp) async {
+    final res = await http.post(
+      Uri.parse('$_baseUrl/api/auth/verify-registration'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email, 'otp': otp}),
+    ).timeout(const Duration(seconds: 60));
     final body = await _handleResponse(res);
     await _saveToken(body['token']);
-    await _saveUserLocally((body['user'] as Map<String, dynamic>?)?['name'] as String? ?? '', (body['user'] as Map<String, dynamic>?)?['email'] as String? ?? '', phone, (body['user'] as Map<String, dynamic>?)?['role'] as String? ?? 'user');
+    await _saveUserLocally((body['user'] as Map<String, dynamic>?)?['name'] as String? ?? '', (body['user'] as Map<String, dynamic>?)?['email'] as String? ?? '', '', (body['user'] as Map<String, dynamic>?)?['role'] as String? ?? 'user');
     return body;
   }
 

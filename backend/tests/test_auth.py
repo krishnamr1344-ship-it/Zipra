@@ -11,40 +11,41 @@ from auth import _create_jwt, _hash_password
 
 
 # ─────────────────────────────────────────────
-# REGISTER
+# REGISTER (OTP-based)
 # ─────────────────────────────────────────────
 class TestRegister:
-    def test_register_success(self, client, db_session):
-        resp = client.post("/api/auth/register", json={
-            "name": "New User",
-            "email": "new@example.com",
-            "phone": "9999999999",
-            "password": "StrongPass1!",
-        })
-        assert resp.status_code == 201
-        data = resp.json()
-        assert data["user"]["email"] == "new@example.com"
-        assert "token" in data
+    def test_register_sends_otp(self, client, db_session):
+        with patch("auth._send_otp_email", return_value=None):
+            resp = client.post("/api/auth/register", json={
+                "name": "New User",
+                "email": "new@example.com",
+                "phone": "9999999999",
+                "password": "StrongPass1!",
+            })
+            assert resp.status_code == 200
+            assert "sent to your email" in resp.json()["message"].lower()
 
     def test_register_duplicate_email(self, client, db_session, test_user):
-        resp = client.post("/api/auth/register", json={
-            "name": "Duplicate",
-            "email": test_user.email,
-            "phone": "8888888888",
-            "password": "StrongPass1!",
-        })
-        assert resp.status_code == 400
-        assert "already registered" in resp.json()["detail"]
+        with patch("auth._send_otp_email", return_value=None):
+            resp = client.post("/api/auth/register", json={
+                "name": "Duplicate",
+                "email": test_user.email,
+                "phone": "8888888888",
+                "password": "StrongPass1!",
+            })
+            assert resp.status_code == 400
+            assert "already registered" in resp.json()["detail"]
 
     def test_register_duplicate_phone(self, client, db_session, test_user):
-        resp = client.post("/api/auth/register", json={
-            "name": "Duplicate",
-            "email": "another@example.com",
-            "phone": test_user.phone,
-            "password": "StrongPass1!",
-        })
-        assert resp.status_code == 400
-        assert "already registered" in resp.json()["detail"]
+        with patch("auth._send_otp_email", return_value=None):
+            resp = client.post("/api/auth/register", json={
+                "name": "Duplicate",
+                "email": "another@example.com",
+                "phone": test_user.phone,
+                "password": "StrongPass1!",
+            })
+            assert resp.status_code == 400
+            assert "already registered" in resp.json()["detail"]
 
     def test_register_weak_password_returns_422(self, client, db_session):
         resp = client.post("/api/auth/register", json={
@@ -60,6 +61,70 @@ class TestRegister:
             "email": "missing@example.com",
         })
         assert resp.status_code == 422
+
+    def test_verify_registration_success(self, client, db_session):
+        from auth import _PENDING_REGISTRATIONS, _hash_password
+        email = "verify@example.com"
+        # Manually seed pending registration
+        _PENDING_REGISTRATIONS[email] = {
+            "name": "Verify User",
+            "password_hash": _hash_password("StrongPass1!"),
+            "phone": "8888888888",
+            "expires_at": __import__("time").time() + 900,
+        }
+        with patch("auth._verify_otp", return_value=True):
+            resp = client.post("/api/auth/verify-registration", json={
+                "email": email,
+                "otp": "123456",
+            })
+            assert resp.status_code == 201
+            data = resp.json()
+            assert data["user"]["email"] == email
+            assert "token" in data
+            assert email not in _PENDING_REGISTRATIONS
+
+    def test_verify_registration_wrong_otp(self, client, db_session):
+        from auth import _PENDING_REGISTRATIONS, _hash_password
+        email = "wrongotp@example.com"
+        _PENDING_REGISTRATIONS[email] = {
+            "name": "Wrong OTP",
+            "password_hash": _hash_password("StrongPass1!"),
+            "phone": "7777777777",
+            "expires_at": __import__("time").time() + 900,
+        }
+        with patch("auth._verify_otp", return_value=False):
+            resp = client.post("/api/auth/verify-registration", json={
+                "email": email,
+                "otp": "000000",
+            })
+            assert resp.status_code == 400
+            assert "Invalid" in resp.json()["detail"]
+
+    def test_verify_registration_expired(self, client, db_session):
+        from auth import _PENDING_REGISTRATIONS, _hash_password
+        email = "expired@example.com"
+        _PENDING_REGISTRATIONS[email] = {
+            "name": "Expired",
+            "password_hash": _hash_password("StrongPass1!"),
+            "phone": "6666666666",
+            "expires_at": 0,  # expired
+        }
+        with patch("auth._verify_otp", return_value=True):
+            resp = client.post("/api/auth/verify-registration", json={
+                "email": email,
+                "otp": "123456",
+            })
+            assert resp.status_code == 400
+            assert "expired" in resp.json()["detail"].lower()
+            assert email not in _PENDING_REGISTRATIONS
+
+    def test_verify_registration_no_pending(self, client, db_session):
+        resp = client.post("/api/auth/verify-registration", json={
+            "email": "nobody@example.com",
+            "otp": "123456",
+        })
+        assert resp.status_code == 400
+        assert "No pending registration" in resp.json()["detail"]
 
 
 # ─────────────────────────────────────────────

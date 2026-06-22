@@ -18,7 +18,9 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
   final _emailCtl = TextEditingController();
   final _passCtl = TextEditingController();
   final _confirmPassCtl = TextEditingController();
+  final _otpCtl = TextEditingController();
   bool _loading = false;
+  bool _otpSent = false;
   bool _obscurePass = true;
   bool _obscureConfirm = true;
   String? _nameError;
@@ -26,6 +28,7 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
   String? _phoneError;
   String? _passError;
   String? _confirmError;
+  String? _otpError;
   late AnimationController _animCtl;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
@@ -61,8 +64,29 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
     try {
       await ApiService().register(_nameCtl.text.trim(), _emailCtl.text.trim(), _phoneCtl.text.trim(), _passCtl.text);
       if (!mounted) return;
-      // The SuccessModal handles navigation via onPrimary/onSecondary callbacks.
-      // Do NOT navigate again after the modal returns — that would cause double navigation.
+      setState(() { _otpSent = true; _loading = false; });
+      AppSnackbar.show(context, 'Verification code sent to your email', type: SnackbarType.success);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      AppSnackbar.show(context, e.message, type: SnackbarType.error);
+      setState(() => _loading = false);
+    } catch (e) {
+      if (!mounted) return;
+      AppSnackbar.show(context, 'Connection failed. Check server.', type: SnackbarType.error);
+      setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _verifyOtp() async {
+    final otp = _otpCtl.text.trim();
+    if (otp.length != 6 || !RegExp(r'^\d{6}$').hasMatch(otp)) {
+      setState(() => _otpError = 'Enter a valid 6-digit OTP');
+      return;
+    }
+    setState(() => _loading = true);
+    try {
+      await ApiService().verifyRegistration(_emailCtl.text.trim(), otp);
+      if (!mounted) return;
       var navigated = false;
       await SuccessModal.show(
         context,
@@ -241,12 +265,52 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
                             ),
                             if (_confirmError != null)
                               Padding(padding: const EdgeInsets.only(left: 4, top: 2), child: Text(_confirmError!, style: const TextStyle(fontSize: 11, color: AppColors.error))),
+                            if (_otpSent) ...[
+                              const SizedBox(height: 16),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.mail_outline, size: 18, color: Colors.orange.shade700),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text('Verification code sent to ${_emailCtl.text.trim()}',
+                                        style: TextStyle(fontSize: 12, color: Colors.orange.shade800)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              TextField(
+                                controller: _otpCtl,
+                                keyboardType: TextInputType.number,
+                                maxLength: 6,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.bold),
+                                decoration: InputDecoration(
+                                  labelText: 'Enter OTP',
+                                  hintText: '000000',
+                                  labelStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14),
+                                  counterText: '',
+                                  border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey.shade300)),
+                                  focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary, width: 2)),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 20),
+                                ),
+                              ),
+                              if (_otpError != null)
+                                Padding(padding: const EdgeInsets.only(left: 4, top: 2), child: Text(_otpError!, style: const TextStyle(fontSize: 11, color: AppColors.error))),
+                            ],
                             const SizedBox(height: 24),
                             SizedBox(
                               width: double.infinity,
                               height: 54,
                               child: ElevatedButton(
-                                onPressed: _loading ? null : _signup,
+                                onPressed: _loading ? null : (_otpSent ? _verifyOtp : _signup),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.primary,
                                   foregroundColor: Colors.white,
@@ -256,7 +320,7 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
                                 ),
                                 child: _loading
                                     ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                                    : const Text('Create Account', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.3)),
+                                    : Text(_otpSent ? 'Verify OTP' : 'Create Account', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.3)),
                               ),
                             ),
                           ],
