@@ -29,6 +29,7 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
   String? _passError;
   String? _confirmError;
   String? _otpError;
+  String? _displayOtp; // shown when no email service sends the OTP
   late AnimationController _animCtl;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
@@ -62,9 +63,13 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
     if (_nameError != null || _emailError != null || _phoneError != null || _passError != null || _confirmError != null) return;
     setState(() => _loading = true);
     try {
-      await ApiService().register(_nameCtl.text.trim(), _emailCtl.text.trim(), _phoneCtl.text.trim(), _passCtl.text);
+      final res = await ApiService().register(_nameCtl.text.trim(), _emailCtl.text.trim(), _phoneCtl.text.trim(), _passCtl.text);
       if (!mounted) return;
-      setState(() { _otpSent = true; _loading = false; });
+      setState(() {
+        _otpSent = true;
+        _loading = false;
+        _displayOtp = res['otp'] as String?;
+      });
       AppSnackbar.show(context, 'Verification code sent to your email', type: SnackbarType.success);
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -279,8 +284,19 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
                                     Icon(Icons.mail_outline, size: 18, color: Colors.orange.shade700),
                                     const SizedBox(width: 10),
                                     Expanded(
-                                      child: Text('Verification code sent to ${_emailCtl.text.trim()}',
-                                        style: TextStyle(fontSize: 12, color: Colors.orange.shade800)),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text('Verification code sent to ${_emailCtl.text.trim()}',
+                                            style: TextStyle(fontSize: 12, color: Colors.orange.shade800)),
+                                          if (_displayOtp != null) ...[
+                                            const SizedBox(height: 4),
+                                            Text('Dev OTP: ${_displayOtp!}',
+                                              style: TextStyle(fontSize: 13, color: Colors.orange.shade900, fontWeight: FontWeight.bold, letterSpacing: 2)),
+                                          ],
+                                        ],
+                                      ),
                                     ),
                                   ],
                                 ),

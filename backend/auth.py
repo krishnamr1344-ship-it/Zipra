@@ -265,7 +265,7 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Phone number already registered")
 
     # Send OTP via Supabase Auth
-    _send_otp_email(email, purpose="Registration")
+    otp = _send_otp_email(email, purpose="Registration")
 
     # Store pending registration (15 min expiry)
     with _REGISTRATION_LOCK:
@@ -276,7 +276,10 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
             "expires_at": time.time() + 900,
         }
 
-    return {"message": "Verification code sent to your email"}
+    resp: dict[str, object] = {"message": "Verification code sent to your email"}
+    if otp is not None:
+        resp["otp"] = otp
+    return resp
 
 
 @router.post("/verify-registration", status_code=status.HTTP_201_CREATED)
