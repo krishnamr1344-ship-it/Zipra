@@ -35,6 +35,8 @@ FIREBASE_PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID")
 if not FIREBASE_PROJECT_ID:
     raise RuntimeError("FIREBASE_PROJECT_ID not set in environment variables")
 
+FIREBASE_PROJECT_NUMBER = os.getenv("FIREBASE_PROJECT_NUMBER", "571924388974")
+
 FIREBASE_CERTS_URL = "https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com"
 FIREBASE_ISSUER = f"https://securetoken.google.com/{FIREBASE_PROJECT_ID}"
 
@@ -76,8 +78,9 @@ def verify_firebase_token(token: str) -> dict:
             token,
             public_key,
             algorithms=["RS256"],
-            audience=FIREBASE_PROJECT_ID,
+            audience=[FIREBASE_PROJECT_ID, FIREBASE_PROJECT_NUMBER],
             issuer=FIREBASE_ISSUER,
+            leeway=60,
         )
         return decoded
     except jwt.ExpiredSignatureError:

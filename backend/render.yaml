@@ -49,6 +49,8 @@ services:
         sync: false
       - key: FIREBASE_PROJECT_ID
         value: zipra-b3c72
+      - key: FIREBASE_PROJECT_NUMBER
+        value: "571924388974"
 
 databases:
   - name: delivery-db
