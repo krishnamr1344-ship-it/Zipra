@@ -102,7 +102,7 @@ def _send_otp_email(email: str, purpose: str = "Email Change") -> Optional[str]:
                 server.login(SMTP_USERNAME, SMTP_PASSWORD)
                 server.send_message(msg)
             logger.info("SMTP OTP sent to %s", email)
-            return code
+            return None  # SMTP handles delivery — don't leak OTP in response
         except Exception as e:
             logger.warning("Failed to send SMTP OTP to %s: %s", email, e)
     # Fallback: generate local OTP (no email service available)
