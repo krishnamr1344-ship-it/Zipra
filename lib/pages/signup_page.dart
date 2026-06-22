@@ -29,7 +29,7 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
   String? _passError;
   String? _confirmError;
   String? _otpError;
-  String? _displayOtp; // shown when no email service sends the OTP
+
   late AnimationController _animCtl;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
@@ -68,7 +68,6 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
       setState(() {
         _otpSent = true;
         _loading = false;
-        _displayOtp = res['otp'] as String?;
       });
       AppSnackbar.show(context, 'Verification code sent to your email', type: SnackbarType.success);
     } on ApiException catch (e) {
@@ -290,11 +289,6 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
                                         children: [
                                           Text('Verification code sent to ${_emailCtl.text.trim()}',
                                             style: TextStyle(fontSize: 12, color: Colors.orange.shade800)),
-                                          if (_displayOtp != null) ...[
-                                            const SizedBox(height: 4),
-                                            Text('Dev OTP: ${_displayOtp!}',
-                                              style: TextStyle(fontSize: 13, color: Colors.orange.shade900, fontWeight: FontWeight.bold, letterSpacing: 2)),
-                                          ],
                                         ],
                                       ),
                                     ),
