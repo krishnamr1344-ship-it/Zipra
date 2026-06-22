@@ -26,5 +26,6 @@ RAZORPAY_WEBHOOK_SECRET: str = _os.getenv("RAZORPAY_WEBHOOK_SECRET", "")
 # ─── Supabase ─────────────────────────────────────────────────────
 SUPABASE_URL: str = _os.getenv("SUPABASE_URL", "")
 SUPABASE_SERVICE_KEY: str = _os.getenv("SUPABASE_SERVICE_KEY", "") or _os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+SUPABASE_ANON_KEY: str = _os.getenv("SUPABASE_ANON_KEY", "")
 SUPABASE_UPLOAD_KEY: str = _os.getenv("SUPABASE_UPLOAD_KEY", "") or SUPABASE_SERVICE_KEY
 SUPABASE_STORAGE_BUCKET: str = _os.getenv("SUPABASE_STORAGE_BUCKET", "product-images")

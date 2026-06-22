@@ -21,8 +21,8 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from sqlalchemy.orm import Session
 
-from database import SessionLocal
-from models import TokenBlacklist
+from database import SessionLocal, get_db as _get_db
+from models import TokenBlacklist, User
 from auth import decode_jwt
 
 RATE_LIMIT_MAX_ATTEMPTS = int(os.getenv("RATE_LIMIT_MAX_ATTEMPTS", "10"))
@@ -102,8 +102,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
 
             jti = payload.get("jti")
+            token_version = payload.get("tok_ver", 0)
 
-            db: Session = SessionLocal()
+            db_override = request.app.dependency_overrides.get(_get_db, _get_db)
+            db_gen = db_override()
+            db: Session = next(db_gen)
             try:
                 blacklisted = db.query(TokenBlacklist).filter(
                     TokenBlacklist.token_jti == jti,
@@ -114,8 +117,25 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                         status_code=status.HTTP_401_UNAUTHORIZED,
                         content={"detail": "Token has been revoked"},
                     )
+
+                user_id = payload.get("sub")
+                if user_id:
+                    user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
+                    if not user:
+                        return JSONResponse(
+                            status_code=status.HTTP_401_UNAUTHORIZED,
+                            content={"detail": "User not found"},
+                        )
+                    if user.token_version != token_version:
+                        return JSONResponse(
+                            status_code=status.HTTP_401_UNAUTHORIZED,
+                            content={"detail": "Token has been invalidated. Please login again."},
+                        )
             finally:
-                db.close()
+                try:
+                    next(db_gen)
+                except StopIteration:
+                    pass
 
             request.state.user_id = payload.get("sub")
             request.state.user_role = payload.get("role", "user")

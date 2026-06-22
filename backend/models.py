@@ -34,6 +34,7 @@ class User(Base):
     phone = Column(String(20), nullable=True)
     role = Column(String(20), default="user", nullable=False)
     is_deleted = Column(Boolean, default=False, nullable=False)
+    token_version = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
 

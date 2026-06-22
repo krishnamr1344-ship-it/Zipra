@@ -807,6 +807,7 @@ class UpdateProfileRequest(BaseModel):
     name: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
+    current_password: Optional[str] = None
 
     @field_validator("name")
     @classmethod
@@ -829,6 +830,42 @@ class UpdateProfileRequest(BaseModel):
             if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", v):
                 raise ValueError("Invalid email format")
         return v.lower() if v else v
+
+
+class InitiateEmailChangeRequest(BaseModel):
+    current_password: str
+    new_email: str
+
+    @field_validator("new_email")
+    @classmethod
+    def valid_email(cls, v):
+        v = v.strip()
+        if not v:
+            raise ValueError("Email is required")
+        if len(v) > MAX_EMAIL_LENGTH:
+            raise ValueError(f"Email must not exceed {MAX_EMAIL_LENGTH} characters")
+        if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", v):
+            raise ValueError("Invalid email format")
+        return v.lower()
+
+    @field_validator("current_password")
+    @classmethod
+    def nonempty(cls, v):
+        if not v:
+            raise ValueError("Current password is required")
+        return v
+
+
+class CompleteEmailChangeRequest(BaseModel):
+    current_email_otp: str
+    new_email_otp: Optional[str] = None
+
+    @field_validator("current_email_otp")
+    @classmethod
+    def nonempty(cls, v):
+        if not v:
+            raise ValueError("OTP is required")
+        return v
 
 
 class ForgotPasswordRequest(BaseModel):

@@ -23,6 +23,8 @@ os.environ.setdefault("RATE_LIMIT_WINDOW_SECONDS", "1")
 os.environ.setdefault("API_KEY", "")
 os.environ.setdefault("SUPABASE_URL", "")
 os.environ.setdefault("SUPABASE_SERVICE_KEY", "")
+os.environ.setdefault("SUPABASE_ANON_KEY", "")
+os.environ.setdefault("BCRYPT_ROUNDS", "4")
 
 from sqlalchemy import String, TypeDecorator
 
@@ -65,7 +67,7 @@ database.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=dat
 Base.metadata.create_all(bind=database.engine)
 
 from models import User, Product, Category, Address, CartItem, Order, OrderItem, Payment, ProductFlag
-from auth import _create_jwt
+from auth import _create_jwt, _hash_password
 from main import app
 import resources
 
@@ -102,7 +104,7 @@ def db_session():
 def test_user(db_session):
     user = User(
         email="test@example.com",
-        password_hash="dummy_hash",
+        password_hash=_hash_password("TestPass1!"),
         name="Test User",
         phone="1234567890",
         role="user",
@@ -116,7 +118,7 @@ def test_user(db_session):
 def admin_user(db_session):
     user = User(
         email="admin@test.com",
-        password_hash="dummy_hash",
+        password_hash=_hash_password("AdminPass1!"),
         name="Admin",
         phone="0000000000",
         role="admin",
@@ -128,13 +130,13 @@ def admin_user(db_session):
 
 @pytest.fixture()
 def auth_headers(test_user):
-    token, _, _ = _create_jwt(str(test_user.id), role=test_user.role)
+    token, _, _ = _create_jwt(str(test_user.id), role=test_user.role, token_version=test_user.token_version)
     return {"Authorization": f"Bearer {token}"}
 
 
 @pytest.fixture()
 def admin_auth_headers(admin_user):
-    token, _, _ = _create_jwt(str(admin_user.id), role=admin_user.role)
+    token, _, _ = _create_jwt(str(admin_user.id), role=admin_user.role, token_version=admin_user.token_version)
     return {"Authorization": f"Bearer {token}"}
 
 

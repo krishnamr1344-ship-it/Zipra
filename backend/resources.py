@@ -1925,15 +1925,20 @@ async def razorpay_webhook(request: Request, db: Session = Depends(get_db)):
     raw_body = await request.body()
     webhook_signature = request.headers.get("X-Razorpay-Signature", "")
 
-    if RAZORPAY_WEBHOOK_SECRET:
-        expected_signature = hmac.new(
-            RAZORPAY_WEBHOOK_SECRET.encode("utf-8"),
-            raw_body,
-            hashlib.sha256,
-        ).hexdigest()
-        if not hmac.compare_digest(expected_signature, webhook_signature):
-            logger.warning("Razorpay webhook HMAC verification failed")
-            return JSONResponse(status_code=200, content={"status": "ignored"})
+    if not RAZORPAY_WEBHOOK_SECRET:
+        logger.error("Razorpay enabled but RAZORPAY_WEBHOOK_SECRET not configured")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": "Webhook secret not configured"},
+        )
+    expected_signature = hmac.new(
+        RAZORPAY_WEBHOOK_SECRET.encode("utf-8"),
+        raw_body,
+        hashlib.sha256,
+    ).hexdigest()
+    if not hmac.compare_digest(expected_signature, webhook_signature):
+        logger.warning("Razorpay webhook HMAC verification failed")
+        return JSONResponse(status_code=200, content={"status": "ignored"})
 
     try:
         event = json.loads(raw_body)

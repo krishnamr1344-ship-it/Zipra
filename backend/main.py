@@ -99,6 +99,13 @@ if 'is_deleted' not in user_cols:
         conn.execute(text("ALTER TABLE users ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT FALSE"))
         conn.commit()
 
+# Migrate existing users table: add token_version column if missing.
+user_cols2 = {c['name'] for c in inspector.get_columns('users')}
+if 'token_version' not in user_cols2:
+    with engine.connect() as conn:
+        conn.execute(text("ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0"))
+        conn.commit()
+
 # Migrate existing orders table: add delivery_otp column if missing.
 order_cols = {c['name'] for c in inspector.get_columns('orders')}
 if 'delivery_otp' not in order_cols:
