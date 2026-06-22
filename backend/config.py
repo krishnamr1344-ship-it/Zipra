@@ -9,7 +9,7 @@ PUBLIC_PATHS: set[str] = {
     "/api/auth/forgot-password", "/api/auth/reset-password",
     "/api/app-version", "/api/categories", "/api/products",
     "/api/combo-packs", "/api/check-zone", "/api/places/search",
-    "/api/places/reverse", "/api/suggest-product",
+    "/api/places/reverse",
     "/api/payments/webhook",
     "/api/banners",
 }

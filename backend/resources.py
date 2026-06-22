@@ -1919,6 +1919,9 @@ async def razorpay_webhook(request: Request, db: Session = Depends(get_db)):
     """Razorpay webhook handler. Always returns 200.
     Uses HMAC compare_digest to verify authenticity.
     """
+    if not RAZORPAY_ENABLED:
+        return JSONResponse(status_code=200, content={"status": "ignored"})
+
     raw_body = await request.body()
     webhook_signature = request.headers.get("X-Razorpay-Signature", "")
 

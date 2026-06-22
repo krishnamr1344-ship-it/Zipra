@@ -54,6 +54,7 @@ __pycache__/
 *.so
 backend/__pycache__/
 backend/test.db
+backend/test_db.sqlite3
 
 # Obfuscation related
 app.*.map.json
