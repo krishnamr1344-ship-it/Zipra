@@ -104,6 +104,14 @@ if 'token_version' not in user_cols2:
         conn.execute(text("ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0"))
         conn.commit()
 
+# Migrate existing users table: add firebase_uid column if missing.
+user_cols3 = {c['name'] for c in inspector.get_columns('users')}
+if 'firebase_uid' not in user_cols3:
+    with engine.connect() as conn:
+        conn.execute(text("ALTER TABLE users ADD COLUMN firebase_uid VARCHAR(255)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_firebase_uid ON users (firebase_uid)"))
+        conn.commit()
+
 # Migrate existing orders table: add delivery_otp column if missing.
 order_cols = {c['name'] for c in inspector.get_columns('orders')}
 if 'delivery_otp' not in order_cols:
@@ -343,7 +351,6 @@ def _seed_data():
         # Add missing columns for existing DB.
         for col_sql in [
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'user'",
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS firebase_uid VARCHAR(255) UNIQUE",
         ]:
             try:
                 db.execute(text(col_sql))
