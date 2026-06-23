@@ -56,7 +56,7 @@ def _require_admin(request: Request, db: Session = None) -> str:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     if db is not None:
         user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
-        if not user:
+        if not user or user.role != "admin":
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     return user_id
 

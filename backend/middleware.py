@@ -119,26 +119,29 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     )
 
                 user_id = payload.get("sub")
-                if user_id:
-                    user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
-                    if not user:
-                        return JSONResponse(
-                            status_code=status.HTTP_401_UNAUTHORIZED,
-                            content={"detail": "User not found"},
-                        )
-                    if user.token_version != token_version:
-                        return JSONResponse(
-                            status_code=status.HTTP_401_UNAUTHORIZED,
-                            content={"detail": "Token has been invalidated. Please login again."},
-                        )
+                if not user_id:
+                    return JSONResponse(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        content={"detail": "Invalid token payload"},
+                    )
+                user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
+                if not user:
+                    return JSONResponse(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        content={"detail": "User not found"},
+                    )
+                if user.token_version != token_version:
+                    return JSONResponse(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        content={"detail": "Token has been invalidated. Please login again."},
+                    )
+                request.state.user_id = str(user.id)
+                request.state.user_role = user.role
             finally:
                 try:
                     next(db_gen)
                 except StopIteration:
                     pass
-
-            request.state.user_id = payload.get("sub")
-            request.state.user_role = payload.get("role", "user")
 
         response = await call_next(request)
 

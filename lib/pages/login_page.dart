@@ -30,6 +30,7 @@ class _LoginPageState extends State<LoginPage> {
     try {
       await _googleSignIn.signOut();
       await _firebaseAuth.signOut();
+      await Future.delayed(const Duration(milliseconds: 300));
       final googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
         if (mounted) setState(() => _loading = false);

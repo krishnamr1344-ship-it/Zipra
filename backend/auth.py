@@ -19,6 +19,7 @@ import httpx
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -176,8 +177,22 @@ def google_login(body: GoogleLoginRequest, db: Session = Depends(get_db)):
                 role=role,
             )
             db.add(user)
-        db.commit()
-        db.refresh(user)
+        try:
+            db.commit()
+            db.refresh(user)
+        except IntegrityError:
+            db.rollback()
+            user = db.query(User).filter(
+                User.firebase_uid == firebase_uid,
+                User.is_deleted == False,
+            ).first()
+            if not user:
+                user = db.query(User).filter(
+                    User.email == email,
+                    User.is_deleted == False,
+                ).first()
+            if not user:
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Login failed. Please try again.")
 
     token, jti, expires = _create_jwt(str(user.id), user.role, user.token_version)
 
@@ -222,6 +237,19 @@ def logout(request: Request, db: Session = Depends(get_db)):
     db.commit()
 
     return {"message": "Logged out successfully"}
+
+
+@router.post("/logout-all", status_code=status.HTTP_200_OK)
+def logout_all(request: Request, db: Session = Depends(get_db)):
+    user_id = getattr(request.state, "user_id", None)
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    user.token_version += 1
+    db.commit()
+    return {"message": "All sessions revoked. Please login again."}
 
 
 @router.get("/me")
