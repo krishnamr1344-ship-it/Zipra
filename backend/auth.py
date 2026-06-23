@@ -16,6 +16,8 @@ from datetime import datetime, timedelta, timezone
 
 import jwt
 import httpx
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
@@ -52,7 +54,14 @@ def _get_firebase_keys() -> dict[str, str]:
     try:
         resp = httpx.get(FIREBASE_CERTS_URL, timeout=10)
         resp.raise_for_status()
-        _cached_keys = resp.json()
+        certs: dict[str, str] = resp.json()
+        keys: dict[str, str] = {}
+        for kid, cert_pem in certs.items():
+            cert = x509.load_pem_x509_certificate(cert_pem.encode(), default_backend())
+            pub_key = cert.public_key()
+            from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+            keys[kid] = pub_key.public_bytes(Encoding.PEM, PublicFormat.SubjectPublicKeyInfo).decode()
+        _cached_keys = keys
         _cached_keys_expiry = now + 3600
     except Exception as e:
         logger.warning("Failed to fetch Firebase public keys: %s", e)
