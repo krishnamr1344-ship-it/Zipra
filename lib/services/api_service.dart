@@ -445,7 +445,7 @@ class ApiService {
     final body = <String, dynamic>{'cart_items': cartItems};
     if (addressId != null) body['address_id'] = addressId;
     if (phone != null) body['phone'] = phone;
-    final res = await http.post(Uri.parse('$_baseUrl/api/payments/create-order'), headers: headers, body: jsonEncode(body)).timeout(const Duration(seconds: 15));
+    final res = await http.post(Uri.parse('$_baseUrl/api/payments/create-order'), headers: headers, body: jsonEncode(body)).timeout(const Duration(seconds: 60));
     if (_checkAndHandleUnauthorized(res.statusCode)) return {};
     return _handleResponse(res);
   }

@@ -99,10 +99,11 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
       setState(() => _checkoutOpen = true);
     } catch (e) {
       setState(() => _initializing = false);
+      debugPrint('PaymentGatewayScreen._openCheckout error: $e');
       if (!mounted) return;
       AppSnackbar.show(
         context,
-        'Failed to initialize payment. Please try again.',
+        'Failed to initialize payment: $e',
         type: SnackbarType.error,
       );
       Navigator.pop(context);

@@ -142,8 +142,12 @@ class _PaymentPageState extends State<PaymentPage> {
         _addressId.isNotEmpty ? _addressId : null,
       );
       final intentId = intent['intent_id'] as String?;
+      final razorpayOrderId = intent['razorpay_order_id'] as String?;
+      final razorpayKeyId = intent['key_id'] as String?;
+      final razorpayAmount = intent['amount'] as int?;
 
-      if (intentId == null) {
+      if (intentId == null || razorpayOrderId == null || razorpayKeyId == null || razorpayAmount == null) {
+        debugPrint('payment_page: missing fields intentId=$intentId orderId=$razorpayOrderId keyId=$razorpayKeyId amount=$razorpayAmount');
         throw Exception('Failed to create payment intent');
       }
 
@@ -157,9 +161,9 @@ class _PaymentPageState extends State<PaymentPage> {
               PaymentGatewayScreen(
                 intentId: intentId,
                 total: widget.total,
-                razorpayOrderId: intent['razorpay_order_id'] as String?,
-                razorpayKeyId: intent['key_id'] as String?,
-                razorpayAmount: intent['amount'] as int?,
+                razorpayOrderId: razorpayOrderId,
+                razorpayKeyId: razorpayKeyId,
+                razorpayAmount: razorpayAmount,
                 onPaymentSuccess: () => cartNotifier.clear(),
               ),
         ),
