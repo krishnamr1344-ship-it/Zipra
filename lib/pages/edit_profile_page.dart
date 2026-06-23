@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../constants/theme.dart';
 import '../services/api_service.dart';
+import '../services/permission_service.dart';
+import '../services/cloudinary_service.dart';
 import '../widgets/app_snackbar.dart';
+import '../widgets/permission_bottom_sheet.dart';
 
 class EditProfilePage extends StatefulWidget {
   final Map<String, dynamic> user;
@@ -16,7 +20,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late TextEditingController _phoneCtl;
   late TextEditingController _emailCtl;
   final _api = ApiService();
+  final _picker = ImagePicker();
+  final _permissionService = PermissionService();
   bool _saving = false;
+  String? _profileImageUrl;
 
   @override
   void initState() {
@@ -36,7 +43,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
       await _api.updateProfile(_nameCtl.text.trim(), _emailCtl.text.trim(), phone: _phoneCtl.text.trim());
     } catch (e) {
         debugPrint("pages.edit_profile_page: $e");
-      // Fallback to local save if API fails
       await _api.saveUser(_nameCtl.text.trim(), _emailCtl.text.trim(), phone: _phoneCtl.text.trim());
     }
     if (!mounted) return;
@@ -49,6 +55,128 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   void _showSnack(String msg) {
     AppSnackbar.show(context, msg, type: SnackbarType.warning);
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      if (source == ImageSource.camera) {
+        final status = await _permissionService.ensure(AppPermission.camera);
+        if (!mounted) return;
+        if (status == PermissionStatus.permanentlyDenied) {
+          showPermissionSheet(
+            context: context,
+            permission: AppPermission.camera,
+            title: 'Camera Access Required',
+            message: 'Allow Zipra to take pictures to set your profile photo.',
+            isPermanentlyDenied: true,
+          );
+          return;
+        }
+        if (status == PermissionStatus.denied) {
+          showPermissionSheet(
+            context: context,
+            permission: AppPermission.camera,
+            title: 'Camera Access Required',
+            message: 'Allow Zipra to take pictures to set your profile photo.',
+            onGranted: () => _openPicker(source),
+          );
+          return;
+        }
+      } else {
+        final status = await _permissionService.ensure(AppPermission.photos);
+        if (!mounted) return;
+        if (status == PermissionStatus.permanentlyDenied) {
+          showPermissionSheet(
+            context: context,
+            permission: AppPermission.photos,
+            title: 'Photo Access Required',
+            message: 'Allow Zipra to access your photos to set your profile photo.',
+            isPermanentlyDenied: true,
+          );
+          return;
+        }
+        if (status == PermissionStatus.denied) {
+          showPermissionSheet(
+            context: context,
+            permission: AppPermission.photos,
+            title: 'Photo Access Required',
+            message: 'Allow Zipra to access your photos to set your profile photo.',
+            onGranted: () => _openPicker(source),
+          );
+          return;
+        }
+      }
+      await _openPicker(source);
+    } catch (e) {
+      debugPrint("pages.edit_profile_page: $e");
+      if (mounted) _showSnack('Failed to pick image');
+    }
+  }
+
+  Future<void> _openPicker(ImageSource source) async {
+    try {
+      final picked = await _picker.pickImage(
+        source: source,
+        imageQuality: 80,
+        maxWidth: 512,
+        maxHeight: 512,
+      );
+      if (picked == null || !mounted) return;
+      setState(() => _saving = true);
+      final url = await CloudinaryService.uploadImage(picked.path);
+      if (!mounted) return;
+      setState(() {
+        _profileImageUrl = url;
+        _saving = false;
+      });
+      _showSnack('Profile photo updated');
+    } catch (e) {
+      debugPrint("pages.edit_profile_page upload: $e");
+      if (mounted) {
+        setState(() => _saving = false);
+        _showSnack('Failed to upload image');
+      }
+    }
+  }
+
+  void _showImageSourceSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Change Profile Photo',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: const Icon(Icons.camera_alt_outlined),
+                title: const Text('Take Photo'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: const Text('Choose from Gallery'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   InputDecoration _fieldStyle(String label, IconData icon) {
@@ -101,20 +229,55 @@ class _EditProfilePageState extends State<EditProfilePage> {
               ),
               child: Column(
                 children: [
-                  CircleAvatar(
-                    radius: 44,
-                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                    child: CircleAvatar(
-                      radius: 40,
-                        backgroundColor: AppColors.primary,
-                      child: Text(
-                        (_nameCtl.text.isNotEmpty ? _nameCtl.text[0] : 'U').toUpperCase(),
-                        style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
-                      ),
+                  GestureDetector(
+                    onTap: _showImageSourceSheet,
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 44,
+                          backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                          child: CircleAvatar(
+                            radius: 40,
+                            backgroundColor: AppColors.primary,
+                            backgroundImage: _profileImageUrl != null
+                                ? NetworkImage(_profileImageUrl!)
+                                : null,
+                            child: _profileImageUrl == null
+                                ? Text(
+                                    (_nameCtl.text.isNotEmpty ? _nameCtl.text[0] : 'U').toUpperCase(),
+                                    style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
+                                  )
+                                : null,
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              size: 16,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Text('Tap to change photo', style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
+                  GestureDetector(
+                    onTap: _showImageSourceSheet,
+                    child: Text(
+                      'Tap to change photo',
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                    ),
+                  ),
                   const SizedBox(height: 28),
                   TextField(
                     controller: _nameCtl,

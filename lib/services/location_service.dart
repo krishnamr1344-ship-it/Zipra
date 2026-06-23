@@ -2,6 +2,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 import 'api_service.dart';
+import 'permission_service.dart';
 
 class LocationResult {
   final double latitude;
@@ -13,6 +14,7 @@ class LocationResult {
 
 class LocationService {
   final ApiService _api = ApiService();
+  final PermissionService _permissionService = PermissionService();
 
   Future<LocationResult> getCurrentLocation() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -24,23 +26,14 @@ class LocationService {
       );
     }
 
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        return LocationResult(
-          latitude: 0,
-          longitude: 0,
-          error: 'Location permissions are denied',
-        );
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
+    PermissionStatus status = await _permissionService.ensure(AppPermission.location);
+    if (!_isGranted(status)) {
       return LocationResult(
         latitude: 0,
         longitude: 0,
-        error: 'Location permissions are permanently denied',
+        error: status == PermissionStatus.permanentlyDenied
+            ? 'Location permissions are permanently denied'
+            : 'Location permissions are denied',
       );
     }
 
@@ -76,6 +69,10 @@ class LocationService {
         error: 'Failed to get location: $e',
       );
     }
+  }
+
+  bool _isGranted(PermissionStatus status) {
+    return status == PermissionStatus.granted;
   }
 
   Future<void> saveLocationToServer(double latitude, double longitude, {String? landmark, String? addressType, String? houseNumber, String? floorNumber}) async {

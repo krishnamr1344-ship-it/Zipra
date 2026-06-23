@@ -4,6 +4,8 @@ import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/theme.dart';
 import '../services/notification_service.dart';
+import '../services/permission_service.dart';
+import '../widgets/permission_bottom_sheet.dart';
 import 'notifications_page.dart';
 import '../services/api_service.dart';
 import '../services/location_service.dart';
@@ -125,27 +127,18 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     if (prefs.getBool('notification_permission_shown') == true) return;
     if (!mounted) return;
     await prefs.setBool('notification_permission_shown', true);
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Enable Notifications'),
-        content: const Text('Get notified about offers, order updates, and promotions.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Not Now'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: _orange, foregroundColor: Colors.white),
-            child: const Text('Allow'),
-          ),
-        ],
-      ),
-    );
-    if (result == true) {
+    final status = await PermissionService().request(AppPermission.notification);
+    if (!mounted) return;
+    if (status == PermissionStatus.granted) {
       notificationService.load();
+    } else if (status == PermissionStatus.denied) {
+      showPermissionSheet(
+        context: context,
+        permission: AppPermission.notification,
+        title: 'Stay Updated',
+        message: 'Get notified about offers, order updates, and promotions.',
+        onGranted: () => notificationService.load(),
+      );
     }
   }
 
@@ -162,17 +155,34 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
       if (loc.error != null) {
         debugPrint('GPS check failed: ${loc.error}');
-        String msg;
-        if (loc.error!.contains('disabled')) {
-          msg = 'Please enable GPS';
-        } else if (loc.error!.contains('deniedForever')) {
-          msg = 'Location blocked';
-        } else {
-          msg = 'Set Location';
+        if (loc.error!.contains('permanently denied')) {
+          if (mounted) {
+            showPermissionSheet(
+              context: context,
+              permission: AppPermission.location,
+              title: 'Location Access Required',
+              message: 'Allow Zipra to access your location for accurate delivery.',
+              isPermanentlyDenied: true,
+            );
+          }
+        } else if (loc.error!.contains('denied')) {
+          if (mounted) {
+            showPermissionSheet(
+              context: context,
+              permission: AppPermission.location,
+              title: 'Location Access Required',
+              message: 'Allow Zipra to access your location for accurate delivery.',
+              onGranted: () {
+                _checkAndDetectLocation();
+              },
+            );
+          }
         }
         if (mounted) {
           setState(() {
-            _locationArea = msg;
+            _locationArea = loc.error!.contains('disabled')
+                ? 'Please enable GPS'
+                : 'Set Location';
             _locationDetail = '';
             _zoneChecked = true;
           });
