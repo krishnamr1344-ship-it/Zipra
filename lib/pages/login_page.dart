@@ -29,6 +29,7 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _loading = true);
     try {
       await _googleSignIn.signOut();
+      await _firebaseAuth.signOut();
       final googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
         if (mounted) setState(() => _loading = false);
