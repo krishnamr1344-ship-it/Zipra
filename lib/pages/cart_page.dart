@@ -5,7 +5,6 @@ import '../widgets/empty_cart_widget.dart';
 import '../widgets/cart_item_card.dart';
 import '../widgets/order_summary.dart';
 import '../widgets/bottom_checkout_bar.dart';
-import '../widgets/cart_bottom_nav.dart';
 
 class CartPage extends StatelessWidget {
   final VoidCallback? onBrowse;
@@ -22,10 +21,6 @@ class CartPage extends StatelessWidget {
             backgroundColor: const Color(0xFFF8F7F5),
             appBar: _buildHeader(context),
             body: const EmptyCartWidget(),
-            bottomNavigationBar: CartBottomNav(
-              currentIndex: 3,
-              onTap: (i) {},
-            ),
           );
         }
         return Scaffold(
@@ -50,10 +45,6 @@ class CartPage extends StatelessWidget {
               ),
               const BottomCheckoutBar(),
             ],
-          ),
-          bottomNavigationBar: CartBottomNav(
-            currentIndex: 3,
-            onTap: (i) {},
           ),
         );
       },
