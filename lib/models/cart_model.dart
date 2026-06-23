@@ -237,6 +237,7 @@ class OrderData {
   final String? deliveryAddress;
   final String? deliveryOtp;
   final String paymentMethod;
+  final int deliveryFee;
 
   OrderData({
     required this.id,
@@ -247,5 +248,6 @@ class OrderData {
     this.deliveryAddress,
     this.deliveryOtp,
     this.paymentMethod = 'Razorpay',
+    this.deliveryFee = 0,
   }) : date = date ?? DateTime.now();
 }

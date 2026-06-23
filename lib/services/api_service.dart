@@ -428,14 +428,14 @@ class ApiService {
     final body = <String, dynamic>{'razorpay_payment_id': paymentId, 'razorpay_signature': signature};
     if (orderId != null) body['order_id'] = orderId;
     if (intentId != null) body['intent_id'] = intentId;
-    final res = await http.post(Uri.parse('$_baseUrl/api/payments/verify'), headers: headers, body: jsonEncode(body)).timeout(const Duration(seconds: 15));
+    final res = await http.post(Uri.parse('$_baseUrl/api/payments/verify'), headers: headers, body: jsonEncode(body)).timeout(const Duration(seconds: 60));
     if (_checkAndHandleUnauthorized(res.statusCode)) return {};
     return _handleResponse(res);
   }
 
   Future<Map<String, dynamic>> createRazorpayOrder(String orderId) async {
     final headers = await _authHeaders(required: true);
-    final res = await http.post(Uri.parse('$_baseUrl/api/payments/create-order'), headers: headers, body: jsonEncode({'order_id': orderId})).timeout(const Duration(seconds: 15));
+    final res = await http.post(Uri.parse('$_baseUrl/api/payments/create-order'), headers: headers, body: jsonEncode({'order_id': orderId})).timeout(const Duration(seconds: 60));
     if (_checkAndHandleUnauthorized(res.statusCode)) return {};
     return _handleResponse(res);
   }
@@ -450,9 +450,31 @@ class ApiService {
     return _handleResponse(res);
   }
 
+  Future<Map<String, dynamic>> placeOrder(String addressId, String paymentMethod) async {
+    final headers = await _authHeaders(required: true);
+    final res = await http.post(
+      Uri.parse('$_baseUrl/api/orders'),
+      headers: headers,
+      body: jsonEncode({'address_id': addressId, 'payment_method': paymentMethod}),
+    ).timeout(const Duration(seconds: 60));
+    if (_checkAndHandleUnauthorized(res.statusCode)) return {};
+    return _handleResponse(res);
+  }
+
+  Future<Map<String, dynamic>> processPayment(String orderId, String method) async {
+    final headers = await _authHeaders(required: true);
+    final res = await http.post(
+      Uri.parse('$_baseUrl/api/payments/process'),
+      headers: headers,
+      body: jsonEncode({'order_id': orderId, 'method': method}),
+    ).timeout(const Duration(seconds: 60));
+    if (_checkAndHandleUnauthorized(res.statusCode)) return {};
+    return _handleResponse(res);
+  }
+
   Future<Map<String, dynamic>> cancelPaymentIntent(String intentId) async {
     final headers = await _authHeaders(required: true);
-    final res = await http.post(Uri.parse('$_baseUrl/api/payments/cancel/$intentId'), headers: headers).timeout(const Duration(seconds: 15));
+    final res = await http.post(Uri.parse('$_baseUrl/api/payments/cancel/$intentId'), headers: headers).timeout(const Duration(seconds: 60));
     if (_checkAndHandleUnauthorized(res.statusCode)) return {};
     return _handleResponse(res);
   }
@@ -498,6 +520,13 @@ class ApiService {
     final headers = await _authHeaders();
     final res = await http.get(Uri.parse('$_baseUrl/api/notifications'), headers: headers).timeout(const Duration(seconds: 60));
     return _handleListResponse(res);
+  }
+
+  // ─── Settings ───────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> getSettings() async {
+    final res = await http.get(Uri.parse('$_baseUrl/api/settings')).timeout(const Duration(seconds: 15));
+    return _handleResponse(res);
   }
 
   // ─── Product Suggestions ────────────────────────────────────────

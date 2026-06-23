@@ -387,7 +387,7 @@ class _InfoBox extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: _infoItem(Icons.payment, 'Payment', 'Online Payment')),
+              Expanded(child: _infoItem(Icons.payment, 'Payment', order.paymentMethod)),
               const SizedBox(width: 12),
               Expanded(child: _infoItem(Icons.shopping_bag, 'Items', '${order.items.length} item${order.items.length > 1 ? 's' : ''}')),
             ],

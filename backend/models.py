@@ -9,6 +9,7 @@ Security:
   - Foreign keys enforce referential integrity.
 """
 import uuid
+from decimal import Decimal
 from datetime import datetime, timezone
 
 from sqlalchemy import (
@@ -157,6 +158,7 @@ class Order(Base):
     address_id = Column(UUID(as_uuid=True), ForeignKey("addresses.id"), nullable=True)
     status = Column(String(20), default="Pending", nullable=False, index=True)
     total_amount = Column(Numeric(10, 2), nullable=False)
+    delivery_fee = Column(Numeric(10, 2), default=Decimal("0.00"), nullable=False)
     payment_method = Column(String(20), nullable=False)
     delivery_otp = Column(String(6), nullable=True)
     idempotency_key = Column(String(64), nullable=True, unique=True)
@@ -367,5 +369,14 @@ class Notification(Base):
     image_url = Column(String(500), nullable=True)
     link = Column(String(500), nullable=True)
     is_deleted = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+
+
+class AppSetting(Base):
+    __tablename__ = "app_settings"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    key = Column(String(100), unique=True, nullable=False, index=True)
+    value = Column(String(500), nullable=False)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)

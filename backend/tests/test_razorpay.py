@@ -31,7 +31,7 @@ class TestRazorpayCreateOrder:
             assert resp2.status_code == 200
             data = resp2.json()
             assert "razorpay_order_id" in data
-            assert data["amount"] == 9000
+            assert data["amount"] == 13000
             assert data["currency"] == "INR"
             assert "key_id" in data
 

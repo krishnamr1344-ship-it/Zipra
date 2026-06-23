@@ -33,7 +33,7 @@ from database import get_db
 from models import (
     User, Category, Product, ProductImage, ProductFlag, Address, CartItem,
     Order, OrderItem, Payment, PaymentIntent, DeliveryZone, ComboPack, ComboPackItem, ProductSuggestion,
-    WishlistItem, AppVersion, Banner, Notification,
+    WishlistItem, AppVersion, Banner, Notification, AppSetting,
 )
 from schemas import (
     CategoryCreate, CategoryResponse,
@@ -542,10 +542,12 @@ def _order_to_response(order: Order, include_otp: bool = False) -> OrderResponse
             longitude=float(addr.longitude) if addr.longitude else None,
             maps_link=maps,
         )
+    fee = float(order.delivery_fee) if order.delivery_fee else 0
     return OrderResponse(
         id=str(order.id),
         status=order.status,
         total_amount=round(float(order.total_amount), 2),
+        delivery_fee=round(fee, 2),
         payment_method=order.payment_method,
         items=items,
         delivery_address=delivery_address,
@@ -1154,6 +1156,23 @@ def validate_cart(request: Request, db: Session = Depends(get_db)):
     return CartValidateResponse(valid=all_valid, items=items, total=round(total, 2))
 
 
+# ─── SETTINGS ──────────────────────────────────────────────────────
+
+def _get_setting(db: Session, key: str, default: str) -> str:
+    row = db.query(AppSetting).filter(AppSetting.key == key).first()
+    return row.value if row else default
+
+
+@router.get("/settings")
+def get_settings(request: Request, db: Session = Depends(get_db)):
+    fee_raw = _get_setting(db, "delivery_fee", "40")
+    threshold_raw = _get_setting(db, "free_delivery_threshold", "499")
+    return {
+        "delivery_fee": int(fee_raw),
+        "free_delivery_threshold": int(threshold_raw),
+    }
+
+
 # ─── ORDERS ───────────────────────────────────────────────────────
 # Ownership: all queries filter by user_id from JWT.
 
@@ -1205,10 +1224,16 @@ def create_order(body: OrderCreateRequest, request: Request, db: Session = Depen
         total += selling_price * ci.quantity
         products_with_qty.append((product, ci.quantity, selling_price))
 
+    fee_raw = _get_setting(db, "delivery_fee", "40")
+    threshold_raw = _get_setting(db, "free_delivery_threshold", "499")
+    delivery_fee = Decimal("0.00") if total >= Decimal(threshold_raw) else Decimal(str(fee_raw))
+    total_with_fee = total + delivery_fee
+
     order = Order(
         user_id=user_id,
         address_id=addr.id,
-        total_amount=total,
+        total_amount=total_with_fee,
+        delivery_fee=delivery_fee,
         payment_method=body.payment_method,
     )
     db.add(order)
@@ -1297,10 +1322,16 @@ def create_order_direct(body: OrderDirectCreateRequest, request: Request, db: Se
                             detail="Delivery not available in your area",
                         )
 
+    fee_raw = _get_setting(db, "delivery_fee", "40")
+    threshold_raw = _get_setting(db, "free_delivery_threshold", "499")
+    delivery_fee = Decimal("0.00") if total >= Decimal(threshold_raw) else Decimal(str(fee_raw))
+    total_with_fee = total + delivery_fee
+
     order = Order(
         user_id=user_id,
         address_id=address_id,
-        total_amount=total,
+        total_amount=total_with_fee,
+        delivery_fee=delivery_fee,
         payment_method=body.payment_method,
         idempotency_key=body.idempotency_key,
     )
@@ -1991,7 +2022,7 @@ async def razorpay_webhook(request: Request, db: Session = Depends(get_db)):
     payment = db.query(Payment).filter(
         Payment.gateway_order_id == gateway_order_id,
         Payment.is_deleted == False,
-    ).order_by(Payment.created_at.desc()).first()
+    ).order_by(Payment.created_at.desc()).with_for_update().first()
     if not payment:
         logger.warning("Razorpay webhook: no payment found for gateway_order_id=%s", gateway_order_id)
         return JSONResponse(status_code=200, content={"status": "ignored"})

@@ -209,6 +209,22 @@ class AdminApiService {
     }
   }
 
+  // ─── Settings ──────────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> getSettings() async {
+    final res = await http.get(Uri.parse('$_baseUrl/api/admin/settings'), headers: await _authHeader()).timeout(_timeout);
+    if (res.statusCode != 200) throw ApiException('Failed to load settings');
+    return _decodeJson(res.body);
+  }
+
+  Future<void> updateSettings(int deliveryFee, int freeThreshold) async {
+    final res = await http.put(Uri.parse('$_baseUrl/api/admin/settings'), headers: await _authHeader(), body: jsonEncode({
+      'delivery_fee': deliveryFee,
+      'free_delivery_threshold': freeThreshold,
+    })).timeout(_timeout);
+    if (res.statusCode != 200) throw ApiException('Failed to update settings');
+  }
+
   // ─── Banners ──────────────────────────────────────────────────────
 
   Future<List<dynamic>> getBanners() async {

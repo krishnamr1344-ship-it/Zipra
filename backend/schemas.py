@@ -428,9 +428,11 @@ class OrderCreateRequest(BaseModel):
     @classmethod
     def valid_method(cls, v):
         v = v.strip().lower()
-        if v not in {"razorpay"}:
-            raise ValueError("Payment method must be 'razorpay'")
-        return "Razorpay"
+        if v not in {"razorpay", "cash on delivery"}:
+            raise ValueError("Payment method must be 'razorpay' or 'Cash on Delivery'")
+        if v == "razorpay":
+            return "Razorpay"
+        return "Cash on Delivery"
 
 class OrderDirectCreateRequest(BaseModel):
     items: list[OrderItemInput] = Field(min_length=1)
@@ -442,9 +444,11 @@ class OrderDirectCreateRequest(BaseModel):
     @classmethod
     def valid_method(cls, v):
         v = v.strip().lower()
-        if v not in {"razorpay"}:
-            raise ValueError("Payment method must be 'razorpay'")
-        return "Razorpay"
+        if v not in {"razorpay", "cash on delivery"}:
+            raise ValueError("Payment method must be 'razorpay' or 'Cash on Delivery'")
+        if v == "razorpay":
+            return "Razorpay"
+        return "Cash on Delivery"
 
 
 class OrderItemResponse(BaseModel):
@@ -478,6 +482,7 @@ class OrderResponse(BaseModel):
     id: str
     status: str
     total_amount: float
+    delivery_fee: float = 0
     payment_method: str
     items: list[OrderItemResponse] = []
     delivery_address: Optional[DeliveryAddress] = None
@@ -499,9 +504,9 @@ class PaymentProcessRequest(BaseModel):
     @classmethod
     def valid_method(cls, v):
         v = v.strip().lower()
-        if v not in {"cod"}:
-            raise ValueError("Payment method must be 'cod'")
-        return "COD"
+        if v not in {"cash on delivery"}:
+            raise ValueError("Payment method must be 'Cash on Delivery'")
+        return "Cash on Delivery"
 
 
 class PaymentResponse(BaseModel):

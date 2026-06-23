@@ -17,7 +17,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, Category, Product, ProductImage, ProductFlag, Address, Order, Payment, DeliveryZone, ComboPack, ComboPackItem, Banner, Notification
+from models import User, Category, Product, ProductImage, ProductFlag, Address, Order, Payment, DeliveryZone, ComboPack, ComboPackItem, Banner, Notification, AppSetting
 from resources import _validate_order_transition
 from pydantic import BaseModel
 from schemas import (
@@ -934,3 +934,49 @@ def delete_banner(banner_id: str, request: Request, db: Session = Depends(get_db
         raise HTTPException(status_code=404, detail="Banner not found")
     banner.is_deleted = True
     db.commit()
+
+
+class SettingsResponse(BaseModel):
+    delivery_fee: int = 40
+    free_delivery_threshold: int = 499
+
+
+class SettingsUpdate(BaseModel):
+    delivery_fee: int
+    free_delivery_threshold: int
+
+
+def _get_setting(db: Session, key: str, default: str) -> str:
+    row = db.query(AppSetting).filter(AppSetting.key == key).first()
+    return row.value if row else default
+
+
+def _set_setting(db: Session, key: str, value: str):
+    row = db.query(AppSetting).filter(AppSetting.key == key).first()
+    if row:
+        row.value = value
+    else:
+        db.add(AppSetting(key=key, value=value))
+    db.commit()
+
+
+@router.get("/settings", response_model=SettingsResponse)
+def get_settings(request: Request, db: Session = Depends(get_db)):
+    _require_admin(request, db)
+    fee_raw = _get_setting(db, "delivery_fee", "40")
+    threshold_raw = _get_setting(db, "free_delivery_threshold", "499")
+    return SettingsResponse(
+        delivery_fee=int(fee_raw),
+        free_delivery_threshold=int(threshold_raw),
+    )
+
+
+@router.put("/settings", response_model=SettingsResponse)
+def update_settings(body: SettingsUpdate, request: Request, db: Session = Depends(get_db)):
+    _require_admin(request, db)
+    _set_setting(db, "delivery_fee", str(body.delivery_fee))
+    _set_setting(db, "free_delivery_threshold", str(body.free_delivery_threshold))
+    return SettingsResponse(
+        delivery_fee=body.delivery_fee,
+        free_delivery_threshold=body.free_delivery_threshold,
+    )

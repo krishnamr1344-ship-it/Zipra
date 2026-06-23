@@ -12,6 +12,7 @@ import 'admin_delivery_zone_page.dart';
 import 'admin_combo_packs_page.dart';
 import 'admin_banners_page.dart';
 import 'admin_notifications_page.dart';
+import 'admin_settings_page.dart';
 
 class AdminHomePage extends StatefulWidget {
   const AdminHomePage({super.key});
@@ -215,6 +216,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
                   _menuCard(AppColors.primary, Icons.inventory_2, 'Combo Packs', 'Monthly Needs packs', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminComboPacksPage())).then((_) => _load())),
                   _menuCard(Colors.orange, Icons.palette, 'Banners', 'Manage promotions', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminBannersPage())).then((_) => _load())),
                   _menuCard(Colors.red, Icons.notifications, 'Notifications', 'Send & manage', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminNotificationsPage()))),
+                  _menuCard(Colors.teal, Icons.settings, 'Settings', 'Delivery fee & more', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminSettingsPage()))),
                 ]),
               ),
             ),

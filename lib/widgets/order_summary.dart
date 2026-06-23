@@ -1,17 +1,50 @@
 import 'package:flutter/material.dart';
 import '../constants/theme.dart';
 import '../models/cart_model.dart';
+import '../services/api_service.dart';
 
-class OrderSummary extends StatelessWidget {
+class OrderSummary extends StatefulWidget {
   const OrderSummary({super.key});
 
   @override
+  State<OrderSummary> createState() => _OrderSummaryState();
+}
+
+class _OrderSummaryState extends State<OrderSummary> {
+  final _api = ApiService();
+  int _deliveryFee = 40;
+  int _freeThreshold = 499;
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    try {
+      final data = await _api.getSettings();
+      if (!mounted) return;
+      setState(() {
+        _deliveryFee = data['delivery_fee'] ?? 40;
+        _freeThreshold = data['free_delivery_threshold'] ?? 499;
+        _loaded = true;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loaded = true);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (!_loaded) return const SizedBox.shrink();
+
     final sub = cartNotifier.total;
     final itemCount = cartNotifier.itemCount;
-    final delivery = sub >= 499 ? 0 : 40;
+    final delivery = sub >= _freeThreshold ? 0 : _deliveryFee;
     final total = sub + delivery;
-    final saving = delivery > 0 ? 0 : 40;
+    final saving = delivery > 0 ? 0 : _deliveryFee;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -48,7 +81,7 @@ class OrderSummary extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(left: 28),
                 child: Text(
-                  'Add ₹${499 - sub} more for free delivery',
+                  'Add ₹${_freeThreshold - sub} more for free delivery',
                   style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
                 ),
               ),

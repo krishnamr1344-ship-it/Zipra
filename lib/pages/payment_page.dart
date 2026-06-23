@@ -103,6 +103,35 @@ class _PaymentPageState extends State<PaymentPage> {
 
     setState(() => _processing = true);
     if (!mounted) return;
+
+    if (_selectedMethod == 'cash_on_delivery') {
+      try {
+        final order = await _api.placeOrder(_addressId, 'Cash on Delivery');
+        final orderId = order['id'] as String?;
+        if (orderId == null) throw Exception('Failed to create order');
+
+        await _api.processPayment(orderId, 'Cash on Delivery');
+
+        cartNotifier.clear();
+
+        setState(() => _processing = false);
+        if (!mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const HomePage()),
+          (route) => false,
+        );
+      } catch (e) {
+        if (mounted) setState(() => _processing = false);
+        if (!mounted) return;
+        AppSnackbar.show(
+          context,
+          'Failed to place order. Please try again.',
+          type: SnackbarType.error,
+        );
+      }
+      return;
+    }
+
     try {
       final items = cartNotifier.items
           .map((i) => ({'product_id': i.productId, 'quantity': i.count}))
@@ -360,6 +389,13 @@ class _PaymentPageState extends State<PaymentPage> {
                   'Pay Online',
                   'Credit / Debit card, UPI, Net Banking',
                   'razorpay',
+                ),
+                const SizedBox(height: 12),
+                _methodTile(
+                  Icons.money_outlined,
+                  'Cash on Delivery',
+                  'Pay with cash when delivered',
+                  'cash_on_delivery',
                 ),
               ],
             ),
