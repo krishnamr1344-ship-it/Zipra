@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:sentry/sentry.dart';
 import 'pages/home_page.dart';
 import 'pages/admin_home_page.dart';
 import 'services/api_service.dart';
@@ -21,16 +21,14 @@ void main() async {
 
   final dsn = const String.fromEnvironment('SENTRY_DSN');
   if (dsn.isNotEmpty) {
-    await SentryFlutter.init(
+    await Sentry.init(
       (options) {
         options.dsn = dsn;
         options.tracesSampleRate = 0.1;
       },
-      appRunner: () => runApp(const MyApp()),
     );
-  } else {
-    runApp(const MyApp());
   }
+  runApp(const MyApp());
 }
 
 class NoGlowScrollBehavior extends ScrollBehavior {
