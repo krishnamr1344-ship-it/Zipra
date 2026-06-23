@@ -145,7 +145,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         response = await call_next(request)
 
-        if is_mutating and response.status_code in FAILURE_CODES:
+        if is_mutating:
             self._record_failure(ip, now)
 
         return response

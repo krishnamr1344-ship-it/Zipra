@@ -14,6 +14,7 @@ import os
 import uuid
 from datetime import datetime, timedelta, timezone
 
+import bcrypt
 import jwt
 import httpx
 from cryptography import x509
@@ -25,6 +26,10 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import User, TokenBlacklist
 from schemas import GoogleLoginRequest, UpdateProfileRequest, UpdatePhoneRequest
+
+
+def _hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(rounds=int(os.getenv("BCRYPT_ROUNDS", "12")))).decode("utf-8")
 
 JWT_SECRET = os.getenv("JWT_SECRET")
 JWT_EXPIRY_MINUTES = int(os.getenv("JWT_EXPIRY_MINUTES", "1440"))
@@ -86,13 +91,12 @@ def verify_firebase_token(token: str) -> dict:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
     public_key = keys[kid]
     try:
-        # Log JWT header and claims for debugging
         unverified_header = jwt.get_unverified_header(token)
-        logger.info("verify_firebase_token: alg=%s kid=%s typ=%s",
+        logger.debug("verify_firebase_token: alg=%s kid=%s typ=%s",
                      unverified_header.get("alg"), unverified_header.get("kid"), unverified_header.get("typ"))
         unverified = jwt.decode(token, options={"verify_signature": False})
-        logger.info("verify_firebase_token: aud=%s iss=%s sub=%s",
-                     unverified.get("aud"), unverified.get("iss"), unverified.get("sub"))
+        logger.debug("verify_firebase_token: aud=%s iss=%s",
+                     unverified.get("aud"), unverified.get("iss"))
         decoded = jwt.decode(
             token,
             public_key,

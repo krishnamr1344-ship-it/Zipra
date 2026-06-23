@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import User, Category, Product, ProductImage, ProductFlag, Address, Order, Payment, DeliveryZone, ComboPack, ComboPackItem, Banner, Notification
+from resources import _validate_order_transition
 from pydantic import BaseModel
 from schemas import (
     CategoryCreate, CategoryResponse,
@@ -309,7 +310,7 @@ def toggle_product(product_id: str, request: Request, db: Session = Depends(get_
     return {"is_enabled": flag.is_enabled, "message": f"Product {'enabled' if flag.is_enabled else 'disabled'}"}
 
 
-@router.delete("/products/{product_id}", response_model=MessageResponse)
+@router.delete("/products/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_product(product_id: str, request: Request, db: Session = Depends(get_db)):
     _require_admin(request, db)
     _validate_uuid(product_id)
@@ -318,7 +319,6 @@ def delete_product(product_id: str, request: Request, db: Session = Depends(get_
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
     product.is_deleted = True
     db.commit()
-    return MessageResponse(message="Product deleted")
 
 
 @router.get("/categories", response_model=list[CategoryResponse])
@@ -363,7 +363,7 @@ def update_category(category_id: str, body: CategoryCreate, request: Request, db
     return CategoryResponse(id=str(cat.id), name=cat.name, description=cat.description, image=cat.image)
 
 
-@router.delete("/categories/{category_id}", response_model=MessageResponse)
+@router.delete("/categories/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_category(category_id: str, request: Request, db: Session = Depends(get_db)):
     _require_admin(request, db)
     _validate_uuid(category_id)
@@ -375,7 +375,6 @@ def delete_category(category_id: str, request: Request, db: Session = Depends(ge
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot delete category with existing products")
     cat.is_deleted = True
     db.commit()
-    return MessageResponse(message="Category deleted")
 
 
 @router.get("/orders")
@@ -454,7 +453,6 @@ def list_orders(request: Request, db: Session = Depends(get_db), status: str = N
             "user_phone": user_phone,
             "user_gps_address": user_gps,
             "delivery_address": delivery_address,
-            "delivery_otp": o.delivery_otp,
         })
     return result
 
@@ -472,6 +470,7 @@ def update_order_status(order_id: str, body: StatusUpdateRequest, request: Reque
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order is already delivered and cannot be modified")
     if body.status == "Delivered":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Use the delivery verification endpoint to mark orders as delivered")
+    _validate_order_transition(order.status, body.status)
     if body.status == "Cancelled" and order.status != "Cancelled":
         for oi in order.items:
             if not oi.is_deleted:
@@ -483,7 +482,7 @@ def update_order_status(order_id: str, body: StatusUpdateRequest, request: Reque
     return MessageResponse(message=f"Order status updated to {body.status}")
 
 
-@router.delete("/orders/{order_id}", response_model=MessageResponse)
+@router.delete("/orders/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_order(order_id: str, request: Request, db: Session = Depends(get_db)):
     _require_admin(request, db)
     _validate_uuid(order_id)
@@ -492,7 +491,6 @@ def delete_order(order_id: str, request: Request, db: Session = Depends(get_db))
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
     order.is_deleted = True
     db.commit()
-    return MessageResponse(message="Order deleted")
 
 
 @router.post("/orders/{order_id}/deliver", response_model=MessageResponse)
@@ -514,7 +512,7 @@ def deliver_order(order_id: str, body: DeliveryVerifyRequest, request: Request, 
     return MessageResponse(message="Order delivered successfully")
 
 
-@router.delete("/orders/{order_id}/hard", response_model=MessageResponse)
+@router.delete("/orders/{order_id}/hard", status_code=status.HTTP_204_NO_CONTENT)
 def hard_delete_order(order_id: str, request: Request, db: Session = Depends(get_db)):
     _require_admin(request, db)
     _validate_uuid(order_id)
@@ -530,7 +528,7 @@ def hard_delete_order(order_id: str, request: Request, db: Session = Depends(get
     except Exception:
         db.rollback()
         raise
-    return MessageResponse(message="Order permanently deleted")
+    return {"message": "Order permanently deleted"}
 
 
 @router.delete("/users/{user_id}", response_model=MessageResponse)
@@ -547,7 +545,7 @@ def delete_user(user_id: str, request: Request, db: Session = Depends(get_db)):
     return MessageResponse(message="User deleted")
 
 
-@router.delete("/users/{user_id}/hard", response_model=MessageResponse)
+@router.delete("/users/{user_id}/hard", status_code=status.HTTP_204_NO_CONTENT)
 def hard_delete_user(user_id: str, request: Request, db: Session = Depends(get_db)):
     admin_id = _require_admin(request, db)
     _validate_uuid(user_id)
@@ -571,7 +569,7 @@ def hard_delete_user(user_id: str, request: Request, db: Session = Depends(get_d
     except Exception:
         db.rollback()
         raise
-    return MessageResponse(message="User permanently deleted")
+    return {"message": "User permanently deleted"}
 
 
 @router.get("/users")
@@ -723,7 +721,7 @@ def update_combo_pack(pack_id: str, body: ComboPackUpdate, request: Request, db:
     return _pack_to_admin_response(pack)
 
 
-@router.delete("/combo-packs/{pack_id}")
+@router.delete("/combo-packs/{pack_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_combo_pack(pack_id: str, request: Request, db: Session = Depends(get_db)):
     _require_admin(request, db)
     _validate_uuid(pack_id)
@@ -732,7 +730,6 @@ def delete_combo_pack(pack_id: str, request: Request, db: Session = Depends(get_
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pack not found")
     pack.is_deleted = True
     db.commit()
-    return {"message": "Combo pack deleted"}
 
 
 @router.put("/combo-packs/{pack_id}/toggle")
@@ -775,7 +772,7 @@ def update_delivery_zone(zone_id: str, body: DeliveryZoneCreate, request: Reques
     return MessageResponse(message=f"Delivery zone '{body.zone_name}' updated")
 
 
-@router.delete("/delivery-zones/{zone_id}", response_model=MessageResponse)
+@router.delete("/delivery-zones/{zone_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_delivery_zone(zone_id: str, request: Request, db: Session = Depends(get_db)):
     _require_admin(request, db)
     _validate_uuid(zone_id)
@@ -784,7 +781,6 @@ def delete_delivery_zone(zone_id: str, request: Request, db: Session = Depends(g
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Delivery zone not found")
     zone.is_deleted = True
     db.commit()
-    return MessageResponse(message="Delivery zone deleted")
 
 
 # ─── NOTIFICATIONS ────────────────────────────────────────────────
@@ -833,7 +829,7 @@ def create_notification(body: NotificationCreate, request: Request, db: Session 
     )
 
 
-@router.delete("/notifications/{notification_id}", response_model=MessageResponse)
+@router.delete("/notifications/{notification_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_notification(notification_id: str, request: Request, db: Session = Depends(get_db)):
     _require_admin(request, db)
     notif = db.query(Notification).filter(Notification.id == notification_id, Notification.is_deleted == False).first()
@@ -841,7 +837,6 @@ def delete_notification(notification_id: str, request: Request, db: Session = De
         raise HTTPException(status_code=404, detail="Notification not found")
     notif.is_deleted = True
     db.commit()
-    return MessageResponse(message="Notification deleted")
 
 
 # ─── BANNERS ──────────────────────────────────────────────────────
@@ -931,7 +926,7 @@ def update_banner(banner_id: str, body: BannerUpdate, request: Request, db: Sess
     )
 
 
-@router.delete("/banners/{banner_id}", response_model=MessageResponse)
+@router.delete("/banners/{banner_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_banner(banner_id: str, request: Request, db: Session = Depends(get_db)):
     _require_admin(request, db)
     banner = db.query(Banner).filter(Banner.id == banner_id, Banner.is_deleted == False).first()
@@ -939,4 +934,3 @@ def delete_banner(banner_id: str, request: Request, db: Session = Depends(get_db
         raise HTTPException(status_code=404, detail="Banner not found")
     banner.is_deleted = True
     db.commit()
-    return MessageResponse(message="Banner deleted")

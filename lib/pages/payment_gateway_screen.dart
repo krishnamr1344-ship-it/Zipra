@@ -111,7 +111,13 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
   void _handleSuccess(PaymentSuccessResponse response) {
     if (!mounted) return;
     setState(() => _checkoutOpen = false);
-    _verifyPayment(response.paymentId!, response.signature!);
+    final paymentId = response.paymentId;
+    final signature = response.signature;
+    if (paymentId == null || signature == null) {
+      AppSnackbar.show(context, 'Invalid payment response received', type: SnackbarType.error);
+      return;
+    }
+    _verifyPayment(paymentId, signature);
   }
 
   Future<void> _handleError(PaymentFailureResponse response) async {

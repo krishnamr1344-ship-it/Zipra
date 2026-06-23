@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -15,8 +16,16 @@ class ApiService {
   static const _userPhoneKey = 'user_phone';
   static const _userRoleKey = 'user_role';
   static const _userIdKey = 'user_id';
+  static const _connectTimeout = Duration(seconds: 15);
+  static const _receiveTimeout = Duration(seconds: 30);
+
+  late final http.Client _httpClient;
 
   final _secureStorage = const FlutterSecureStorage();
+
+  ApiService() {
+    _httpClient = http.Client();
+  }
 
   Future<String?> getToken() async {
     return await _secureStorage.read(key: _tokenKey);
@@ -51,16 +60,16 @@ class ApiService {
   }
 
   List<dynamic> _handleListResponse(http.Response res) {
-    if (res.statusCode != 200) {
+    if (res.statusCode < 200 || res.statusCode >= 300) {
       if (kDebugMode) debugPrint('API Error ${res.statusCode}');
       throw ApiException(_tryDecodeDetail(res.body) ?? 'Request failed (${res.statusCode})');
     }
     try {
       final decoded = jsonDecode(res.body);
       if (decoded is List<dynamic>) return decoded;
-      } catch (e) {
-        debugPrint('ApiService._handleListResponse: decode failed: $e');
-      }
+    } catch (e) {
+      debugPrint('ApiService._handleListResponse: decode failed: $e');
+    }
     throw ApiException('Invalid response (${res.statusCode})');
   }
 
@@ -84,6 +93,16 @@ class ApiService {
     return null;
   }
 
+  Future<T> _withTimeout<T>(Future<T> Function() fn) async {
+    try {
+      return await fn();
+    } on SocketException {
+      throw ApiException('No internet connection');
+    } on TimeoutException {
+      throw ApiException('Request timed out');
+    }
+  }
+
   bool _checkAndHandleUnauthorized(int statusCode) {
     if (statusCode == 401) {
       _clearToken();
@@ -93,11 +112,11 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> googleLogin(String idToken) async {
-    final res = await http.post(
+    final res = await _withTimeout(() => http.post(
       Uri.parse('$_baseUrl/api/auth/google-login'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'id_token': idToken}),
-    ).timeout(const Duration(seconds: 60));
+    ).timeout(const Duration(seconds: 60)));
     final body = await _handleResponse(res);
     await _saveToken(body['token']);
     final userMap = body['user'] as Map<String, dynamic>?;
@@ -115,13 +134,13 @@ class ApiService {
     final token = await getToken();
     if (token != null) {
       try {
-        await http.post(
+        await _withTimeout(() => http.post(
           Uri.parse('$_baseUrl/api/auth/logout'),
           headers: {
             'Authorization': 'Bearer $token',
             'Content-Type': 'application/json',
           },
-        ).timeout(const Duration(seconds: 60));
+        ).timeout(const Duration(seconds: 60)));
       } catch (e) {
         if (kDebugMode) debugPrint('ApiService.logout: request failed');
       }
@@ -351,7 +370,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> createOrder(Map<String, dynamic> data) async {
     final headers = await _authHeaders(required: true);
-    final res = await http.post(Uri.parse('$_baseUrl/api/orders'), headers: headers, body: jsonEncode(data)).timeout(const Duration(seconds: 120));
+    final res = await _withTimeout(() => http.post(Uri.parse('$_baseUrl/api/orders'), headers: headers, body: jsonEncode(data)).timeout(const Duration(seconds: 120)));
     return _handleResponse(res);
   }
 
@@ -394,13 +413,13 @@ class ApiService {
 
   Future<Map<String, dynamic>> createPaymentOrder(Map<String, dynamic> data) async {
     final headers = await _authHeaders(required: true);
-    final res = await http.post(Uri.parse('$_baseUrl/api/payments/create-order'), headers: headers, body: jsonEncode(data)).timeout(const Duration(seconds: 60));
+    final res = await _withTimeout(() => http.post(Uri.parse('$_baseUrl/api/payments/create-order'), headers: headers, body: jsonEncode(data)).timeout(const Duration(seconds: 60)));
     return _handleResponse(res);
   }
 
   Future<Map<String, dynamic>> verifyPayment(Map<String, dynamic> data) async {
     final headers = await _authHeaders(required: true);
-    final res = await http.post(Uri.parse('$_baseUrl/api/payments/verify'), headers: headers, body: jsonEncode(data)).timeout(const Duration(seconds: 60));
+    final res = await _withTimeout(() => http.post(Uri.parse('$_baseUrl/api/payments/verify'), headers: headers, body: jsonEncode(data)).timeout(const Duration(seconds: 60)));
     return _handleResponse(res);
   }
 

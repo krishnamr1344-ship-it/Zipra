@@ -1,7 +1,6 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'pages/home_page.dart';
 import 'pages/admin_home_page.dart';
 import 'services/api_service.dart';
@@ -20,7 +19,18 @@ void main() async {
   await Firebase.initializeApp();
   await AppInfo.load();
 
-  runApp(const MyApp());
+  final dsn = const String.fromEnvironment('SENTRY_DSN');
+  if (dsn.isNotEmpty) {
+    await SentryFlutter.init(
+      (options) {
+        options.dsn = dsn;
+        options.tracesSampleRate = 0.1;
+      },
+      appRunner: () => runApp(const MyApp()),
+    );
+  } else {
+    runApp(const MyApp());
+  }
 }
 
 class NoGlowScrollBehavior extends ScrollBehavior {
@@ -136,21 +146,16 @@ class _AppEntryState extends State<_AppEntry> with WidgetsBindingObserver {
   Future<void> _checkTokenOnResume() async {
     final token = await _api.getToken();
     if (token != null && mounted) {
-      final parts = token.split('.');
-      if (parts.length == 3) {
-        try {
-          final payload = jsonDecode(
-            utf8.decode(base64.decode(base64.normalize(parts[1]))),
-          ) as Map<String, dynamic>;
-          final exp = payload['exp'] as int?;
-          if (exp != null && DateTime.fromMillisecondsSinceEpoch(exp * 1000).isBefore(DateTime.now())) {
-            await _api.logout();
-            if (mounted) Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const HomePage()),
-              (route) => false,
-            );
-          }
-        } catch (_) {}
+      try {
+        await _api.getMe();
+      } catch (_) {
+        await _api.logout();
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const HomePage()),
+            (route) => false,
+          );
+        }
       }
     }
   }

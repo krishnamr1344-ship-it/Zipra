@@ -103,7 +103,7 @@ class ProductCreate(BaseModel):
     unit: str
     images: list[str] = []
     stock: int = 0
-    discount_percent: int = 0
+    discount_percent: int = Field(default=0, ge=0, le=90)
 
     @field_validator("name")
     @classmethod

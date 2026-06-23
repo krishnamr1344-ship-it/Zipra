@@ -64,6 +64,8 @@ from models import Category, Product, ProductImage, ProductFlag, User, ComboPack
 
 FRONTEND_URL = os.getenv("FRONTEND_URL")
 API_KEY = os.getenv("API_KEY")
+BACKEND_URL = os.getenv("BACKEND_URL")
+SENTRY_DSN = os.getenv("SENTRY_DSN")
 
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 
@@ -78,6 +80,17 @@ if _missing:
 
 from config import PUBLIC_PATHS, RAZORPAY_ENABLED, RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET
 PUBLIC_PATHS_C4 = PUBLIC_PATHS
+
+# ─── Sentry ──────────────────────────────────────────────────────
+if SENTRY_DSN:
+    import sentry_sdk
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        traces_sample_rate=0.1,
+        profiles_sample_rate=0.1,
+        environment="production" if not os.getenv("DEV") else "development",
+    )
+    logger.info("Sentry initialized")
 
 # Create all tables on startup (new tables only).
 Base.metadata.create_all(bind=engine)
@@ -113,9 +126,10 @@ if 'firebase_uid' not in user_cols3:
         conn.commit()
 
 # Migrate existing users table: make password_hash nullable (Google Sign-In has no password).
-with engine.connect() as conn:
-    conn.execute(text("ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL"))
-    conn.commit()
+if engine.dialect.name == "postgresql":
+    with engine.connect() as conn:
+        conn.execute(text("ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL"))
+        conn.commit()
 
 # Migrate existing orders table: add delivery_otp column if missing.
 order_cols = {c['name'] for c in inspector.get_columns('orders')}
@@ -466,7 +480,25 @@ def startup():
         db.close()
 
 
+@app.get("/health")
+def health():
+    """Health check with DB and storage connectivity."""
+    db: Session = SessionLocal()
+    try:
+        db.execute(text("SELECT 1"))
+        db_ok = True
+    except Exception as e:
+        logger.error("Health check DB failure: %s", e)
+        db_ok = False
+    finally:
+        db.close()
+
+    if not db_ok:
+        return JSONResponse(status_code=503, content={"status": "error", "service": "Delivery App API", "database": "unreachable"})
+    return {"status": "ok", "service": "Delivery App API", "database": "connected"}
+
+
 @app.get("/")
 def root():
-    """Health check — no sensitive info exposed."""
-    return {"status": "ok", "service": "Delivery App API"}
+    """Root redirect to health."""
+    return {"status": "ok", "service": "Delivery App API", "message": "See /health for details"}

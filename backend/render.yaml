@@ -17,6 +17,10 @@ services:
         sync: false
       - key: FRONTEND_URL
         sync: false
+      - key: BACKEND_URL
+        sync: false
+      - key: API_KEY
+        sync: false
       - key: BCRYPT_ROUNDS
         value: "12"
       - key: JWT_EXPIRY_MINUTES
@@ -31,7 +35,7 @@ services:
         sync: false
       - key: SUPABASE_ANON_KEY
         sync: false
-      - key: SUPABASE_SERVICE_KEY
+      - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
       - key: SUPABASE_UPLOAD_KEY
         sync: false
@@ -48,9 +52,19 @@ services:
       - key: SMTP_FROM_EMAIL
         sync: false
       - key: FIREBASE_PROJECT_ID
-        value: zipra-b3c72
+        sync: false
       - key: FIREBASE_PROJECT_NUMBER
-        value: "571924388974"
+        sync: false
+      - key: RAZORPAY_ENABLED
+        value: "true"
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
 
 databases:
   - name: delivery-db

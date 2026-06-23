@@ -101,7 +101,10 @@ def _normalize_mime(filename: str, content_type: str | None) -> str:
 
 @router.post("/upload")
 async def upload_image(request: Request, file: UploadFile = FastAPIFile(...)):
-    _get_user_id(request)
+    user_id = _get_user_id(request)
+    user_role = getattr(request.state, "user_role", None)
+    if user_role != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     if file.size is not None and file.size > _MAX_UPLOAD_SIZE:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
@@ -718,14 +721,13 @@ def update_address(address_id: str, body: AddressUpdate, request: Request, db: S
     )
 
 
-@router.delete("/addresses/{address_id}", response_model=MessageResponse)
+@router.delete("/addresses/{address_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_address(address_id: str, request: Request, db: Session = Depends(get_db)):
     user_id = _get_user_id(request)
     _validate_uuid(address_id)
     addr = _get_address_or_404(address_id, user_id, db)
     addr.is_deleted = True
     db.commit()
-    return MessageResponse(message="Address deleted")
 
 
 @router.post("/addresses/auto", response_model=AddressResponse, status_code=status.HTTP_201_CREATED)
@@ -992,7 +994,7 @@ def add_to_wishlist(body: WishlistAddRequest, request: Request, db: Session = De
     )
 
 
-@router.delete("/wishlist/{product_id}", response_model=MessageResponse)
+@router.delete("/wishlist/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
 def remove_from_wishlist(product_id: str, request: Request, db: Session = Depends(get_db)):
     user_id = _get_user_id(request)
     _validate_uuid(product_id)
@@ -1002,7 +1004,7 @@ def remove_from_wishlist(product_id: str, request: Request, db: Session = Depend
         WishlistItem.is_deleted == False,
     ).first()
     if not item:
-        return MessageResponse(message="Item not in wishlist")
+        return
     item.is_deleted = True
     db.commit()
     return MessageResponse(message="Removed from wishlist")
@@ -1085,17 +1087,16 @@ def update_cart_item(item_id: str, body: CartUpdateRequest, request: Request, db
     return _cart_item_to_response(item)
 
 
-@router.delete("/cart/{item_id}", response_model=MessageResponse)
+@router.delete("/cart/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 def remove_cart_item(item_id: str, request: Request, db: Session = Depends(get_db)):
     user_id = _get_user_id(request)
     _validate_uuid(item_id)
     item = _get_cart_item_or_404(item_id, user_id, db)
     item.is_deleted = True
     db.commit()
-    return MessageResponse(message="Item removed from cart")
 
 
-@router.delete("/cart", response_model=MessageResponse)
+@router.delete("/cart", status_code=status.HTTP_204_NO_CONTENT)
 def clear_cart(request: Request, db: Session = Depends(get_db)):
     user_id = _get_user_id(request)
     items = db.query(CartItem).filter(
@@ -1105,7 +1106,6 @@ def clear_cart(request: Request, db: Session = Depends(get_db)):
     for item in items:
         item.is_deleted = True
     db.commit()
-    return MessageResponse(message="Cart cleared")
 
 
 @router.post("/cart/validate", response_model=CartValidateResponse)
@@ -1369,6 +1369,27 @@ def _confirm_order_payment(order: Order, user_id: str, method: str, db: Session,
     )
     db.add(payment)
     return payment
+
+
+VALID_ORDER_TRANSITIONS: dict[str, list[str]] = {
+    "Pending": ["Confirmed", "Failed"],
+    "Confirmed": ["Preparing", "Cancelled"],
+    "Preparing": ["Picked", "Cancelled"],
+    "Picked": ["OutForDelivery", "Cancelled"],
+    "OutForDelivery": ["Delivered", "Cancelled"],
+    "Delivered": [],
+    "Cancelled": [],
+    "Failed": ["Pending"],
+}
+
+
+def _validate_order_transition(current: str, new: str):
+    allowed = VALID_ORDER_TRANSITIONS.get(current, [])
+    if new not in allowed:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot transition order from '{current}' to '{new}'. Allowed: {allowed if allowed else 'none'}",
+        )
 
 
 def _generate_txn_id() -> str:
@@ -2004,6 +2025,20 @@ async def razorpay_webhook(request: Request, db: Session = Depends(get_db)):
             order.status = "Failed"
         db.commit()
         logger.info("Razorpay webhook: payment %s failed: %s", gateway_payment_id, failure_reason)
+
+    elif event_type == "payment.refunded":
+        payment.status = "refunded"
+        payment.gateway_payment_id = gateway_payment_id
+        order = db.query(Order).filter(Order.id == payment.order_id).first()
+        if order:
+            order.status = "Cancelled"
+            for oi in order.items:
+                if not oi.is_deleted:
+                    product = db.query(Product).filter(Product.id == oi.product_id, Product.is_deleted == False).first()
+                    if product:
+                        product.stock += oi.quantity
+        db.commit()
+        logger.info("Razorpay webhook: payment %s refunded, stock restored for order %s", gateway_payment_id, order.id if order else "unknown")
 
     return JSONResponse(status_code=200, content={"status": "ok"})
 

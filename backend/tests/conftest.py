@@ -25,6 +25,8 @@ os.environ.setdefault("SUPABASE_URL", "")
 os.environ.setdefault("SUPABASE_SERVICE_KEY", "")
 os.environ.setdefault("SUPABASE_ANON_KEY", "")
 os.environ.setdefault("BCRYPT_ROUNDS", "4")
+os.environ.setdefault("FIREBASE_PROJECT_ID", "test-firebase-project")
+os.environ.setdefault("FIREBASE_PROJECT_NUMBER", "123456789")
 
 from sqlalchemy import String, TypeDecorator
 

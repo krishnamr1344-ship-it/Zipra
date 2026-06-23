@@ -14,7 +14,14 @@ if not DATABASE_URL:
 
 # engine manages the connection pool.
 # Security: No raw SQL — all queries go through SQLAlchemy ORM.
-engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+engine = create_engine(
+    DATABASE_URL,
+    pool_size=10,
+    max_overflow=20,
+    pool_timeout=30,
+    pool_recycle=1800,
+    pool_pre_ping=True,
+)
 
 # SessionLocal creates new DB sessions (one per request).
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

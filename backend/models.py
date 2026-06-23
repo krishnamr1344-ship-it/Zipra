@@ -32,7 +32,7 @@ class User(Base):
     email = Column(String(255), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=True)
     name = Column(String(255), nullable=False)
-    phone = Column(String(20), nullable=True)
+    phone = Column(String(20), nullable=True, unique=True)
     role = Column(String(20), default="user", nullable=False)
     is_deleted = Column(Boolean, default=False, nullable=False)
     token_version = Column(Integer, default=0, nullable=False)
@@ -146,6 +146,7 @@ class CartItem(Base):
     __table_args__ = (
         UniqueConstraint("user_id", "product_id", name="uq_user_product_cart"),
         Index("ix_cart_items_user_deleted", "user_id", "is_deleted"),
+        Index("ix_cart_items_product_deleted", "product_id", "is_deleted"),
     )
 
 
@@ -171,6 +172,7 @@ class Order(Base):
     __table_args__ = (
         Index("ix_orders_user_deleted", "user_id", "is_deleted"),
         Index("ix_orders_idempotency_key", "idempotency_key"),
+        Index("ix_orders_status_deleted", "status", "is_deleted"),
     )
 
 
@@ -178,7 +180,7 @@ class OrderItem(Base):
     __tablename__ = "order_items"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     order_id = Column(UUID(as_uuid=True), ForeignKey("orders.id", ondelete="CASCADE"), nullable=False, index=True)
-    product_id = Column(UUID(as_uuid=True), ForeignKey("products.id"), nullable=False)
+    product_id = Column(UUID(as_uuid=True), ForeignKey("products.id"), nullable=False, index=True)
     product_name = Column(String(200), nullable=False)
     product_price = Column(Numeric(10, 2), nullable=False)
     quantity = Column(Integer, nullable=False)
@@ -252,7 +254,7 @@ class ComboPackItem(Base):
     __tablename__ = "combo_pack_items"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     pack_id = Column(UUID(as_uuid=True), ForeignKey("combo_packs.id", ondelete="CASCADE"), nullable=False, index=True)
-    product_id = Column(UUID(as_uuid=True), ForeignKey("products.id"), nullable=False)
+    product_id = Column(UUID(as_uuid=True), ForeignKey("products.id"), nullable=False, index=True)
     quantity = Column(Integer, default=1, nullable=False)
     is_deleted = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)

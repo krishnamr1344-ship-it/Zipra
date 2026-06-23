@@ -180,11 +180,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         return;
       }
 
-      debugPrint('GPS coords: ${loc.latitude}, ${loc.longitude}');
       final data = await _api.reverseGeocode(loc.latitude, loc.longitude);
-      debugPrint(
-        'Reverse geocode result: ${data['address_line2']}, ${data['address_line1']}',
-      );
 
       if (loc.latitude == 0 && loc.longitude == 0 && mounted) {
         setState(() {
@@ -196,7 +192,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
       final area = data['address_line2'] ?? '';
       final line1 = data['address_line1'] ?? '';
-      debugPrint('Final displayed area: $area');
 
       if (mounted) {
         setState(() {

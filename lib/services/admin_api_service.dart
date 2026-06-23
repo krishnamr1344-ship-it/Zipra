@@ -13,7 +13,7 @@ class AdminApiService {
     final token = await ApiService().getToken();
     return {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer ${token ?? ''}',
+      if (token != null) 'Authorization': 'Bearer $token',
     };
   }
 
@@ -56,9 +56,9 @@ class AdminApiService {
 
   Future<void> deleteProduct(String id) async {
     final res = await http.delete(Uri.parse('$_baseUrl/api/admin/products/$id'), headers: await _authHeader()).timeout(_timeout);
-    if (res.statusCode != 200) {
-      final msg = _decodeJson(res.body)['detail'] ?? 'Failed to delete product';
-      throw ApiException('$msg');
+    if (res.statusCode != 200 && res.statusCode != 204) {
+      final detail = res.body.isNotEmpty ? (_decodeJson(res.body)['detail'] ?? 'Failed to delete product') : 'Failed to delete product';
+      throw ApiException('$detail');
     }
   }
 
@@ -80,9 +80,9 @@ class AdminApiService {
 
   Future<void> deleteCategory(String id) async {
     final res = await http.delete(Uri.parse('$_baseUrl/api/admin/categories/$id'), headers: await _authHeader()).timeout(_timeout);
-    if (res.statusCode != 200) {
-      final msg = _decodeJson(res.body)['detail'] ?? 'Failed to delete category';
-      throw ApiException('$msg');
+    if (res.statusCode != 200 && res.statusCode != 204) {
+      final detail = res.body.isNotEmpty ? (_decodeJson(res.body)['detail'] ?? 'Failed to delete category') : 'Failed to delete category';
+      throw ApiException('$detail');
     }
   }
 
@@ -104,9 +104,9 @@ class AdminApiService {
 
   Future<void> deleteOrder(String orderId) async {
     final res = await http.delete(Uri.parse('$_baseUrl/api/admin/orders/$orderId'), headers: await _authHeader()).timeout(_timeout);
-    if (res.statusCode != 200) {
-      final msg = _decodeJson(res.body)['detail'] ?? 'Failed to delete order';
-      throw ApiException('$msg');
+    if (res.statusCode != 200 && res.statusCode != 204) {
+      final detail = res.body.isNotEmpty ? (_decodeJson(res.body)['detail'] ?? 'Failed to delete order') : 'Failed to delete order';
+      throw ApiException('$detail');
     }
   }
 
@@ -144,9 +144,9 @@ class AdminApiService {
 
   Future<void> deleteComboPack(String id) async {
     final res = await http.delete(Uri.parse('$_baseUrl/api/admin/combo-packs/$id'), headers: await _authHeader()).timeout(_timeout);
-    if (res.statusCode != 200) {
-      final msg = _decodeJson(res.body)['detail'] ?? 'Failed to delete pack';
-      throw ApiException('$msg');
+    if (res.statusCode != 200 && res.statusCode != 204) {
+      final detail = res.body.isNotEmpty ? (_decodeJson(res.body)['detail'] ?? 'Failed to delete pack') : 'Failed to delete pack';
+      throw ApiException('$detail');
     }
   }
 
@@ -195,17 +195,17 @@ class AdminApiService {
 
   Future<void> deleteNotification(String id) async {
     final res = await http.delete(Uri.parse('$_baseUrl/api/admin/notifications/$id'), headers: await _authHeader()).timeout(_timeout);
-    if (res.statusCode != 200) {
-      final msg = _decodeJson(res.body)['detail'] ?? 'Failed to delete notification';
-      throw ApiException('$msg');
+    if (res.statusCode != 200 && res.statusCode != 204) {
+      final detail = res.body.isNotEmpty ? (_decodeJson(res.body)['detail'] ?? 'Failed to delete notification') : 'Failed to delete notification';
+      throw ApiException('$detail');
     }
   }
 
   Future<void> deleteDeliveryZone(String id) async {
     final res = await http.delete(Uri.parse('$_baseUrl/api/admin/delivery-zones/$id'), headers: await _authHeader()).timeout(_timeout);
-    if (res.statusCode != 200) {
-      final msg = _decodeJson(res.body)['detail'] ?? 'Failed to delete zone';
-      throw ApiException('$msg');
+    if (res.statusCode != 200 && res.statusCode != 204) {
+      final detail = res.body.isNotEmpty ? (_decodeJson(res.body)['detail'] ?? 'Failed to delete zone') : 'Failed to delete zone';
+      throw ApiException('$detail');
     }
   }
 
@@ -231,9 +231,9 @@ class AdminApiService {
 
   Future<void> deleteBanner(String id) async {
     final res = await http.delete(Uri.parse('$_baseUrl/api/admin/banners/$id'), headers: await _authHeader()).timeout(_timeout);
-    if (res.statusCode != 200) {
-      final msg = _decodeJson(res.body)['detail'] ?? 'Failed to delete banner';
-      throw ApiException('$msg');
+    if (res.statusCode != 200 && res.statusCode != 204) {
+      final detail = res.body.isNotEmpty ? (_decodeJson(res.body)['detail'] ?? 'Failed to delete banner') : 'Failed to delete banner';
+      throw ApiException('$detail');
     }
   }
 }

@@ -4,7 +4,7 @@ Shared configuration — single source of truth for public paths.
 import os as _os
 
 PUBLIC_PATHS: set[str] = {
-    "/", "/docs", "/openapi.json", "/redoc",
+    "/", "/health", "/docs", "/openapi.json", "/redoc",
     "/api/auth/google-login",
     "/api/app-version", "/api/categories", "/api/products",
     "/api/combo-packs", "/api/check-zone", "/api/places/search",
@@ -20,6 +20,13 @@ RAZORPAY_ENABLED: bool = _os.getenv("RAZORPAY_ENABLED", "").lower() in ("1", "tr
 RAZORPAY_KEY_ID: str = _os.getenv("RAZORPAY_KEY_ID", "")
 RAZORPAY_KEY_SECRET: str = _os.getenv("RAZORPAY_KEY_SECRET", "")
 RAZORPAY_WEBHOOK_SECRET: str = _os.getenv("RAZORPAY_WEBHOOK_SECRET", "")
+
+if RAZORPAY_ENABLED and not RAZORPAY_KEY_ID:
+    raise RuntimeError("RAZORPAY_KEY_ID is required when RAZORPAY_ENABLED=true")
+if RAZORPAY_ENABLED and not RAZORPAY_KEY_SECRET:
+    raise RuntimeError("RAZORPAY_KEY_SECRET is required when RAZORPAY_ENABLED=true")
+if RAZORPAY_ENABLED and not RAZORPAY_WEBHOOK_SECRET:
+    raise RuntimeError("RAZORPAY_WEBHOOK_SECRET is required when RAZORPAY_ENABLED=true")
 
 
 # ─── Supabase ─────────────────────────────────────────────────────
