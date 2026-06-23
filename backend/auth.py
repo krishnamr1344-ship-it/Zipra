@@ -76,9 +76,12 @@ def verify_firebase_token(token: str) -> dict:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
     public_key = keys[kid]
     try:
-        # First decode without verification to inspect claims for debugging
+        # Log JWT header and claims for debugging
+        unverified_header = jwt.get_unverified_header(token)
+        logger.info("verify_firebase_token: alg=%s kid=%s typ=%s",
+                     unverified_header.get("alg"), unverified_header.get("kid"), unverified_header.get("typ"))
         unverified = jwt.decode(token, options={"verify_signature": False})
-        logger.info("verify_firebase_token: unverified claims: aud=%s iss=%s sub=%s",
+        logger.info("verify_firebase_token: aud=%s iss=%s sub=%s",
                      unverified.get("aud"), unverified.get("iss"), unverified.get("sub"))
         decoded = jwt.decode(
             token,
