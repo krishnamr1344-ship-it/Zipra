@@ -3,6 +3,7 @@ import 'package:razorpay_flutter/razorpay_flutter.dart';
 import '../constants/theme.dart';
 import '../services/api_service.dart';
 import '../widgets/app_snackbar.dart';
+import 'home_page.dart';
 import 'orders_page.dart';
 
 class PaymentGatewayScreen extends StatefulWidget {
@@ -302,7 +303,7 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
     await Future.delayed(const Duration(seconds: 3));
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const OrdersPage()),
+      MaterialPageRoute(builder: (_) => const HomePage()),
       (route) => false,
     );
   }
@@ -313,7 +314,7 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
       canPop: false,
       onPopInvokedWithResult: (_, _) {
         Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const OrdersPage()),
+          MaterialPageRoute(builder: (_) => const HomePage()),
           (route) => false,
         );
       },
@@ -355,11 +356,15 @@ class _OrderStatusPageState extends State<OrderStatusPage> {
                 SizedBox(
                   width: double.infinity,
                   height: 52,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (_) => const OrdersPage()),
+                  child:                   ElevatedButton(
+                    onPressed: () async {
+                      await Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const HomePage()),
                         (route) => false,
+                      );
+                      if (!context.mounted) return;
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const OrdersPage()),
                       );
                     },
                     style: ElevatedButton.styleFrom(
@@ -400,7 +405,7 @@ class PaymentFailedScreen extends StatelessWidget {
       canPop: false,
       onPopInvokedWithResult: (_, _) {
         Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const OrdersPage()),
+          MaterialPageRoute(builder: (_) => const HomePage()),
           (route) => false,
         );
       },
@@ -439,6 +444,27 @@ class PaymentFailedScreen extends StatelessWidget {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const HomePage()),
+                        (route) => false,
+                      );
+                    },
+                    child: const Text(
+                      'Go to Home',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
                 if (orderId != null)
                   SizedBox(
                     width: double.infinity,
@@ -478,10 +504,14 @@ class PaymentFailedScreen extends StatelessWidget {
                   width: double.infinity,
                   height: 48,
                   child: TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (_) => const OrdersPage()),
+                    onPressed: () async {
+                      await Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const HomePage()),
                         (route) => false,
+                      );
+                      if (!context.mounted) return;
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const OrdersPage()),
                       );
                     },
                     child: const Text(
