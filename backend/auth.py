@@ -149,7 +149,7 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 @router.post("/google-login")
 def google_login(body: GoogleLoginRequest, db: Session = Depends(get_db)):
     decoded = verify_firebase_token(body.id_token)
-    firebase_uid = decoded.get("uid")
+    firebase_uid = decoded.get("sub") or decoded.get("user_id")
     email = decoded.get("email", "")
     name = decoded.get("name", email.split("@")[0])
     if not firebase_uid or not email:
