@@ -65,15 +65,21 @@ def verify_firebase_token(token: str) -> dict:
     keys = _get_firebase_keys()
     try:
         header = jwt.get_unverified_header(token)
-    except Exception:
+    except Exception as e:
+        logger.warning("verify_firebase_token: bad header: %s", e)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token format")
     kid = header.get("kid")
     if not kid or kid not in keys:
         keys = _get_firebase_keys()
         if not kid or kid not in keys:
+            logger.warning("verify_firebase_token: kid=%s not in keys", kid)
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
     public_key = keys[kid]
     try:
+        # First decode without verification to inspect claims for debugging
+        unverified = jwt.decode(token, options={"verify_signature": False})
+        logger.info("verify_firebase_token: unverified claims: aud=%s iss=%s sub=%s",
+                     unverified.get("aud"), unverified.get("iss"), unverified.get("sub"))
         decoded = jwt.decode(
             token,
             public_key,
@@ -84,8 +90,16 @@ def verify_firebase_token(token: str) -> dict:
         )
         return decoded
     except jwt.ExpiredSignatureError:
+        logger.warning("verify_firebase_token: token expired")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired")
-    except jwt.InvalidTokenError:
+    except jwt.InvalidAudienceError:
+        logger.warning("verify_firebase_token: invalid audience")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    except jwt.InvalidIssuerError:
+        logger.warning("verify_firebase_token: invalid issuer")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    except jwt.InvalidTokenError as e:
+        logger.warning("verify_firebase_token: %s", e)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
 
