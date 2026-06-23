@@ -112,6 +112,11 @@ if 'firebase_uid' not in user_cols3:
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_firebase_uid ON users (firebase_uid)"))
         conn.commit()
 
+# Migrate existing users table: make password_hash nullable (Google Sign-In has no password).
+with engine.connect() as conn:
+    conn.execute(text("ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL"))
+    conn.commit()
+
 # Migrate existing orders table: add delivery_otp column if missing.
 order_cols = {c['name'] for c in inspector.get_columns('orders')}
 if 'delivery_otp' not in order_cols:
