@@ -11,6 +11,7 @@ PUBLIC_PATHS: set[str] = {
     "/api/places/reverse",
     "/api/payments/webhook",
     "/api/banners",
+    "/api/settings",
 }
 
 PUBLIC_PATH_PREFIXES: set[str] = set()
