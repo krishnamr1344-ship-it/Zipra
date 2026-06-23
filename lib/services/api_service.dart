@@ -351,7 +351,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> addToCart(String productId, {int quantity = 1}) async {
     final headers = await _authHeaders(required: true);
-    final res = await http.post(Uri.parse('$_baseUrl/api/cart'), headers: headers, body: jsonEncode({'product_id': productId, 'quantity': quantity})).timeout(const Duration(seconds: 60));
+    final res = await _withTimeout(() => http.post(Uri.parse('$_baseUrl/api/cart'), headers: headers, body: jsonEncode({'product_id': productId, 'quantity': quantity})).timeout(const Duration(seconds: 60)));
     return _handleResponse(res);
   }
 
@@ -400,7 +400,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> addToWishlist(String productId) async {
     final headers = await _authHeaders(required: true);
-    final res = await http.post(Uri.parse('$_baseUrl/api/wishlist'), headers: headers, body: jsonEncode({'product_id': productId})).timeout(const Duration(seconds: 60));
+    final res = await _withTimeout(() => http.post(Uri.parse('$_baseUrl/api/wishlist'), headers: headers, body: jsonEncode({'product_id': productId})).timeout(const Duration(seconds: 60)));
     return _handleResponse(res);
   }
 

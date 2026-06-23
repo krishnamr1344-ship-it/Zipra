@@ -56,7 +56,7 @@ class CartNotifier extends ChangeNotifier {
     }
   }
 
-  Future<void> add(String productId, {String name = '', String qty = '', int price = 0, String? image}) async {
+  Future<bool> add(String productId, {String name = '', String qty = '', int price = 0, String? image}) async {
     try {
       final result = await _api.addToCart(productId);
       final existing = _items.where((i) => i.productId == productId).firstOrNull;
@@ -74,9 +74,11 @@ class CartNotifier extends ChangeNotifier {
         ));
       }
       notifyListeners();
+      return true;
     } catch (e) {
       debugPrint('CartNotifier.add error: $e');
       notifyListeners();
+      return false;
     }
   }
 

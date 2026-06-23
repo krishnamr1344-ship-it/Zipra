@@ -58,9 +58,10 @@ class _WishlistPageState extends State<WishlistPage> {
     final unit = item['product_unit'] as String? ?? '';
     final price = ((item['product_final_price'] ?? item['product_price'] ?? 0) as num).toDouble().round();
     final image = item['product_image'] as String?;
-    await cartNotifier.add(pid, name: name, qty: unit, price: price, image: image);
-    if (!mounted) return;
-    AppSnackbar.show(context, '$name added to cart');
+    final ok = await cartNotifier.add(pid, name: name, qty: unit, price: price, image: image);
+    if (ok && mounted) {
+      AppSnackbar.show(context, '$name added to cart');
+    }
   }
 
   Future<void> _clearAll() async {

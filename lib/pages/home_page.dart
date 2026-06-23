@@ -1114,14 +1114,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 onAdd: (gp) async {
                   if (!await _requireLogin()) return;
                   if (!mounted) return;
-                  await cartNotifier.add(
+                  final ok = await cartNotifier.add(
                     gp.id,
                     name: gp.name,
                     qty: gp.unit,
                     price: gp.sellingPrice.round(),
                   );
-                  if (!mounted) return;
-                  AppSnackbar.show(context, '${gp.name} added to cart');
+                  if (ok && mounted) {
+                    AppSnackbar.show(context, '${gp.name} added to cart');
+                  }
                 },
                 onDecrement: (gp) async {
                   if (!await _requireLogin()) return;
