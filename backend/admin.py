@@ -266,7 +266,7 @@ def list_orders(request: Request, db: Session = Depends(get_db), status: str = N
     _require_admin(request, db)
     query = db.query(Order).filter(Order.is_deleted == False)
     if status:
-        valid = {"Pending", "Confirmed", "Preparing", "Shipped", "Out For Delivery", "Delivered", "Cancelled", "Failed"}
+        valid = {"Pending", "Confirmed", "Shipped", "Out For Delivery", "Delivered", "Cancelled", "Failed"}
         if status not in valid:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid status. Must be one of: {', '.join(sorted(valid))}")
         query = query.filter(Order.status == status)

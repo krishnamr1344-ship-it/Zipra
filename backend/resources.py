@@ -1254,8 +1254,7 @@ def _confirm_order_payment(order: Order, user_id: str, method: str, db: Session,
 
 VALID_ORDER_TRANSITIONS: dict[str, list[str]] = {
     "Pending": ["Confirmed", "Cancelled", "Failed"],
-    "Confirmed": ["Preparing", "Cancelled"],
-    "Preparing": ["Shipped", "Cancelled"],
+    "Confirmed": ["Shipped", "Cancelled"],
     "Shipped": ["Out For Delivery", "Cancelled"],
     "Out For Delivery": ["Delivered"],
     "Delivered": [],

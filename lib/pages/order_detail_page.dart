@@ -183,7 +183,6 @@ class _StatusBox extends StatelessWidget {
     switch (order.status) {
       case 'Pending': return AppColors.primaryLight;
       case 'Confirmed': return AppColors.primary;
-      case 'Preparing': return const Color(0xFFFF9800);
       case 'Shipped': return const Color(0xFF2196F3);
       case 'Out For Delivery': return const Color(0xFF9C27B0);
       case 'Delivered': return AppColors.success;
@@ -197,10 +196,9 @@ class _StatusBox extends StatelessWidget {
     switch (order.status) {
       case 'Pending': return 0;
       case 'Confirmed': return 1;
-      case 'Preparing': return 2;
-      case 'Shipped': return 3;
-      case 'Out For Delivery': return 4;
-      case 'Delivered': return 5;
+      case 'Shipped': return 2;
+      case 'Out For Delivery': return 3;
+      case 'Delivered': return 4;
       default: return 0;
     }
   }
@@ -210,7 +208,7 @@ class _StatusBox extends StatelessWidget {
     final failed = order.status == 'Failed';
     if (failed) return _buildFailedStatus(context);
 
-    final steps = ['Placed', 'Confirmed', 'Preparing', 'Shipped', 'Out For Delivery', 'Delivered'];
+    final steps = ['Placed', 'Confirmed', 'Shipped', 'Out For Delivery', 'Delivered'];
     final active = _activeIndex;
     final cancelled = order.status == 'Cancelled';
 
