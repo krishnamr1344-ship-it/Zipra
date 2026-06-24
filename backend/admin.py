@@ -145,9 +145,6 @@ def create_product(body: ProductCreate, request: Request, db: Session = Depends(
 
 # ─── CATEGORIES ────────────────────────────────────────────────────
 
-@router.get("/categories", response_model=list[CategoryResponse])
-
-
 # ─── PRODUCTS (update / delete) ────────────────────────────────────
 
 @router.put("/products/{product_id}", response_model=ProductResponse)
