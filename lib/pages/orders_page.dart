@@ -166,7 +166,9 @@ class _OrderCard extends StatelessWidget {
     switch (s) {
       case 'Pending': return AppColors.primaryLight;
       case 'Confirmed': return AppColors.primary;
+      case 'Preparing': return const Color(0xFFFF9800);
       case 'Shipped': return const Color(0xFF2196F3);
+      case 'Out For Delivery': return const Color(0xFF9C27B0);
       case 'Delivered': return AppColors.success;
       case 'Cancelled': return AppColors.error;
       case 'Failed': return AppColors.error;
@@ -178,7 +180,9 @@ class _OrderCard extends StatelessWidget {
     switch (s) {
       case 'Pending': return Icons.hourglass_empty;
       case 'Confirmed': return Icons.check_circle_outline;
+      case 'Preparing': return Icons.restaurant;
       case 'Shipped': return Icons.local_shipping;
+      case 'Out For Delivery': return Icons.directions_bike;
       case 'Delivered': return Icons.inventory_2;
       case 'Cancelled': return Icons.cancel_outlined;
       case 'Failed': return Icons.error_outline;
