@@ -7,6 +7,11 @@ class OrderDetailPage extends StatelessWidget {
   final OrderData order;
   const OrderDetailPage({super.key, required this.order});
 
+  bool get _showOtp =>
+      order.deliveryOtp != null &&
+      order.deliveryOtp!.isNotEmpty &&
+      (order.status == 'Out For Delivery' || order.status == 'Shipped');
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -31,6 +36,10 @@ class OrderDetailPage extends StatelessWidget {
           children: [
             _StatusBox(order: order),
             const SizedBox(height: 16),
+            if (_showOtp) ...[
+              _OtpBox(deliveryOtp: order.deliveryOtp!),
+              const SizedBox(height: 16),
+            ],
             _InfoBox(order: order),
             const SizedBox(height: 16),
             _ItemsBox(order: order),
@@ -74,6 +83,98 @@ class OrderDetailPage extends StatelessWidget {
   }
 }
 
+class _OtpBox extends StatelessWidget {
+  final String deliveryOtp;
+  const _OtpBox({required this.deliveryOtp});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0D47A1), Color(0xFF1565C0)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0D47A1).withValues(alpha: 0.3),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.lock_outline, size: 18, color: Colors.white70),
+              const SizedBox(width: 8),
+              Text(
+                'Share this code with the delivery partner',
+                style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.8)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(deliveryOtp.length, (i) {
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 5),
+                width: 42,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                ),
+                child: Center(
+                  child: Text(
+                    deliveryOtp[i],
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 12),
+          GestureDetector(
+            onTap: () {},
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.info_outline, size: 14, color: Colors.white70),
+                  SizedBox(width: 6),
+                  Text(
+                    'Do not share unless you are receiving your order',
+                    style: TextStyle(fontSize: 11, color: Colors.white60),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _StatusBox extends StatelessWidget {
   final OrderData order;
   const _StatusBox({required this.order});
@@ -82,7 +183,9 @@ class _StatusBox extends StatelessWidget {
     switch (order.status) {
       case 'Pending': return AppColors.primaryLight;
       case 'Confirmed': return AppColors.primary;
+      case 'Preparing': return const Color(0xFFFF9800);
       case 'Shipped': return const Color(0xFF2196F3);
+      case 'Out For Delivery': return const Color(0xFF9C27B0);
       case 'Delivered': return AppColors.success;
       case 'Cancelled': return AppColors.error;
       case 'Failed': return AppColors.error;
@@ -94,8 +197,10 @@ class _StatusBox extends StatelessWidget {
     switch (order.status) {
       case 'Pending': return 0;
       case 'Confirmed': return 1;
-      case 'Shipped': return 2;
-      case 'Delivered': return 3;
+      case 'Preparing': return 2;
+      case 'Shipped': return 3;
+      case 'Out For Delivery': return 4;
+      case 'Delivered': return 5;
       default: return 0;
     }
   }
@@ -105,7 +210,7 @@ class _StatusBox extends StatelessWidget {
     final failed = order.status == 'Failed';
     if (failed) return _buildFailedStatus(context);
 
-    final steps = ['Placed', 'Confirmed', 'Shipped', 'Delivered'];
+    final steps = ['Placed', 'Confirmed', 'Preparing', 'Shipped', 'Out For Delivery', 'Delivered'];
     final active = _activeIndex;
     final cancelled = order.status == 'Cancelled';
 

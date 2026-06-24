@@ -1135,7 +1135,7 @@ def list_orders(request: Request, db: Session = Depends(get_db)):
         Order.user_id == user_id,
         Order.is_deleted == False,
     ).order_by(Order.created_at.desc()).all()
-    return [_order_to_response(o) for o in orders]
+    return [_order_to_response(o, include_otp=True) for o in orders]
 
 
 @router.get("/orders/{order_id}", response_model=OrderResponse)
@@ -1143,7 +1143,7 @@ def get_order(order_id: str, request: Request, db: Session = Depends(get_db)):
     user_id = _get_user_id(request)
     _validate_uuid(order_id)
     order = _get_order_or_404(order_id, user_id, db)
-    return _order_to_response(order)
+    return _order_to_response(order, include_otp=True)
 
 
 @router.post("/orders", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
@@ -1181,12 +1181,14 @@ def create_order(body: OrderCreateRequest, request: Request, db: Session = Depen
     delivery_fee = Decimal("0.00") if total >= Decimal(threshold_raw) else Decimal(str(fee_raw))
     total_with_fee = total + delivery_fee
 
+    otp = ''.join(secrets.choice(_string.digits) for _ in range(6))
     order = Order(
         user_id=user_id,
         address_id=addr.id,
         total_amount=total_with_fee,
         delivery_fee=delivery_fee,
         payment_method=body.payment_method,
+        delivery_otp=otp,
     )
     db.add(order)
     db.flush()
@@ -1212,7 +1214,8 @@ def create_order(body: OrderCreateRequest, request: Request, db: Session = Depen
 
 
 def _confirm_order_payment(order: Order, user_id: str, method: str, db: Session, existing_payment: Payment = None) -> Payment:
-    """Deduct stock, generate OTP, create or update Payment record.
+    """Deduct stock, create or update Payment record.
+    OTP was already generated when the order was created.
     Called at payment-confirmation time:
     - For cart-based: from process_payment (creates new Payment)
     - For Razorpay: from verify / webhook (updates existing pending Payment)
@@ -1229,9 +1232,6 @@ def _confirm_order_payment(order: Order, user_id: str, method: str, db: Session,
                 detail=f"Insufficient stock for {product.name}",
             )
         product.stock -= oi.quantity
-
-    otp = ''.join(secrets.choice(_string.digits) for _ in range(6))
-    order.delivery_otp = otp
 
     if existing_payment:
         existing_payment.status = "success"
@@ -1254,8 +1254,10 @@ def _confirm_order_payment(order: Order, user_id: str, method: str, db: Session,
 
 VALID_ORDER_TRANSITIONS: dict[str, list[str]] = {
     "Pending": ["Confirmed", "Failed"],
-    "Confirmed": ["Shipped", "Cancelled"],
-    "Shipped": ["Delivered", "Cancelled"],
+    "Confirmed": ["Preparing", "Cancelled"],
+    "Preparing": ["Shipped", "Cancelled"],
+    "Shipped": ["Out For Delivery", "Cancelled"],
+    "Out For Delivery": ["Delivered"],
     "Delivered": [],
     "Cancelled": [],
     "Failed": ["Pending"],

@@ -47,8 +47,12 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
         return const Color(0xFFF59E0B);
       case 'Confirmed':
         return const Color(0xFF3B82F6);
+      case 'Preparing':
+        return const Color(0xFFFF9800);
       case 'Shipped':
         return const Color(0xFF8B5CF6);
+      case 'Out For Delivery':
+        return const Color(0xFF9C27B0);
       case 'Delivered':
         return const Color(0xFF10B981);
       case 'Cancelled':
@@ -66,8 +70,12 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
         return Icons.hourglass_bottom;
       case 'Confirmed':
         return Icons.check_circle_outline;
+      case 'Preparing':
+        return Icons.restaurant;
       case 'Shipped':
         return Icons.local_shipping;
+      case 'Out For Delivery':
+        return Icons.directions_bike;
       case 'Delivered':
         return Icons.inventory_2;
       case 'Cancelled':
@@ -80,7 +88,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
   }
 
   List<Map<String, dynamic>> get _statusFlow {
-    final all = ['Pending', 'Confirmed', 'Shipped', 'Delivered'];
+    final all = ['Pending', 'Confirmed', 'Preparing', 'Shipped', 'Out For Delivery', 'Delivered'];
     final idx = all.indexOf(_order['status']);
     if (idx == -1) return [];
     if (_order['status'] == 'Cancelled') {
@@ -102,14 +110,25 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
   }
 
   String _getPreviousStatus() {
-    final all = ['Pending', 'Confirmed', 'Shipped', 'Delivered'];
+    final all = ['Pending', 'Confirmed', 'Preparing', 'Shipped', 'Out For Delivery', 'Delivered'];
     final idx = all.indexOf(_order['status'] == 'Cancelled' ? _order['previous_status'] ?? 'Pending' : _order['status']);
     if (idx <= 0) return 'Pending';
     return all[idx - 1];
   }
 
+  List<String> _availableTransitions(String current) {
+    switch (current) {
+      case 'Pending': return ['Confirmed'];
+      case 'Confirmed': return ['Preparing', 'Cancelled'];
+      case 'Preparing': return ['Shipped', 'Cancelled'];
+      case 'Shipped': return ['Out For Delivery', 'Cancelled'];
+      default: return [];
+    }
+  }
+
   void _changeStatus() {
-    final statuses = ['Confirmed', 'Shipped', 'Cancelled'];
+    final statuses = _availableTransitions(_order['status']);
+    if (statuses.isEmpty) return;
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -230,7 +249,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                         },
                       ),
                     )),
-            if (_order['status'] == 'Shipped') ...[
+            if (_order['status'] == 'Out For Delivery') ...[
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 8),
                 child: Divider(),
@@ -396,8 +415,12 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
     switch (status) {
       case 'Confirmed':
         return 'Accept the order and confirm stock availability';
+      case 'Preparing':
+        return 'Order is being prepared';
       case 'Shipped':
-        return 'Order is out for delivery';
+        return 'Order has been handed to delivery partner';
+      case 'Out For Delivery':
+        return 'Delivery partner is on the way';
       case 'Cancelled':
         return 'Cancel this order';
       case 'Failed':

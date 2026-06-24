@@ -266,7 +266,7 @@ def list_orders(request: Request, db: Session = Depends(get_db), status: str = N
     _require_admin(request, db)
     query = db.query(Order).filter(Order.is_deleted == False)
     if status:
-        valid = {"Pending", "Confirmed", "Shipped", "Delivered", "Cancelled", "Failed"}
+        valid = {"Pending", "Confirmed", "Preparing", "Shipped", "Out For Delivery", "Delivered", "Cancelled", "Failed"}
         if status not in valid:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid status. Must be one of: {', '.join(sorted(valid))}")
         query = query.filter(Order.status == status)
@@ -331,6 +331,7 @@ def list_orders(request: Request, db: Session = Depends(get_db), status: str = N
             "id": str(o.id), "status": o.status,
             "total_amount": round(float(o.total_amount), 2), "payment_method": o.payment_method,
             "items": items, "created_at": o.created_at,
+            "delivery_otp": o.delivery_otp,
             "user_id": user_id,
             "user_name": user_name,
             "user_email": user_email,
@@ -386,6 +387,8 @@ def deliver_order(order_id: str, body: DeliveryVerifyRequest, request: Request, 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
     if order.status == "Delivered":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order is already delivered")
+    if order.status != "Out For Delivery":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order must be 'Out For Delivery' before delivery can be confirmed")
     if not order.delivery_otp:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No delivery code assigned to this order")
     if order.delivery_otp != body.otp:
