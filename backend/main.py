@@ -392,9 +392,9 @@ def _seed_data():
         # Seed app version (runs regardless of whether other seed data exists)
         if db.query(AppVersion).count() == 0:
             db.add(AppVersion(
-                version="1.1.1",
-                apk_download_url="https://github.com/selvaabi5555/delivery-app/releases/download/v1.1.1/delivery-app-v1.1.1.apk",
-                release_notes="Redesigned home screen with Blinkit/Zepto-style UI\n• New orange curved header\n• Premium pill-shaped search bar\n• Improved product cards with green ADD button\n• Updated offers pack detail view\n• In-app update system",
+                version="1.1.2",
+                apk_download_url="https://github.com/selvaabi5555/delivery-app/releases/download/v1.1.2/delivery-app-v1.1.2.apk",
+                release_notes="Project restructured & dead code removed\n• FastAPI backend cleanup (Admin, auth, resources)\n• Removed dead Dart screens, widgets, and constants\n• Removed unused deps (cupertino_icons, razorpay)\n• Fixed order state machine and default address endpoint\n• Dockerized for GCP deployment",
                 is_active=True,
             ))
             db.commit()
