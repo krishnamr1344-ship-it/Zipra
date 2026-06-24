@@ -67,8 +67,12 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
         return const Color(0xFFF59E0B);
       case 'Confirmed':
         return const Color(0xFF3B82F6);
+      case 'Preparing':
+        return const Color(0xFFFF9800);
       case 'Shipped':
         return const Color(0xFF8B5CF6);
+      case 'Out For Delivery':
+        return const Color(0xFF9C27B0);
       case 'Delivered':
         return const Color(0xFF10B981);
       case 'Cancelled':
@@ -86,8 +90,12 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
         return Icons.hourglass_bottom;
       case 'Confirmed':
         return Icons.check_circle_outline;
+      case 'Preparing':
+        return Icons.restaurant;
       case 'Shipped':
         return Icons.local_shipping;
+      case 'Out For Delivery':
+        return Icons.directions_bike;
       case 'Delivered':
         return Icons.inventory_2;
       case 'Cancelled':
@@ -116,7 +124,9 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
       'All',
       'Pending',
       'Confirmed',
+      'Preparing',
       'Shipped',
+      'Out For Delivery',
       'Delivered',
       'Cancelled',
       'Failed'

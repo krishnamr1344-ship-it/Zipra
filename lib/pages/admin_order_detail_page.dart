@@ -118,7 +118,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
 
   List<String> _availableTransitions(String current) {
     switch (current) {
-      case 'Pending': return ['Confirmed'];
+      case 'Pending': return ['Confirmed', 'Cancelled'];
       case 'Confirmed': return ['Preparing', 'Cancelled'];
       case 'Preparing': return ['Shipped', 'Cancelled'];
       case 'Shipped': return ['Out For Delivery', 'Cancelled'];
@@ -128,7 +128,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
 
   void _changeStatus() {
     final statuses = _availableTransitions(_order['status']);
-    if (statuses.isEmpty) return;
+    if (statuses.isEmpty && _order['status'] != 'Out For Delivery') return;
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
