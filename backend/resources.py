@@ -1472,12 +1472,14 @@ def _create_intent_from_cart(body: RazorpayCreateOrderRequest, user_id: str, db:
 def _create_order_from_intent(intent: PaymentIntent, user_id: str, status: str, db: Session) -> Order:
     """Create Order + OrderItems from a PaymentIntent's stored cart data."""
     total = Decimal(str(intent.amount))
+    otp = ''.join(secrets.choice(_string.digits) for _ in range(6))
     order = Order(
         user_id=user_id,
         address_id=intent.address_id,
         total_amount=total,
         payment_method="Razorpay",
         status=status,
+        delivery_otp=otp,
     )
     db.add(order)
     db.flush()
