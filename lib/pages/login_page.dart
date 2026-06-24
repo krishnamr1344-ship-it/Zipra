@@ -104,7 +104,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     final children = <Widget>[
       Image.asset(
-        'login/IMG_20260623_030259.png',
+        'assets/login/IMG_20260623_030259.png',
         width: double.infinity,
         height: double.infinity,
         fit: BoxFit.cover,

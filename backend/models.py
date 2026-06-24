@@ -316,17 +316,6 @@ class AppVersion(Base):
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
 
 
-class PasswordResetCode(Base):
-    __tablename__ = "password_reset_codes"
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    email = Column(String(255), nullable=False, index=True)
-    code_hash = Column(String(255), nullable=False)
-    expires_at = Column(DateTime(timezone=True), nullable=False)
-    used_at = Column(DateTime(timezone=True), nullable=True)
-    is_deleted = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
-
-
 class Banner(Base):
     __tablename__ = "banners"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

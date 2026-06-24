@@ -39,8 +39,8 @@ from schemas import (
     CategoryCreate, CategoryResponse,
     ProductCreate, ProductResponse,
     AddressCreate, AddressUpdate, AddressResponse, GpsAddressCreate,
-    CartAddRequest, CartUpdateRequest, CartItemResponse, CartValidateResponse, CartValidateItem,
-    OrderCreateRequest, OrderDirectCreateRequest, OrderResponse, OrderItemResponse, DeliveryAddress,
+    CartAddRequest, CartUpdateRequest, CartItemResponse,
+    OrderCreateRequest, OrderResponse, OrderItemResponse, DeliveryAddress,
     PaymentProcessRequest, PaymentResponse, MessageResponse,
     RazorpayCreateOrderRequest, RazorpayCreateOrderResponse, RazorpayVerifyRequest,
     ZoneCheckRequest, ZoneCheckResponse,
@@ -567,14 +567,6 @@ def list_categories(db: Session = Depends(get_db)):
     ]
 
 
-@router.get("/categories/{category_id}", response_model=CategoryResponse)
-def get_category(category_id: str, db: Session = Depends(get_db)):
-    _validate_uuid(category_id)
-    cat = db.query(Category).filter(Category.id == category_id, Category.is_deleted == False).first()
-    if not cat:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
-    return CategoryResponse(id=str(cat.id), name=cat.name, description=cat.description, image=cat.image)
-
 
 # ─── PRODUCTS ─────────────────────────────────────────────────────
 
@@ -602,26 +594,6 @@ def list_products(category_id: Optional[str] = None, db: Session = Depends(get_d
             is_enabled=enabled,
         ))
     return result
-
-
-@router.get("/products/{product_id}", response_model=ProductResponse)
-def get_product(product_id: str, db: Session = Depends(get_db)):
-    _validate_uuid(product_id)
-    p = db.query(Product).filter(Product.id == product_id, Product.is_deleted == False).first()
-    if not p or (p.flag is not None and not p.flag.is_enabled):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
-    return ProductResponse(
-        id=str(p.id),
-        category_id=str(p.category_id),
-        category_name=p.category.name if p.category else None,
-        name=p.name,
-        description=p.description,
-        price=round(float(p.price), 2),
-        unit=p.unit,
-        images=[img.image_url for img in p.images if not img.is_deleted],
-        stock=p.stock, discount_percent=p.discount_percent,
-        is_enabled=p.flag.is_enabled if p.flag else True,
-    )
 
 
 # ─── ADDRESSES ────────────────────────────────────────────────────
@@ -707,6 +679,32 @@ def update_address(address_id: str, body: AddressUpdate, request: Request, db: S
         else:
             setattr(addr, field, value)
 
+    db.commit()
+    db.refresh(addr)
+    maps = f"https://www.google.com/maps?q={addr.latitude},{addr.longitude}" if addr.latitude and addr.longitude else None
+    return AddressResponse(
+        id=str(addr.id), label=addr.label,
+        address_line1=addr.address_line1, address_line2=addr.address_line2,
+        city=addr.city, state=addr.state, pincode=addr.pincode,
+        address_type=addr.address_type, house_number=addr.house_number,
+        floor_number=addr.floor_number, landmark=addr.landmark,
+        latitude=float(addr.latitude) if addr.latitude else None,
+        longitude=float(addr.longitude) if addr.longitude else None,
+        is_default=addr.is_default,
+        maps_link=maps,
+    )
+
+
+@router.put("/addresses/{address_id}/default", response_model=AddressResponse)
+def set_default_address(address_id: str, request: Request, db: Session = Depends(get_db)):
+    user_id = _get_user_id(request)
+    _validate_uuid(address_id)
+    addr = _get_address_or_404(address_id, user_id, db)
+
+    db.query(Address).filter(Address.user_id == user_id, Address.is_deleted == False).update(
+        {"is_default": False}
+    )
+    addr.is_default = True
     db.commit()
     db.refresh(addr)
     maps = f"https://www.google.com/maps?q={addr.latitude},{addr.longitude}" if addr.latitude and addr.longitude else None
@@ -1110,52 +1108,6 @@ def clear_cart(request: Request, db: Session = Depends(get_db)):
     db.commit()
 
 
-@router.post("/cart/validate", response_model=CartValidateResponse)
-def validate_cart(request: Request, db: Session = Depends(get_db)):
-    user_id = _get_user_id(request)
-    cart_items = db.query(CartItem).filter(
-        CartItem.user_id == user_id,
-        CartItem.is_deleted == False,
-    ).all()
-    if not cart_items:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cart is empty")
-    
-    all_valid = True
-    items = []
-    total = 0.0
-    
-    for ci in cart_items:
-        product = _get_product_or_404(str(ci.product_id), db)
-        disc = Decimal(str(product.discount_percent or 0))
-        current_price = float((product.price * (100 - disc) / 100).quantize(Decimal("0.01")))
-        messages = []
-        
-        if product.stock <= 0:
-            messages.append(f"{product.name} is out of stock")
-            valid = False
-        elif product.stock < ci.quantity:
-            messages.append(f"Only {product.stock} units available for {product.name}")
-            valid = False
-        else:
-            valid = True
-        
-        subtotal = round(current_price * ci.quantity, 2)
-        items.append(CartValidateItem(
-            product_id=str(product.id),
-            current_price=current_price,
-            current_stock=product.stock,
-            quantity=ci.quantity,
-            subtotal=subtotal,
-            valid=valid,
-            message="; ".join(messages) if messages else None,
-        ))
-        if not valid:
-            all_valid = False
-        total += subtotal
-    
-    return CartValidateResponse(valid=all_valid, items=items, total=round(total, 2))
-
-
 # ─── SETTINGS ──────────────────────────────────────────────────────
 
 def _get_setting(db: Session, key: str, default: str) -> str:
@@ -1259,111 +1211,9 @@ def create_order(body: OrderCreateRequest, request: Request, db: Session = Depen
     return _order_to_response(order)
 
 
-@router.post("/orders/direct", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
-def create_order_direct(body: OrderDirectCreateRequest, request: Request, db: Session = Depends(get_db)):
-    user_id = _get_user_id(request)
-    _get_user(user_id, db)
-
-    if body.idempotency_key:
-        existing = db.query(Order).filter(
-            Order.idempotency_key == body.idempotency_key,
-            Order.user_id == user_id,
-            Order.is_deleted == False,
-        ).first()
-        if existing:
-            return _order_to_response(existing)
-
-    total = Decimal("0.00")
-    products_with_qty = []
-
-    for item in body.items:
-        product = _get_product_or_404(item.product_id, db, for_update=True)
-        if product.stock < item.quantity:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Insufficient stock for {product.name}",
-            )
-        disc = Decimal(str(product.discount_percent or 0))
-        selling_price = (product.price * (100 - disc) / 100).quantize(Decimal("0.01"))
-        total += selling_price * item.quantity
-        products_with_qty.append((product, item.quantity, selling_price))
-
-    address_id = body.address_id
-    if address_id:
-        _validate_uuid(address_id)
-        addr = db.query(Address).filter(
-            Address.id == address_id,
-            Address.user_id == user_id,
-            Address.is_deleted == False,
-        ).first()
-        if not addr:
-            address_id = None
-        else:
-            if addr.latitude is not None and addr.longitude is not None:
-                zones = db.query(DeliveryZone).filter(
-                    DeliveryZone.is_deleted == False,
-                    DeliveryZone.is_active == True,
-                ).all()
-                if zones:
-                    point = Point(float(addr.longitude), float(addr.latitude))
-                    in_zone = False
-                    for z in zones:
-                        try:
-                            geom = json.loads(z.geojson_data)
-                            polygon = shapely_shape(geom)
-                            if polygon.contains(point):
-                                in_zone = True
-                                break
-                        except Exception:
-                            continue
-                    if not in_zone:
-                        raise HTTPException(
-                            status_code=status.HTTP_403_FORBIDDEN,
-                            detail="Delivery not available in your area",
-                        )
-
-    fee_raw = _get_setting(db, "delivery_fee", "40")
-    threshold_raw = _get_setting(db, "free_delivery_threshold", "499")
-    delivery_fee = Decimal("0.00") if total >= Decimal(threshold_raw) else Decimal(str(fee_raw))
-    total_with_fee = total + delivery_fee
-
-    order = Order(
-        user_id=user_id,
-        address_id=address_id,
-        total_amount=total_with_fee,
-        delivery_fee=delivery_fee,
-        payment_method=body.payment_method,
-        idempotency_key=body.idempotency_key,
-    )
-    db.add(order)
-    db.flush()
-
-    try:
-        for product, qty, price in products_with_qty:
-            oi = OrderItem(
-                order_id=order.id,
-                product_id=product.id,
-                product_name=product.name,
-                product_price=price,
-                quantity=qty,
-                subtotal=price * qty,
-            )
-            db.add(oi)
-        db.flush()
-
-        db.commit()
-    except Exception:
-        db.rollback()
-        raise
-
-    db.refresh(order)
-    return _order_to_response(order)
-
-
 def _confirm_order_payment(order: Order, user_id: str, method: str, db: Session, existing_payment: Payment = None) -> Payment:
     """Deduct stock, generate OTP, create or update Payment record.
     Called at payment-confirmation time:
-    - For direct orders: from create_order_direct (creates new Payment)
     - For cart-based: from process_payment (creates new Payment)
     - For Razorpay: from verify / webhook (updates existing pending Payment)
     """
@@ -1404,10 +1254,8 @@ def _confirm_order_payment(order: Order, user_id: str, method: str, db: Session,
 
 VALID_ORDER_TRANSITIONS: dict[str, list[str]] = {
     "Pending": ["Confirmed", "Failed"],
-    "Confirmed": ["Preparing", "Cancelled"],
-    "Preparing": ["Picked", "Cancelled"],
-    "Picked": ["OutForDelivery", "Cancelled"],
-    "OutForDelivery": ["Delivered", "Cancelled"],
+    "Confirmed": ["Shipped", "Cancelled"],
+    "Shipped": ["Delivered", "Cancelled"],
     "Delivered": [],
     "Cancelled": [],
     "Failed": ["Pending"],
@@ -1497,20 +1345,6 @@ def process_payment(body: PaymentProcessRequest, request: Request, db: Session =
         db.rollback()
         raise
 
-    return _payment_to_response(payment)
-
-
-@router.get("/payments/{order_id}", response_model=PaymentResponse)
-def get_payment(order_id: str, request: Request, db: Session = Depends(get_db)):
-    user_id = _get_user_id(request)
-    _validate_uuid(order_id)
-    payment = db.query(Payment).filter(
-        Payment.order_id == order_id,
-        Payment.user_id == user_id,
-        Payment.is_deleted == False,
-    ).order_by(Payment.created_at.desc()).first()
-    if not payment:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found")
     return _payment_to_response(payment)
 
 

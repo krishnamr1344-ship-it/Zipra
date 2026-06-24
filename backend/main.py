@@ -64,7 +64,6 @@ from models import Category, Product, ProductImage, ProductFlag, User, ComboPack
 
 FRONTEND_URL = os.getenv("FRONTEND_URL")
 API_KEY = os.getenv("API_KEY")
-BACKEND_URL = os.getenv("BACKEND_URL")
 SENTRY_DSN = os.getenv("SENTRY_DSN")
 
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")

@@ -11,7 +11,7 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
-test.db
+archive/
 
 # IntelliJ related
 *.iml

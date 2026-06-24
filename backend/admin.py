@@ -136,128 +136,12 @@ def create_product(body: ProductCreate, request: Request, db: Session = Depends(
     )
 
 
-@router.put("/products/bulk-delete", response_model=MessageResponse)
-def bulk_delete_products(request: Request, db: Session = Depends(get_db)):
-    _require_admin(request, db)
-    count = db.query(Product).filter(Product.is_deleted == False).count()
-    db.query(Product).filter(Product.is_deleted == False).update({"is_deleted": True})
-    db.commit()
-    return MessageResponse(message=f"{count} products deleted")
+# ─── CATEGORIES ────────────────────────────────────────────────────
+
+@router.get("/categories", response_model=list[CategoryResponse])
 
 
-SEED_CATALOG = {
-    "🥛 Dairy": {
-        "icon": "🥛",
-        "products": [
-            ("Milk", "1L", 56, 60, 100, "Fresh toned milk", "https://placehold.co/400x400/FFF3E0/E65100?text=Milk"),
-            ("Curd", "500g", 40, 45, 80, "Fresh thick curd", "https://placehold.co/400x400/FFF3E0/E65100?text=Curd"),
-            ("Butter", "100g", 52, 58, 60, "Creamy butter", "https://placehold.co/400x400/FFF3E0/E65100?text=Butter"),
-            ("Ghee", "500ml", 390, 430, 40, "Pure cow ghee", "https://placehold.co/400x400/FFF3E0/E65100?text=Ghee"),
-            ("Paneer", "200g", 90, 100, 50, "Fresh cottage cheese", "https://placehold.co/400x400/FFF3E0/E65100?text=Paneer"),
-            ("Cheese", "200g", 120, 135, 40, "Mozzarella cheese", "https://placehold.co/400x400/FFF3E0/E65100?text=Cheese"),
-        ],
-    },
-    "🌾 Rice & Grocery": {
-        "icon": "🌾",
-        "products": [
-            ("Rice", "1kg", 52, 58, 100, "Premium sona masoori rice", "https://placehold.co/400x400/E8F5E9/2E7D32?text=Rice"),
-            ("Wheat Flour (Atta)", "1kg", 48, 52, 80, "Chakki fresh atta", "https://placehold.co/400x400/E8F5E9/2E7D32?text=Atta"),
-            ("Rava", "1kg", 55, 62, 60, "Bombay rava/sooji", "https://placehold.co/400x400/E8F5E9/2E7D32?text=Rava"),
-            ("Maida", "1kg", 45, 50, 60, "Fine maida flour", "https://placehold.co/400x400/E8F5E9/2E7D32?text=Maida"),
-            ("Sugar", "1kg", 42, 46, 100, "Fine white sugar", "https://placehold.co/400x400/E8F5E9/2E7D32?text=Sugar"),
-            ("Salt", "1kg", 18, 20, 100, "Iodized table salt", "https://placehold.co/400x400/E8F5E9/2E7D32?text=Salt"),
-        ],
-    },
-    "🥜 Dals": {
-        "icon": "🥜",
-        "products": [
-            ("Toor Dal", "500g", 75, 82, 60, "Premium toor dal/pigeon pea", "https://placehold.co/400x400/FFF8E1/F57F17?text=Toor+Dal"),
-            ("Urad Dal", "500g", 70, 78, 60, "Premium urad dal/black gram", "https://placehold.co/400x400/FFF8E1/F57F17?text=Urad+Dal"),
-            ("Moong Dal", "500g", 65, 72, 60, "Premium moong dal/green gram", "https://placehold.co/400x400/FFF8E1/F57F17?text=Moong+Dal"),
-            ("Chana Dal", "500g", 60, 68, 60, "Premium chana dal/bengal gram", "https://placehold.co/400x400/FFF8E1/F57F17?text=Chana+Dal"),
-        ],
-    },
-    "🛢️ Oils": {
-        "icon": "🛢️",
-        "products": [
-            ("Sunflower Oil", "1L", 155, 170, 80, "Refined sunflower oil", "https://placehold.co/400x400/FFF3E0/E65100?text=Sunflower+Oil"),
-            ("Groundnut Oil", "1L", 195, 215, 50, "Pure groundnut oil", "https://placehold.co/400x400/FFF3E0/E65100?text=Groundnut+Oil"),
-            ("Coconut Oil", "1L", 210, 230, 50, "Pure coconut oil", "https://placehold.co/400x400/FFF3E0/E65100?text=Coconut+Oil"),
-        ],
-    },
-    "🌶️ Masala": {
-        "icon": "🌶️",
-        "products": [
-            ("Chilli Powder", "100g", 40, 46, 80, "Pure red chilli powder", "https://placehold.co/400x400/FCE4EC/D32F2F?text=Chilli+Powder"),
-            ("Turmeric Powder", "100g", 35, 42, 80, "Pure turmeric powder", "https://placehold.co/400x400/FCE4EC/D32F2F?text=Turmeric+Powder"),
-            ("Coriander Powder", "100g", 30, 36, 80, "Pure coriander powder", "https://placehold.co/400x400/FCE4EC/D32F2F?text=Coriander+Powder"),
-            ("Garam Masala", "100g", 55, 64, 60, "Aromatic garam masala", "https://placehold.co/400x400/FCE4EC/D32F2F?text=Garam+Masala"),
-            ("Sambar Powder", "200g", 60, 70, 60, "Authentic sambar powder", "https://placehold.co/400x400/FCE4EC/D32F2F?text=Sambar+Powder"),
-        ],
-    },
-    "☕ Beverages": {
-        "icon": "☕",
-        "products": [
-            ("Tea Powder", "250g", 130, 148, 80, "Premium CTC tea powder", "https://placehold.co/400x400/E3F2FD/1565C0?text=Tea+Powder"),
-            ("Coffee Powder", "200g", 180, 200, 60, "Premium filter coffee", "https://placehold.co/400x400/E3F2FD/1565C0?text=Coffee+Powder"),
-            ("Boost", "500g", 295, 340, 50, "Boost energy health drink", "https://placehold.co/400x400/E3F2FD/1565C0?text=Boost"),
-            ("Horlicks", "500g", 260, 300, 50, "Horlicks nutritive drink", "https://placehold.co/400x400/E3F2FD/1565C0?text=Horlicks"),
-        ],
-    },
-    "🧼 Bathroom & Personal Care": {
-        "icon": "🧼",
-        "products": [
-            ("Soap", "100g", 40, 48, 100, "Premium bathing soap", "https://placehold.co/400x400/F3E5F5/7B1FA2?text=Soap"),
-            ("Shampoo", "200ml", 95, 115, 80, "Nourishing shampoo", "https://placehold.co/400x400/F3E5F5/7B1FA2?text=Shampoo"),
-            ("Toothpaste", "200g", 105, 125, 80, "Strong teeth toothpaste", "https://placehold.co/400x400/F3E5F5/7B1FA2?text=Toothpaste"),
-            ("Toothbrush", "piece", 35, 42, 100, "Soft bristle toothbrush", "https://placehold.co/400x400/F3E5F5/7B1FA2?text=Toothbrush"),
-            ("Hair Oil", "200ml", 65, 78, 80, "Pure coconut hair oil", "https://placehold.co/400x400/F3E5F5/7B1FA2?text=Hair+Oil"),
-        ],
-    },
-}
-
-
-@router.post("/products/seed", response_model=MessageResponse)
-def seed_catalog(request: Request, db: Session = Depends(get_db)):
-    _require_admin(request, db)
-
-    # Soft-delete all existing products
-    db.query(Product).filter(Product.is_deleted == False).update({"is_deleted": True})
-    db.flush()
-
-    # Soft-delete all existing categories
-    db.query(Category).filter(Category.is_deleted == False).update({"is_deleted": True})
-    db.flush()
-
-    created_cats = 0
-    created_products = 0
-
-    for cat_name, cat_data in SEED_CATALOG.items():
-        cat = Category(name=cat_name, description="", image=cat_data["icon"])
-        db.add(cat)
-        db.flush()
-
-        for prod_name, unit, price, mrp, stock, desc, img_url in cat_data["products"]:
-            discount = int(round((1 - price / mrp) * 100)) if mrp > price else 0
-            product = Product(
-                category_id=cat.id,
-                name=prod_name,
-                description=desc,
-                price=price,
-                unit=unit,
-                stock=stock,
-                discount_percent=discount,
-            )
-            db.add(product)
-            db.flush()
-            db.add(ProductImage(product_id=product.id, image_url=img_url, sort_order=0))
-            created_products += 1
-
-        created_cats += 1
-
-    db.commit()
-    return MessageResponse(message=f"Seeded {created_cats} categories with {created_products} products")
-
+# ─── PRODUCTS (update / delete) ────────────────────────────────────
 
 @router.put("/products/{product_id}", response_model=ProductResponse)
 def update_product(product_id: str, body: ProductCreate, request: Request, db: Session = Depends(get_db)):
@@ -510,66 +394,6 @@ def deliver_order(order_id: str, body: DeliveryVerifyRequest, request: Request, 
     order.delivery_otp = None
     db.commit()
     return MessageResponse(message="Order delivered successfully")
-
-
-@router.delete("/orders/{order_id}/hard", status_code=status.HTTP_204_NO_CONTENT)
-def hard_delete_order(order_id: str, request: Request, db: Session = Depends(get_db)):
-    _require_admin(request, db)
-    _validate_uuid(order_id)
-    oid = uuid.UUID(order_id)
-    order = db.query(Order).filter(Order.id == oid).first()
-    if not order:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
-    try:
-        db.execute(text("DELETE FROM payments WHERE order_id = :oid"), {"oid": oid})
-        db.execute(text("DELETE FROM order_items WHERE order_id = :oid"), {"oid": oid})
-        db.execute(text("DELETE FROM orders WHERE id = :oid"), {"oid": oid})
-        db.commit()
-    except Exception:
-        db.rollback()
-        raise
-    return {"message": "Order permanently deleted"}
-
-
-@router.delete("/users/{user_id}", response_model=MessageResponse)
-def delete_user(user_id: str, request: Request, db: Session = Depends(get_db)):
-    admin_id = _require_admin(request, db)
-    _validate_uuid(user_id)
-    if user_id == admin_id:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot delete yourself")
-    user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    user.is_deleted = True
-    db.commit()
-    return MessageResponse(message="User deleted")
-
-
-@router.delete("/users/{user_id}/hard", status_code=status.HTTP_204_NO_CONTENT)
-def hard_delete_user(user_id: str, request: Request, db: Session = Depends(get_db)):
-    admin_id = _require_admin(request, db)
-    _validate_uuid(user_id)
-    if user_id == admin_id:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot delete yourself")
-    uid = uuid.UUID(user_id)
-    user = db.query(User).filter(User.id == uid).first()
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    try:
-        db.execute(text("DELETE FROM addresses WHERE user_id = :uid"), {"uid": uid})
-        db.execute(text("DELETE FROM cart_items WHERE user_id = :uid"), {"uid": uid})
-        for order in db.query(Order).filter(Order.user_id == uid).all():
-            db.execute(text("DELETE FROM payments WHERE order_id = :oid"), {"oid": order.id})
-            db.execute(text("DELETE FROM order_items WHERE order_id = :oid"), {"oid": order.id})
-        db.execute(text("DELETE FROM orders WHERE user_id = :uid"), {"uid": uid})
-        db.execute(text("DELETE FROM wishlist_items WHERE user_id = :uid"), {"uid": uid})
-        db.execute(text("UPDATE product_suggestions SET user_id = NULL WHERE user_id = :uid"), {"uid": uid})
-        db.execute(text("DELETE FROM users WHERE id = :uid"), {"uid": uid})
-        db.commit()
-    except Exception:
-        db.rollback()
-        raise
-    return {"message": "User permanently deleted"}
 
 
 @router.get("/users")
