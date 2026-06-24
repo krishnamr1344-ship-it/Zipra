@@ -1210,7 +1210,7 @@ def create_order(body: OrderCreateRequest, request: Request, db: Session = Depen
         raise
 
     db.refresh(order)
-    return _order_to_response(order)
+    return _order_to_response(order, include_otp=True)
 
 
 def _confirm_order_payment(order: Order, user_id: str, method: str, db: Session, existing_payment: Payment = None) -> Payment:

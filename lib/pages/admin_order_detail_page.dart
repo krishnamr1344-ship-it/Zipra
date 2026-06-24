@@ -1194,48 +1194,71 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: _order['status'] == 'Delivered' || _order['status'] == 'Failed'
-                  ? Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                            color: const Color(0xFF10B981).withValues(alpha: 0.2)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.check_circle_rounded,
-                              color: Color(0xFF10B981), size: 22),
-                          const SizedBox(width: 10),
-                          const Text('Delivered',
-                              style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF10B981))),
-                        ],
-                      ),
-                    )
-                  : SizedBox(
-                      width: double.infinity,
-                      height: 54,
-                      child: ElevatedButton.icon(
-                        onPressed: _changeStatus,
-                        icon: const Icon(Icons.swap_horiz_rounded, size: 20),
-                        label: const Text('Change Status',
+              child: () {
+                if (_order['status'] == 'Delivered' || _order['status'] == 'Failed') {
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.2)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.check_circle_rounded,
+                            color: Color(0xFF10B981), size: 22),
+                        const SizedBox(width: 10),
+                        const Text('Delivered',
                             style: TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.w700)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primary,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16)),
-                          elevation: 0,
-                        ),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF10B981))),
+                      ],
+                    ),
+                  );
+                }
+                if (_order['status'] == 'Out For Delivery') {
+                  return SizedBox(
+                    width: double.infinity,
+                    height: 54,
+                    child: ElevatedButton.icon(
+                      onPressed: _showDeliveryOtpDialog,
+                      icon: const Icon(Icons.inventory_2, size: 20),
+                      label: const Text('Confirm Delivery',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w700)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF10B981),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                        elevation: 0,
                       ),
                     ),
+                  );
+                }
+                return SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: ElevatedButton.icon(
+                    onPressed: _changeStatus,
+                    icon: const Icon(Icons.swap_horiz_rounded, size: 20),
+                    label: const Text('Change Status',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w700)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                      elevation: 0,
+                    ),
+                  ),
+                );
+              }(),
             ),
           ),
         ],
