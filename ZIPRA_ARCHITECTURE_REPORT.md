@@ -150,8 +150,8 @@ delivery-app/
 ├── archive/                           # Old test DBs (6 files)
 │
 ├── deploy/
-│   ├── Procfile                       # Heroku/Render process
-│   └── render.yaml                    # Render.com infra-as-code
+│   ├── compose.yaml                   # Docker Compose config
+│   └── nginx/                         # Reverse proxy config
 │
 ├── nginx/
 │   └── default.conf                   # Reverse proxy config
@@ -759,9 +759,9 @@ services:
 2. `ssh` to GCP VM
 3. `docker compose down && docker compose up --build -d`
 
-### 10.5 Render.com (Alternative Deployment)
+### 10.5 Deployment
 
-`deploy/render.yaml` contains the full Render Blueprint for automatic deployment including a managed PostgreSQL database. Not currently used.
+Deployment uses Docker Compose on GCP VM (`34.100.218.97`). See `compose.yaml` and `nginx/default.conf`.
 
 ---
 
@@ -850,8 +850,7 @@ The following were identified and removed prior to this report:
 | D2 | `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` in env | `.env.example` | Only used when `RAZORPAY_ENABLED=true`; dead if disabled |
 | D3 | `CloudinaryService` / `cloudinary.dart` | `lib/services/cloudinary_service.dart`, `lib/constants/cloudinary.dart` | All images now in Supabase Storage — no Cloudinary usage visible |
 | D4 | `admin_password` in `main.py:seed_data` | `backend/main.py:373` | Admin created with `password_hash=None` (Firebase-only) — password param unused |
-| D5 | `Procfile` | `deploy/Procfile` | Render deployment not active |
-| D6 | `render.yaml` | `deploy/render.yaml` | Render deployment not active |
+| D5 | `Procfile` / `render.yaml` | `deploy/` | Removed — migrated to GCP Docker Compose |
 | D7 | Archive SQLite DBs | `archive/*.db` | Legacy test databases, no longer needed |
 | D8 | `DELIVERY_ZONE_TYPES` in schemas | `backend/schemas.py:688-691` | Appears unused in actual zone logic |
 | D9 | `payments_page.dart` | `lib/pages/payments_page.dart` | Saved payment methods page — Razorpay doesn't save methods client-side; likely unused |
@@ -888,7 +887,7 @@ The following were identified and removed prior to this report:
 
 8. **Clean up dual migration strategy** — Consolidate to pure Alembic. Remove imperative `ALTER TABLE` from `main.py`.
 9. **Remove dead Cloudinary code** — Delete `cloudinary_service.dart`, `cloudinary.dart` since Supabase Storage is now used.
-10. **Remove dead code** — `_hash_password()` functions, `Procfile`, `render.yaml` (unless Render is planned), `payments_page.dart` (if unused).
+10. **Remove dead code** — `_hash_password()` functions, `payments_page.dart` (if unused).
 11. **Add TokenBlacklist cleanup job** — Regularly purge expired blacklisted tokens.
 12. **Reduce home_page.dart size** — 101KB file is too large. Split into composable widgets (search bar, banner carousel, category grid, product grid, offers section).
 

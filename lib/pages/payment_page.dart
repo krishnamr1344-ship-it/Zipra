@@ -4,9 +4,8 @@ import '../constants/theme.dart';
 import '../models/cart_model.dart';
 import '../services/api_service.dart';
 import '../widgets/app_snackbar.dart';
-import 'home_page.dart';
-import 'orders_page.dart';
 import 'delivery_location_page.dart';
+import 'order_detail_page.dart';
 import 'payment_gateway_screen.dart' show PaymentGatewayScreen;
 
 class PaymentPage extends StatefulWidget {
@@ -114,10 +113,39 @@ class _PaymentPageState extends State<PaymentPage> {
 
         cartNotifier.clear();
 
+        if (!mounted) return;
+
+        final items = (order['items'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+        String? addr;
+        if (order['delivery_address'] != null) {
+          final da = order['delivery_address'] as Map<String, dynamic>;
+          addr = '${da['address_line1'] ?? ''}, ${da['city'] ?? ''}';
+        }
+        final orderData = OrderData(
+          id: orderId,
+          total: ((order['total_amount'] ?? 0) as num).toDouble().round(),
+          status: order['status'] ?? 'Confirmed',
+          date: DateTime.tryParse(order['created_at'] ?? '') ?? DateTime.now(),
+          deliveryAddress: addr,
+          deliveryOtp: order['delivery_otp'],
+          paymentMethod: 'Cash on Delivery',
+          deliveryFee: ((order['delivery_fee'] ?? 0) as num).toDouble().round(),
+          items: items.map((i) => CartItem(
+            id: i['product_id'] ?? '',
+            productId: i['product_id'] ?? '',
+            name: i['product_name'] ?? '',
+            qty: '',
+            price: ((i['product_price'] ?? 0) as num).toDouble().round(),
+            icon: Icons.shopping_bag,
+            color: AppColors.success,
+            count: i['quantity'] ?? 1,
+          )).toList(),
+        );
+
         setState(() => _processing = false);
         if (!mounted) return;
         Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const HomePage()),
+          MaterialPageRoute(builder: (_) => OrderDetailPage(order: orderData)),
           (route) => false,
         );
       } catch (e) {

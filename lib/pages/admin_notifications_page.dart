@@ -15,28 +15,63 @@ class AdminNotificationsPage extends StatefulWidget {
 
 class _AdminNotificationsPageState extends State<AdminNotificationsPage> {
   final _api = AdminApiService();
+  final ScrollController _scrollController = ScrollController();
   List<Map<String, dynamic>> _notifications = [];
   bool _loading = true;
   bool _error = false;
+  bool _loadingMore = false;
+  bool _hasMore = true;
+  int _page = 1;
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _load();
   }
 
-  Future<void> _load() async {
-    setState(() { _loading = true; _error = false; });
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 300 && _hasMore && !_loadingMore) {
+      _loadMore();
+    }
+  }
+
+  void _loadMore() {
+    if (_loadingMore || !_hasMore) return;
+    _page++;
+    _load(page: _page, append: true).catchError((_) {});
+  }
+
+  Future<void> _load({int page = 1, bool append = false}) async {
+    if (append) {
+      setState(() => _loadingMore = true);
+    } else {
+      setState(() { _loading = true; _error = false; _page = 1; _hasMore = true; _notifications = []; });
+    }
     try {
-      final data = await _api.getNotifications();
+      final data = await _api.getNotifications(page: page);
       if (!mounted) return;
       setState(() {
-        _notifications = data.cast<Map<String, dynamic>>();
+        if (append) {
+          _notifications.addAll(data.cast<Map<String, dynamic>>());
+          if (data.length < 50) _hasMore = false;
+        } else {
+          _notifications = data.cast<Map<String, dynamic>>();
+          if (data.length < 50) _hasMore = false;
+        }
         _loading = false;
+        _loadingMore = false;
       });
     } catch (e) {
         debugPrint("pages.admin_notifications_page: $e");
-      if (mounted) setState(() { _loading = false; _error = true; });
+      if (mounted) setState(() { _loading = false; _loadingMore = false; _error = !append; });
     }
   }
 
@@ -276,11 +311,18 @@ class _AdminNotificationsPageState extends State<AdminNotificationsPage> {
                       onAction: _showCreateForm,
                     )
                   : RefreshIndicator(
-                  onRefresh: _load,
+                  onRefresh: () => _load(),
                   child: ListView.builder(
+                    controller: _scrollController,
                     padding: const EdgeInsets.all(16),
-                    itemCount: _notifications.length,
+                    itemCount: _notifications.length + (_loadingMore ? 1 : 0),
                     itemBuilder: (_, i) {
+                      if (i == _notifications.length) {
+                        return const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
                       final notif = _notifications[i];
                       final type = notif['type'] as String? ?? 'info';
                       final createdAt = notif['created_at'] as String? ?? '';

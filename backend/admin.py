@@ -50,6 +50,12 @@ class SeedCatalogRequest(BaseModel):
 router = APIRouter(prefix="/api/admin")
 
 
+def _paginate_query(query, page: int, limit: int):
+    total = query.count()
+    items = query.offset((page - 1) * limit).limit(limit).all()
+    return items, total
+
+
 def _require_admin(request: Request, db: Session = None) -> str:
     role = getattr(request.state, "user_role", None)
     user_id = getattr(request.state, "user_id", None)
@@ -91,9 +97,10 @@ def dashboard_stats(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/products", response_model=list[ProductResponse])
-def list_products(request: Request, db: Session = Depends(get_db)):
+def list_products(request: Request, db: Session = Depends(get_db), page: int = 1, limit: int = 50):
     _require_admin(request, db)
-    products = db.query(Product).filter(Product.is_deleted == False).order_by(Product.name).all()
+    query = db.query(Product).filter(Product.is_deleted == False).order_by(Product.name)
+    products, total = _paginate_query(query, page, limit)
     return [
         ProductResponse(
             id=str(p.id), category_id=str(p.category_id),
@@ -262,7 +269,7 @@ def delete_category(category_id: str, request: Request, db: Session = Depends(ge
 
 
 @router.get("/orders")
-def list_orders(request: Request, db: Session = Depends(get_db), status: str = None):
+def list_orders(request: Request, db: Session = Depends(get_db), status: str = None, page: int = 1, limit: int = 50):
     _require_admin(request, db)
     query = db.query(Order).filter(Order.is_deleted == False)
     if status:
@@ -272,7 +279,8 @@ def list_orders(request: Request, db: Session = Depends(get_db), status: str = N
         query = query.filter(Order.status == status)
     else:
         query = query.filter(Order.status != "Failed")
-    orders = query.order_by(Order.created_at.desc()).all()
+    query = query.order_by(Order.created_at.desc())
+    orders, total = _paginate_query(query, page, limit)
     result = []
     for o in orders:
         items = []
@@ -400,9 +408,10 @@ def deliver_order(order_id: str, body: DeliveryVerifyRequest, request: Request, 
 
 
 @router.get("/users")
-def list_users(request: Request, db: Session = Depends(get_db)):
+def list_users(request: Request, db: Session = Depends(get_db), page: int = 1, limit: int = 50):
     _require_admin(request, db)
-    users = db.query(User).filter(User.is_deleted == False).order_by(User.created_at.desc()).all()
+    query = db.query(User).filter(User.is_deleted == False).order_by(User.created_at.desc())
+    users, total = _paginate_query(query, page, limit)
     result = []
     for u in users:
         gps_addr = db.query(Address).filter(
@@ -483,9 +492,10 @@ def _pack_to_admin_response(pack: ComboPack) -> dict:
 
 
 @router.get("/combo-packs")
-def list_combo_packs_admin(request: Request, db: Session = Depends(get_db)):
+def list_combo_packs_admin(request: Request, db: Session = Depends(get_db), page: int = 1, limit: int = 50):
     _require_admin(request, db)
-    packs = db.query(ComboPack).filter(ComboPack.is_deleted == False).order_by(ComboPack.name).all()
+    query = db.query(ComboPack).filter(ComboPack.is_deleted == False).order_by(ComboPack.name)
+    packs, total = _paginate_query(query, page, limit)
     return [_pack_to_admin_response(p) for p in packs]
 
 
@@ -614,11 +624,12 @@ def delete_delivery_zone(zone_id: str, request: Request, db: Session = Depends(g
 
 
 @router.get("/notifications", response_model=list[NotificationResponse])
-def list_admin_notifications(request: Request, db: Session = Depends(get_db)):
+def list_admin_notifications(request: Request, db: Session = Depends(get_db), page: int = 1, limit: int = 50):
     _require_admin(request, db)
-    notifications = db.query(Notification).filter(
+    query = db.query(Notification).filter(
         Notification.is_deleted == False,
-    ).order_by(Notification.created_at.desc()).limit(100).all()
+    ).order_by(Notification.created_at.desc())
+    notifications, total = _paginate_query(query, page, limit)
     return [
         NotificationResponse(
             id=str(n.id),
@@ -670,11 +681,12 @@ def delete_notification(notification_id: str, request: Request, db: Session = De
 
 
 @router.get("/banners", response_model=list[BannerResponse])
-def list_banners(request: Request, db: Session = Depends(get_db)):
+def list_banners(request: Request, db: Session = Depends(get_db), page: int = 1, limit: int = 50):
     _require_admin(request, db)
-    banners = db.query(Banner).filter(
+    query = db.query(Banner).filter(
         Banner.is_deleted == False,
-    ).order_by(Banner.sort_order, Banner.created_at.desc()).all()
+    ).order_by(Banner.sort_order, Banner.created_at.desc())
+    banners, total = _paginate_query(query, page, limit)
     return [
         BannerResponse(
             id=str(b.id),

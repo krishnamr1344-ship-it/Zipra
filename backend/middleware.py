@@ -4,7 +4,7 @@ Purpose: Rate limiting + JWT validation middleware.
 Security:
   - All mutating endpoints (POST/PUT/DELETE/PATCH) rate limited per IP.
   - Counts only FAILED attempts (4xx) to avoid penalising legitimate users.
-  - Respects X-Forwarded-For header for proxy deployments (Render).
+  - Respects X-Forwarded-For header for proxy deployments.
   - JWT check on all protected routes (except public paths).
   - Blacklisted tokens are rejected immediately.
 """

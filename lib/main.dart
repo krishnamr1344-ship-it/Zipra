@@ -131,6 +131,7 @@ class _AppEntryState extends State<_AppEntry> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    ApiService.close();
     super.dispose();
   }
 
@@ -146,14 +147,23 @@ class _AppEntryState extends State<_AppEntry> with WidgetsBindingObserver {
     if (token != null && mounted) {
       try {
         await _api.getMe();
-      } catch (_) {
-        await _api.logout();
-        if (mounted) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const HomePage()),
-            (route) => false,
-          );
+      } on ApiException catch (e) {
+        final msg = e.message.toLowerCase();
+        if (msg.contains('login required') ||
+            msg.contains('unauthorized') ||
+            msg.contains('not authenticated') ||
+            msg.contains('token has been revoked') ||
+            msg.contains('invalid')) {
+          await _api.logout();
+          if (mounted) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const HomePage()),
+              (route) => false,
+            );
+          }
         }
+      } catch (_) {
+        // SocketException or TimeoutException — stay logged in
       }
     }
   }

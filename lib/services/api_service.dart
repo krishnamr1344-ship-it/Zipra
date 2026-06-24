@@ -8,7 +8,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class ApiService {
   static const _baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://delivery-app-api-16t0.onrender.com',
+    defaultValue: 'http://34.100.218.97',
   );
   static const _tokenKey = 'auth_token';
   static const _userNameKey = 'user_name';
@@ -19,13 +19,11 @@ class ApiService {
   static const _connectTimeout = Duration(seconds: 15);
   static const _receiveTimeout = Duration(seconds: 30);
 
-  late final http.Client _httpClient;
+  static final http.Client _clientPool = http.Client();
 
   final _secureStorage = const FlutterSecureStorage();
 
-  ApiService() {
-    _httpClient = http.Client();
-  }
+  ApiService();
 
   Future<String?> getToken() async {
     return await _secureStorage.read(key: _tokenKey);
@@ -103,12 +101,11 @@ class ApiService {
     }
   }
 
-  bool _checkAndHandleUnauthorized(int statusCode) {
+  Future<void> _checkAndHandleUnauthorized(int statusCode) async {
     if (statusCode == 401) {
-      _clearToken();
-      return true;
+      await _clearToken();
+      throw ApiException('Session expired. Please login again.');
     }
-    return false;
   }
 
   Future<Map<String, dynamic>> googleLogin(String idToken) async {
@@ -276,7 +273,7 @@ class ApiService {
     if (houseNumber != null && houseNumber.isNotEmpty) bodyMap['house_number'] = houseNumber;
     if (floorNumber != null && floorNumber.isNotEmpty) bodyMap['floor_number'] = floorNumber;
     final res = await http.post(Uri.parse('$_baseUrl/api/addresses/auto'), headers: headers, body: jsonEncode(bodyMap)).timeout(const Duration(seconds: 60));
-    if (_checkAndHandleUnauthorized(res.statusCode)) return {};
+    await _checkAndHandleUnauthorized(res.statusCode);
     return _handleResponse(res);
   }
 
@@ -331,14 +328,14 @@ class ApiService {
     final headers = await _authHeaders();
     if (headers['Authorization'] == null) return [];
     final res = await http.get(Uri.parse('$_baseUrl/api/cart'), headers: headers).timeout(const Duration(seconds: 60));
-    if (_checkAndHandleUnauthorized(res.statusCode)) return [];
+    await _checkAndHandleUnauthorized(res.statusCode);
     return _handleListResponse(res);
   }
 
   Future<void> clearCart() async {
     final headers = await _authHeaders(required: true);
     final res = await http.delete(Uri.parse('$_baseUrl/api/cart'), headers: headers).timeout(const Duration(seconds: 60));
-    if (_checkAndHandleUnauthorized(res.statusCode)) return;
+    await _checkAndHandleUnauthorized(res.statusCode);
   }
 
   // ─── Cart ───────────────────────────────────────────────────────
@@ -429,14 +426,14 @@ class ApiService {
     if (orderId != null) body['order_id'] = orderId;
     if (intentId != null) body['intent_id'] = intentId;
     final res = await http.post(Uri.parse('$_baseUrl/api/payments/verify'), headers: headers, body: jsonEncode(body)).timeout(const Duration(seconds: 60));
-    if (_checkAndHandleUnauthorized(res.statusCode)) return {};
+    await _checkAndHandleUnauthorized(res.statusCode);
     return _handleResponse(res);
   }
 
   Future<Map<String, dynamic>> createRazorpayOrder(String orderId) async {
     final headers = await _authHeaders(required: true);
     final res = await http.post(Uri.parse('$_baseUrl/api/payments/create-order'), headers: headers, body: jsonEncode({'order_id': orderId})).timeout(const Duration(seconds: 60));
-    if (_checkAndHandleUnauthorized(res.statusCode)) return {};
+    await _checkAndHandleUnauthorized(res.statusCode);
     return _handleResponse(res);
   }
 
@@ -446,7 +443,7 @@ class ApiService {
     if (addressId != null) body['address_id'] = addressId;
     if (phone != null) body['phone'] = phone;
     final res = await http.post(Uri.parse('$_baseUrl/api/payments/create-order'), headers: headers, body: jsonEncode(body)).timeout(const Duration(seconds: 60));
-    if (_checkAndHandleUnauthorized(res.statusCode)) return {};
+    await _checkAndHandleUnauthorized(res.statusCode);
     return _handleResponse(res);
   }
 
@@ -457,7 +454,7 @@ class ApiService {
       headers: headers,
       body: jsonEncode({'address_id': addressId, 'payment_method': paymentMethod}),
     ).timeout(const Duration(seconds: 60));
-    if (_checkAndHandleUnauthorized(res.statusCode)) return {};
+    await _checkAndHandleUnauthorized(res.statusCode);
     return _handleResponse(res);
   }
 
@@ -468,14 +465,14 @@ class ApiService {
       headers: headers,
       body: jsonEncode({'order_id': orderId, 'method': method}),
     ).timeout(const Duration(seconds: 60));
-    if (_checkAndHandleUnauthorized(res.statusCode)) return {};
+    await _checkAndHandleUnauthorized(res.statusCode);
     return _handleResponse(res);
   }
 
   Future<Map<String, dynamic>> cancelPaymentIntent(String intentId) async {
     final headers = await _authHeaders(required: true);
     final res = await http.post(Uri.parse('$_baseUrl/api/payments/cancel/$intentId'), headers: headers).timeout(const Duration(seconds: 60));
-    if (_checkAndHandleUnauthorized(res.statusCode)) return {};
+    await _checkAndHandleUnauthorized(res.statusCode);
     return _handleResponse(res);
   }
 
@@ -489,7 +486,7 @@ class ApiService {
   Future<Map<String, dynamic>> addPackToCart(String packId) async {
     final headers = await _authHeaders(required: true);
     final res = await http.post(Uri.parse('$_baseUrl/api/combo-packs/add-to-cart'), headers: headers, body: jsonEncode({'pack_id': packId})).timeout(const Duration(seconds: 60));
-    if (_checkAndHandleUnauthorized(res.statusCode)) return {};
+    await _checkAndHandleUnauthorized(res.statusCode);
     return _handleResponse(res);
   }
 
@@ -503,7 +500,7 @@ class ApiService {
   // ─── Delivery Zone ──────────────────────────────────────────────
 
   Future<Map<String, dynamic>> checkZone(double lat, double lng) async {
-    final res = await http.post(Uri.parse('$_baseUrl/api/check-zone'), headers: {'Content-Type': 'application/json'}, body: jsonEncode({'latitude': lat, 'longitude': lng})).timeout(const Duration(seconds: 60));
+    final res = await http.post(Uri.parse('$_baseUrl/api/check-zone'), headers: {'Content-Type': 'application/json'}, body: jsonEncode({'lat': lat, 'lng': lng})).timeout(const Duration(seconds: 60));
     return _handleResponse(res);
   }
 
@@ -537,9 +534,15 @@ class ApiService {
     return _handleResponse(res);
   }
 
+  static void close() {
+    _clientPool.close();
+  }
+
   Future<void> warmUp() async {
     try {
-      await http.get(Uri.parse('$_baseUrl/api/app-version')).timeout(const Duration(seconds: 20));
+      await _clientPool
+          .get(Uri.parse('$_baseUrl/api/app-version'))
+          .timeout(const Duration(seconds: 20));
     } catch (e) {
       debugPrint('ApiService.warmUp: request failed: $e');
     }

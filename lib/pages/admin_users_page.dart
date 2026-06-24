@@ -12,45 +12,87 @@ class AdminUsersPage extends StatefulWidget {
 
 class _AdminUsersPageState extends State<AdminUsersPage> {
   final _api = AdminApiService();
-  List<dynamic> _users = [];
+  List<dynamic> _allUsers = [];
   List<dynamic> _filtered = [];
   bool _loading = true;
   bool _error = false;
+  bool _hasMore = true;
+  bool _loadingMore = false;
   String _search = '';
+  int _page = 1;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _load();
   }
 
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = false;
-    });
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      _loadMore();
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_loadingMore || !_hasMore) return;
+    _page++;
+    await _load(page: _page, append: true);
+  }
+
+  Future<void> _load({int page = 1, bool append = false}) async {
+    if (append) {
+      setState(() {
+        _loadingMore = true;
+      });
+    } else {
+      setState(() {
+        _loading = true;
+        _error = false;
+      });
+    }
     try {
-      final data = await _api.getUsers();
+      final data = await _api.getUsers(page: page);
       if (!mounted) return;
       setState(() {
-        _users = data;
-        _filtered = List.from(data);
+        if (append) {
+          _allUsers.addAll(data);
+          if (data.length < 50) _hasMore = false;
+        } else {
+          _allUsers = List.from(data);
+          _page = 1;
+          _hasMore = data.length >= 50;
+        }
+        _filtered = List.from(_allUsers);
         _loading = false;
+        _loadingMore = false;
       });
       _applyFilter();
     } catch (e) {
-        debugPrint("pages.admin_users_page: $e");
+      debugPrint("pages.admin_users_page: $e");
       if (!mounted) return;
       setState(() {
-        _loading = false;
-        _error = true;
+        if (append) {
+          _loadingMore = false;
+        } else {
+          _loading = false;
+          _error = true;
+        }
       });
     }
   }
 
   void _applyFilter() {
     setState(() {
-      _filtered = _users.where((u) {
+      _filtered = _allUsers.where((u) {
         final user = u as Map<String, dynamic>;
         final q = _search.toLowerCase();
         return _search.isEmpty ||
@@ -189,6 +231,14 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate((_, i) {
+                  if (i == _filtered.length) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+                  }
                   final u = _filtered[i] as Map<String, dynamic>;
                   final isAdmin = u['role'] == 'admin';
                   final accent = isAdmin ? Colors.amber : Colors.blue;
@@ -390,7 +440,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                       ),
                     ),
                   );
-                }, childCount: _filtered.length),
+                }, childCount: _filtered.length + (_loadingMore ? 1 : 0)),
               ),
             ),
         ],

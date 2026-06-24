@@ -21,7 +21,7 @@ class CloudinaryService {
     final relative = json['url'] as String;
     final fullUrl = relative.startsWith('http')
         ? relative
-        : 'https://delivery-app-api-16t0.onrender.com$relative';
+        : 'http://34.100.218.97$relative';
     return fullUrl;
   }
 }

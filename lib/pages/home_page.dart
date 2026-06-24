@@ -320,7 +320,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       final userData = await _api.getSavedUser();
       if (!mounted) return;
       setState(() => _user = userData);
-      await _api.getCategories();
     } catch (e) {
       if (_isAuthError(e)) {
         await _handleExpiredToken();
@@ -956,21 +955,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                           ),
                         ),
                       ),
-                      Container(
-                        width: 50,
-                        height: 56,
-                        decoration: const BoxDecoration(color: _orange),
-                        child: IconButton(
-                          icon: const Icon(
-                            Icons.tune,
-                            color: Colors.white,
-                            size: 22,
-                          ),
-                          onPressed: () {},
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                        ),
-                      ),
+
                     ],
                   ),
                 ),

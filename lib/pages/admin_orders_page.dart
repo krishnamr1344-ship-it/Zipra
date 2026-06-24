@@ -13,49 +13,83 @@ class AdminOrdersPage extends StatefulWidget {
 
 class _AdminOrdersPageState extends State<AdminOrdersPage> {
   final _api = AdminApiService();
-  List<dynamic> _orders = [];
-  List<dynamic> _filtered = [];
+  final _scrollController = ScrollController();
+  List<Map<String, dynamic>> _allOrders = [];
+  List<Map<String, dynamic>> _filtered = [];
   bool _loading = true;
+  bool _loadingMore = false;
   bool _error = false;
+  bool _hasMore = true;
+  int _page = 1;
   String _search = '';
   String _statusFilter = 'All';
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _load();
   }
 
-  Future<void> _load() async {
-    setState(() { _loading = true; _error = false; });
+  Future<void> _load({int page = 1, bool append = false}) async {
+    if (append) {
+      setState(() { _loadingMore = true; });
+    } else {
+      setState(() { _loading = true; _error = false; });
+    }
     try {
-      final data = await _api.getOrders();
+      final data = await _api.getOrders(page: page);
       if (!mounted) return;
       setState(() {
-        _orders = data;
-        _filtered = List.from(data);
-        _loading = false;
+        if (append) {
+          _allOrders.addAll(data.cast<Map<String, dynamic>>());
+          if (data.length < 50) _hasMore = false;
+          _loadingMore = false;
+        } else {
+          _allOrders = data.cast<Map<String, dynamic>>();
+          _filtered = List.from(_allOrders);
+          _loading = false;
+          _page = 1;
+          _hasMore = true;
+        }
       });
       _applyFilters();
     } catch (e) {
         debugPrint("pages.admin_orders_page: $e");
       if (!mounted) return;
-      setState(() { _loading = false; _error = true; });
+      setState(() {
+        _loading = false;
+        _loadingMore = false;
+        _error = !append;
+      });
     }
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent - 300 &&
+        _hasMore &&
+        !_loadingMore) {
+      _loadMore();
+    }
+  }
+
+  Future<void> _loadMore() async {
+    _page++;
+    await _load(page: _page, append: true);
   }
 
   void _applyFilters() {
     setState(() {
-      _filtered = _orders.where((o) {
-        final ord = o as Map<String, dynamic>;
+      _filtered = _allOrders.where((o) {
         final statusMatch =
-            _statusFilter == 'All' || ord['status'] == _statusFilter;
+            _statusFilter == 'All' || o['status'] == _statusFilter;
         final searchLower = _search.toLowerCase();
         final searchMatch = _search.isEmpty ||
-            (ord['id']?.toString().toLowerCase() ?? '').contains(searchLower) ||
-            (ord['user_name']?.toString().toLowerCase() ?? '')
+            (o['id']?.toString().toLowerCase() ?? '').contains(searchLower) ||
+            (o['user_name']?.toString().toLowerCase() ?? '')
                 .contains(searchLower) ||
-            (ord['total_amount']?.toString() ?? '').contains(searchLower);
+            (o['total_amount']?.toString() ?? '').contains(searchLower);
         return statusMatch && searchMatch;
       }).toList();
     });
@@ -104,12 +138,13 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
   }
 
   int _countByStatus(String status) {
-    if (status == 'All') return _orders.length;
-    return _orders.where((o) => (o as Map)['status'] == status).length;
+    if (status == 'All') return _allOrders.length;
+    return _allOrders.where((o) => o['status'] == status).length;
   }
 
   @override
   void dispose() {
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -128,9 +163,9 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
     ];
 
     final pending = _countByStatus('Pending');
-    final totalRev = _orders.fold<double>(
+    final totalRev = _allOrders.fold<double>(
       0,
-      (sum, o) => sum + ((o as Map)['total_amount'] ?? 0).toDouble(),
+      (sum, o) => sum + (o['total_amount'] ?? 0).toDouble(),
     );
 
     return Scaffold(
@@ -193,7 +228,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                             _StatCard(
                               icon: Icons.receipt_long,
                               label: 'Total',
-                              value: '${_orders.length}',
+                              value: '${_allOrders.length}',
                               color: Colors.white,
                               bgColor: Colors.white.withValues(alpha: 0.08),
                             ),
@@ -383,7 +418,14 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (_, i) {
-                      final o = _filtered[i] as Map<String, dynamic>;
+                      if (i >= _filtered.length) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Center(
+                              child: CircularProgressIndicator(strokeWidth: 2)),
+                        );
+                      }
+                      final o = _filtered[i];
                       final items =
                           (o['items'] as List?)?.cast<Map<String, dynamic>>() ??
                               [];
@@ -587,7 +629,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                           ),
                         );
                     },
-                    childCount: _filtered.length,
+                    childCount: _filtered.length + (_loadingMore ? 1 : 0),
                   ),
                 ),
               ),

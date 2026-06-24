@@ -35,6 +35,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
   Razorpay? _razorpay;
   bool _initializing = false;
   bool _checkoutOpen = false;
+  bool _backPressed = false;
 
   @override
   void initState() {
@@ -112,6 +113,9 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
 
   void _handleSuccess(PaymentSuccessResponse response) {
     if (!mounted) return;
+    // Intentionally NOT checking _backPressed here.
+    // If Razorpay reports payment success, we must verify it
+    // on the server — even if the user pressed back.
     setState(() => _checkoutOpen = false);
     final paymentId = response.paymentId;
     final signature = response.signature;
@@ -123,7 +127,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
   }
 
   Future<void> _handleError(PaymentFailureResponse response) async {
-    if (!mounted) return;
+    if (!mounted || _backPressed) return;
     setState(() => _checkoutOpen = false);
 
     String? orderId;
@@ -190,10 +194,12 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
   }
 
   Future<void> _handleBack() async {
+    _backPressed = true;
     _razorpay?.clear();
 
     String? orderId;
-    if (widget.intentId != null) {
+    // Only cancel intent if payment never started
+    if (widget.intentId != null && !_checkoutOpen) {
       try {
         final result = await _api.cancelPaymentIntent(widget.intentId!);
         orderId = result['order_id'] as String?;

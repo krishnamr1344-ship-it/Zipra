@@ -5,7 +5,7 @@ import 'api_service.dart';
 class AdminApiService {
   static const _baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://delivery-app-api-16t0.onrender.com',
+    defaultValue: 'http://34.100.218.97',
   );
   static const _timeout = Duration(seconds: 60);
 
@@ -31,8 +31,8 @@ class AdminApiService {
     return _decodeJson(res.body);
   }
 
-  Future<List<dynamic>> getProducts() async {
-    final res = await http.get(Uri.parse('$_baseUrl/api/admin/products'), headers: await _authHeader()).timeout(_timeout);
+  Future<List<dynamic>> getProducts({int page = 1, int limit = 50}) async {
+    final res = await http.get(Uri.parse('$_baseUrl/api/admin/products?page=$page&limit=$limit'), headers: await _authHeader()).timeout(_timeout);
     if (res.statusCode != 200) throw ApiException('Failed to load products');
     return _decodeJson(res.body);
   }
@@ -86,8 +86,9 @@ class AdminApiService {
     }
   }
 
-  Future<List<dynamic>> getOrders() async {
-    final res = await http.get(Uri.parse('$_baseUrl/api/admin/orders'), headers: await _authHeader()).timeout(_timeout);
+  Future<List<dynamic>> getOrders({int page = 1, int limit = 50}) async {
+    final uri = Uri.parse('$_baseUrl/api/admin/orders').replace(queryParameters: {'page': '$page', 'limit': '$limit'});
+    final res = await http.get(uri, headers: await _authHeader()).timeout(_timeout);
     if (res.statusCode != 200) throw ApiException('Failed to load orders');
     return _decodeJson(res.body);
   }
@@ -110,8 +111,8 @@ class AdminApiService {
     }
   }
 
-  Future<List<dynamic>> getUsers() async {
-    final res = await http.get(Uri.parse('$_baseUrl/api/admin/users'), headers: await _authHeader()).timeout(_timeout);
+  Future<List<dynamic>> getUsers({int page = 1, int limit = 50}) async {
+    final res = await http.get(Uri.parse('$_baseUrl/api/admin/users?page=$page&limit=$limit'), headers: await _authHeader()).timeout(_timeout);
     if (res.statusCode != 200) throw ApiException('Failed to load users');
     return _decodeJson(res.body);
   }
@@ -124,8 +125,8 @@ class AdminApiService {
 
   // ─── Combo Packs ──────────────────────────────────────────────────
 
-  Future<List<dynamic>> getComboPacks() async {
-    final res = await http.get(Uri.parse('$_baseUrl/api/admin/combo-packs'), headers: await _authHeader()).timeout(_timeout);
+  Future<List<dynamic>> getComboPacks({int page = 1, int limit = 50}) async {
+    final res = await http.get(Uri.parse('$_baseUrl/api/admin/combo-packs?page=$page&limit=$limit'), headers: await _authHeader()).timeout(_timeout);
     if (res.statusCode != 200) throw ApiException('Failed to load combo packs');
     return _decodeJson(res.body);
   }
@@ -181,8 +182,8 @@ class AdminApiService {
 
   // ─── Notifications ──────────────────────────────────────────────────
 
-  Future<List<dynamic>> getNotifications() async {
-    final res = await http.get(Uri.parse('$_baseUrl/api/admin/notifications'), headers: await _authHeader()).timeout(_timeout);
+  Future<List<dynamic>> getNotifications({int page = 1, int limit = 50}) async {
+    final res = await http.get(Uri.parse('$_baseUrl/api/admin/notifications?page=$page&limit=$limit'), headers: await _authHeader()).timeout(_timeout);
     if (res.statusCode != 200) throw ApiException('Failed to load notifications');
     return _decodeJson(res.body);
   }
@@ -227,8 +228,8 @@ class AdminApiService {
 
   // ─── Banners ──────────────────────────────────────────────────────
 
-  Future<List<dynamic>> getBanners() async {
-    final res = await http.get(Uri.parse('$_baseUrl/api/admin/banners'), headers: await _authHeader()).timeout(_timeout);
+  Future<List<dynamic>> getBanners({int page = 1, int limit = 50}) async {
+    final res = await http.get(Uri.parse('$_baseUrl/api/admin/banners?page=$page&limit=$limit'), headers: await _authHeader()).timeout(_timeout);
     if (res.statusCode != 200) throw ApiException('Failed to load banners');
     return _decodeJson(res.body);
   }

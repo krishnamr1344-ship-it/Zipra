@@ -1,3 +1,3 @@
 class CloudinaryConfig {
-  static const String uploadUrl = 'https://delivery-app-api-16t0.onrender.com/api/upload';
+  static const String uploadUrl = 'http://34.100.218.97/api/upload';
 }

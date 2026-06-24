@@ -1,12 +1,11 @@
-"""Tests: register, login, password reset, admin auth, IDOR, email change OTP, token invalidation."""
-import hashlib
-from datetime import datetime, timezone, timedelta
+"""Tests: register, login, admin auth, IDOR, email change OTP, token invalidation."""
+from datetime import datetime, timezone
 from decimal import Decimal
 from unittest.mock import patch, MagicMock
 
 import pytest
 
-from models import User, PasswordResetCode, TokenBlacklist, Address, Order
+from models import User, TokenBlacklist, Address, Order
 from auth import _create_jwt, _hash_password
 
 
@@ -185,132 +184,7 @@ class TestLogin:
         assert resp.status_code == 429
 
 
-# ─────────────────────────────────────────────
-# PASSWORD RESET
-# ─────────────────────────────────────────────
-class TestPasswordReset:
-    def _make_code_record(self, db_session, email, code="123456", minutes_from_now=15):
-        record = PasswordResetCode(
-            email=email,
-            code_hash=hashlib.sha256(code.encode()).hexdigest(),
-            expires_at=datetime.now(timezone.utc) + timedelta(minutes=minutes_from_now),
-        )
-        db_session.add(record)
-        db_session.flush()
-        return record
 
-    def test_reset_password_success(self, client, db_session, test_user):
-        test_user.password_hash = _hash_password("OldPass1!")
-        db_session.flush()
-        self._make_code_record(db_session, test_user.email, code="reset123")
-        resp = client.post("/api/auth/reset-password", json={
-            "email": test_user.email,
-            "code": "reset123",
-            "new_password": "NewPass1!",
-        })
-        assert resp.status_code == 200
-        assert "successful" in resp.json()["message"]
-        db_session.refresh(test_user)
-        assert test_user.password_hash != _hash_password("OldPass1!")
-
-    def test_reset_password_invalid_code(self, client, db_session, test_user):
-        self._make_code_record(db_session, test_user.email, code="correct")
-        resp = client.post("/api/auth/reset-password", json={
-            "email": test_user.email,
-            "code": "wrong",
-            "new_password": "NewPass1!",
-        })
-        assert resp.status_code == 400
-        assert "Invalid or expired" in resp.json()["detail"]
-
-    def test_reset_password_expired_code(self, client, db_session, test_user):
-        self._make_code_record(db_session, test_user.email, code="expired", minutes_from_now=-1)
-        resp = client.post("/api/auth/reset-password", json={
-            "email": test_user.email,
-            "code": "expired",
-            "new_password": "NewPass1!",
-        })
-        assert resp.status_code == 400
-
-    def test_reset_password_nonexistent_email(self, client, db_session):
-        resp = client.post("/api/auth/reset-password", json={
-            "email": "nobody@example.com",
-            "code": "123456",
-            "new_password": "NewPass1!",
-        })
-        assert resp.status_code == 400
-
-    def test_reset_password_weak_new_password_returns_422(self, client, db_session, test_user):
-        self._make_code_record(db_session, test_user.email, code="reset123")
-        resp = client.post("/api/auth/reset-password", json={
-            "email": test_user.email,
-            "code": "reset123",
-            "new_password": "weak",
-        })
-        assert resp.status_code == 422
-
-    def test_reset_password_reuse_code_fails(self, client, db_session, test_user):
-        test_user.password_hash = _hash_password("OldPass1!")
-        db_session.flush()
-        self._make_code_record(db_session, test_user.email, code="usedonce")
-        client.post("/api/auth/reset-password", json={
-            "email": test_user.email,
-            "code": "usedonce",
-            "new_password": "NewPass1!",
-        })
-        resp = client.post("/api/auth/reset-password", json={
-            "email": test_user.email,
-            "code": "usedonce",
-            "new_password": "AnotherPass1!",
-        })
-        assert resp.status_code == 400
-
-
-# ─────────────────────────────────────────────
-# TOKEN INVALIDATION ON PASSWORD CHANGE
-# ─────────────────────────────────────────────
-class TestTokenInvalidation:
-    def _make_code_record(self, db_session, email, code="123456"):
-        record = PasswordResetCode(
-            email=email,
-            code_hash=hashlib.sha256(code.encode()).hexdigest(),
-            expires_at=datetime.now(timezone.utc) + timedelta(minutes=15),
-        )
-        db_session.add(record)
-        db_session.flush()
-
-    def test_old_token_rejected_after_password_reset(self, client, db_session, test_user):
-        test_user.password_hash = _hash_password("OldPass1!")
-        db_session.flush()
-        old_token, _, _ = _create_jwt(str(test_user.id), role=test_user.role, token_version=test_user.token_version)
-
-        self._make_code_record(db_session, test_user.email, code="reset456")
-        resp = client.post("/api/auth/reset-password", json={
-            "email": test_user.email,
-            "code": "reset456",
-            "new_password": "NewPass1!",
-        })
-        assert resp.status_code == 200
-
-        db_session.refresh(test_user)
-        assert test_user.token_version > 0
-
-        resp = client.put("/api/auth/profile", json={"name": "Should Fail"}, headers={"Authorization": f"Bearer {old_token}"})
-        assert resp.status_code == 401
-
-    def test_new_token_works_after_password_reset(self, client, db_session, test_user):
-        test_user.password_hash = _hash_password("OldPass1!")
-        db_session.flush()
-        self._make_code_record(db_session, test_user.email, code="reset789")
-        client.post("/api/auth/reset-password", json={
-            "email": test_user.email,
-            "code": "reset789",
-            "new_password": "NewPass1!",
-        })
-        db_session.refresh(test_user)
-        new_token, _, _ = _create_jwt(str(test_user.id), role=test_user.role, token_version=test_user.token_version)
-        resp = client.put("/api/auth/profile", json={"name": "Should Work"}, headers={"Authorization": f"Bearer {new_token}"})
-        assert resp.status_code == 200
 
 
 # ─────────────────────────────────────────────

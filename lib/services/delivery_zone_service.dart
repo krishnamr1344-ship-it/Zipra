@@ -11,7 +11,7 @@ class DeliveryZoneException implements Exception {
 class DeliveryZoneService {
   static const _baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://delivery-app-api-16t0.onrender.com',
+    defaultValue: 'http://34.100.218.97',
   );
 
   Future<ZoneCheckResult> checkLocation(double lat, double lng) async {

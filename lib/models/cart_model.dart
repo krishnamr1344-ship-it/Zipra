@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 
@@ -28,6 +29,7 @@ class CartItem {
 class CartNotifier extends ChangeNotifier {
   final ApiService _api = ApiService();
   final List<CartItem> _items = [];
+  Timer? _debounceTimer;
 
   List<CartItem> get items => List.unmodifiable(_items);
   int get itemCount => _items.fold(0, (sum, item) => sum + item.count);
@@ -92,21 +94,18 @@ class CartNotifier extends ChangeNotifier {
       return;
     }
 
-    // Save previous count for rollback
-    final oldCount = item.count;
     item.count = newCount;
     notifyListeners();
 
-    if (item.id.isNotEmpty) {
+    _debounceTimer?.cancel();
+    if (item.id.isEmpty) return;
+    _debounceTimer = Timer(const Duration(milliseconds: 350), () async {
       try {
-        await _api.updateCartItem(item.id, newCount);
+        await _api.updateCartItem(item.id, item.count);
       } catch (e) {
         debugPrint('CartNotifier.updateCount API error: $e');
-        // Rollback on failure
-        item.count = oldCount;
-        notifyListeners();
       }
-    }
+    });
   }
 
   Future<void> removeAll(String productId) async {

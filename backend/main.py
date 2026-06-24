@@ -8,7 +8,7 @@ Security:
 
 Database:
   - PostgreSQL via SQLAlchemy (models.py, database.py)
-  - Render PostgreSQL in production, local PostgreSQL in development
+  - Cloud PostgreSQL in production, local PostgreSQL in development
 """
 import logging
 import os

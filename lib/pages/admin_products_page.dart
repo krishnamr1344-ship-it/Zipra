@@ -15,38 +15,81 @@ class AdminProductsPage extends StatefulWidget {
 
 class _AdminProductsPageState extends State<AdminProductsPage> {
   final _api = AdminApiService();
-  List<dynamic> _products = [];
+  List<dynamic> _allItems = [];
   List<dynamic> _filtered = [];
   List<dynamic> _categories = [];
   bool _loading = true;
   bool _error = false;
   bool _gridMode = false;
+  bool _hasMore = true;
+  bool _loadingMore = false;
+  int _page = 1;
   String _search = '';
+  ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _load();
   }
 
-  Future<void> _load() async {
-    setState(() { _loading = true; _error = false; });
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load({int page = 1, bool append = false}) async {
+    if (!append) {
+      setState(() { _loading = true; _error = false; });
+    }
     try {
-      final prods = await _api.getProducts();
-      final cats = await _api.getCategories();
+      final cats = !append ? await _api.getCategories() : null;
+      final prods = await _api.getProducts(page: page);
       if (!mounted) return;
-      setState(() { _products = prods; _filtered = List.from(prods); _categories = cats; _loading = false; });
+      setState(() {
+        if (append) {
+          _allItems.addAll(prods);
+          if (prods.length < 50) _hasMore = false;
+          _loadingMore = false;
+        } else {
+          _allItems = List.from(prods);
+          _page = 1;
+          _hasMore = true;
+          _loading = false;
+        }
+        if (cats != null) _categories = cats;
+        _filtered = List.from(_allItems);
+      });
       _applyFilter();
     } catch (e) {
-        debugPrint("pages.admin_products_page: $e");
+      debugPrint("pages.admin_products_page: $e");
       if (!mounted) return;
-      setState(() { _loading = false; _error = true; });
+      setState(() {
+        if (!append) { _loading = false; _error = true; }
+        _loadingMore = false;
+      });
     }
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200 && !_loadingMore && _hasMore) {
+      _loadMore();
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_loadingMore || !_hasMore) return;
+    setState(() { _loadingMore = true; });
+    _page++;
+    await _load(page: _page, append: true);
   }
 
   void _applyFilter() {
     setState(() {
-      _filtered = _products.where((p) {
+      _filtered = _allItems.where((p) {
         final prod = p as Map<String, dynamic>;
         final q = _search.toLowerCase();
         return _search.isEmpty ||
@@ -385,6 +428,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
 
     return Scaffold(
       body: CustomScrollView(
+        controller: _scrollController,
         slivers: [
           SliverAppBar(
             expandedHeight: 140,
@@ -731,6 +775,13 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                 ),
               ),
             ),
+        if (_loadingMore)
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: 24),
+              child: Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))),
+            ),
+          ),
         ],
       ),
     );
