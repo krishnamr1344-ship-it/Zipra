@@ -21,7 +21,7 @@ class CloudinaryService {
     final relative = json['url'] as String;
     final fullUrl = relative.startsWith('http')
         ? relative
-        : 'http://34.100.218.97$relative';
+        : 'https://zipra-api-583825347591.asia-south1.run.app$relative';
     return fullUrl;
   }
 }

@@ -21,7 +21,7 @@ from decimal import Decimal
 import hashlib
 import hmac
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 import httpx
@@ -877,7 +877,7 @@ def reverse_geocode(lat: float, lng: float, db: Session = Depends(get_db)):
 
 
 @router.get("/places/search")
-def search_places(q: str, db: Session = Depends(get_db)):
+def search_places(q: str = Query(..., max_length=200), db: Session = Depends(get_db)):
     try:
         with httpx.Client(timeout=httpx.Timeout(10.0, connect=5, read=8, write=5, pool=5)) as client:
             resp = client.get(
@@ -1667,9 +1667,12 @@ def razorpay_verify(body: RazorpayVerifyRequest, request: Request, db: Session =
             intent.is_deleted = True
             db.commit()
             db.refresh(payment)
-            raise HTTPException(
+            return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Payment verification failed",
+                content={
+                    "detail": "Payment verification failed",
+                    "order_id": str(order.id),
+                },
             )
 
         # Success: create Order, confirm, deduct stock
@@ -1737,7 +1740,13 @@ def razorpay_verify(body: RazorpayVerifyRequest, request: Request, db: Session =
         payment.failure_reason = "Signature verification failed"
         order.status = "Failed"
         db.commit()
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Payment verification failed")
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={
+                "detail": "Payment verification failed",
+                "order_id": str(order.id),
+            },
+        )
 
     duplicate = db.query(Payment).filter(
         Payment.gateway_payment_id == body.razorpay_payment_id,
@@ -1749,7 +1758,13 @@ def razorpay_verify(body: RazorpayVerifyRequest, request: Request, db: Session =
         payment.failure_reason = "Duplicate payment ID"
         order.status = "Failed"
         db.commit()
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Payment already processed")
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={
+                "detail": "Payment already processed",
+                "order_id": str(order.id),
+            },
+        )
 
     try:
         payment.gateway_payment_id = body.razorpay_payment_id

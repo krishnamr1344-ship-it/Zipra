@@ -8,7 +8,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class ApiService {
   static const _baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://34.100.218.97',
+    defaultValue: 'https://zipra-api-583825347591.asia-south1.run.app',
   );
   static const _tokenKey = 'auth_token';
   static const _userNameKey = 'user_name';
@@ -427,7 +427,28 @@ class ApiService {
     if (intentId != null) body['intent_id'] = intentId;
     final res = await http.post(Uri.parse('$_baseUrl/api/payments/verify'), headers: headers, body: jsonEncode(body)).timeout(const Duration(seconds: 60));
     await _checkAndHandleUnauthorized(res.statusCode);
-    return _handleResponse(res);
+
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      try {
+        final decoded = jsonDecode(res.body);
+        if (decoded is Map<String, dynamic>) return decoded;
+      } catch (e) {
+        debugPrint('ApiService.verifyRazorpayPayment: decode failed: $e');
+      }
+      throw ApiException('Invalid response (${res.statusCode})');
+    }
+
+    String msg = 'Request failed (${res.statusCode})';
+    String? orderIdFromError;
+    try {
+      final decoded = jsonDecode(res.body);
+      if (decoded is Map<String, dynamic>) {
+        msg = (decoded['detail'] as String?) ?? msg;
+        orderIdFromError = decoded['order_id'] as String?;
+      }
+    } catch (_) {}
+
+    throw ApiException(msg, orderId: orderIdFromError);
   }
 
   Future<Map<String, dynamic>> createRazorpayOrder(String orderId) async {
@@ -551,7 +572,8 @@ class ApiService {
 
 class ApiException implements Exception {
   final String message;
-  const ApiException(this.message);
+  final String? orderId;
+  const ApiException(this.message, {this.orderId});
   @override
   String toString() => message;
 }

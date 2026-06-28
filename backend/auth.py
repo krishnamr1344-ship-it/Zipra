@@ -8,13 +8,11 @@ Security:
 """
 import logging
 import time
-from typing import Optional
 logger = logging.getLogger(__name__)
 import os
 import uuid
 from datetime import datetime, timedelta, timezone
 
-import bcrypt
 import jwt
 import httpx
 from cryptography import x509
@@ -27,9 +25,6 @@ from database import get_db
 from models import User, TokenBlacklist
 from schemas import GoogleLoginRequest, UpdateProfileRequest, UpdatePhoneRequest
 
-
-def _hash_password(password: str) -> str:
-    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(rounds=int(os.getenv("BCRYPT_ROUNDS", "12")))).decode("utf-8")
 
 JWT_SECRET = os.getenv("JWT_SECRET")
 JWT_EXPIRY_MINUTES = int(os.getenv("JWT_EXPIRY_MINUTES", "1440"))

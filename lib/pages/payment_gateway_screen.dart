@@ -181,11 +181,15 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
       );
     } catch (e) {
       if (!mounted) return;
+      String? orderId = widget.orderId;
+      if (e is ApiException && e.orderId != null) {
+        orderId = e.orderId;
+      }
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (_) => PaymentFailedScreen(
-            orderId: widget.orderId,
+            orderId: orderId,
             total: widget.total,
           ),
         ),

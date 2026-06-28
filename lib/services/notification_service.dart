@@ -47,7 +47,7 @@ class NotificationModel {
 class NotificationService extends ChangeNotifier {
   static const _baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://34.100.218.97',
+    defaultValue: 'https://zipra-api-583825347591.asia-south1.run.app',
   );
 
   List<NotificationModel> _notifications = [];
