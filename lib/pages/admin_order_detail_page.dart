@@ -215,6 +215,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                         ),
                         onTap: () async {
                           Navigator.pop(ctx);
+                          final messenger = ScaffoldMessenger.of(context);
                           try {
                             await _api.updateOrderStatus(
                                 _order['id'], s);
@@ -225,7 +226,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                               }
                               _order['status'] = s;
                             });
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            messenger.showSnackBar(
                               SnackBar(
                                 content: Text('Order $s'),
                                 behavior: SnackBarBehavior.floating,
@@ -233,13 +234,11 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                               ),
                             );
                           } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                    content: Text('$e'),
-                                    behavior: SnackBarBehavior.floating),
-                              );
-                            }
+                            messenger.showSnackBar(
+                              SnackBar(
+                                  content: Text('$e'),
+                                  behavior: SnackBarBehavior.floating),
+                            );
                           }
                         },
                       ),
@@ -360,6 +359,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                       final otp = otpController.text.trim();
                       if (otp.length != 6) return;
                       setDialogState(() => loading = true);
+                      final mainMessenger = ScaffoldMessenger.of(context);
                       try {
                         await _api.deliverOrder(_order['id'], otp);
                         if (!ctx.mounted) return;
@@ -368,7 +368,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                         setState(() {
                           _order['status'] = 'Delivered';
                         });
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        mainMessenger.showSnackBar(
                           const SnackBar(
                             content: Text('Order delivered successfully'),
                             behavior: SnackBarBehavior.floating,

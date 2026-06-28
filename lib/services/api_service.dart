@@ -16,9 +16,6 @@ class ApiService {
   static const _userPhoneKey = 'user_phone';
   static const _userRoleKey = 'user_role';
   static const _userIdKey = 'user_id';
-  static const _connectTimeout = Duration(seconds: 15);
-  static const _receiveTimeout = Duration(seconds: 30);
-
   static final http.Client _clientPool = http.Client();
 
   final _secureStorage = const FlutterSecureStorage();

@@ -53,6 +53,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
       }
       wishlistNotifier.load();
       cartNotifier.load();
+      if (!mounted) return;
       Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomePage()), (route) => false);
     } on ApiException catch (e) {
       if (!mounted) return;

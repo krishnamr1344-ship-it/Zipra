@@ -25,7 +25,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
   bool _loadingMore = false;
   int _page = 1;
   String _search = '';
-  ScrollController _scrollController = ScrollController();
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {

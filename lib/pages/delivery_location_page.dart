@@ -285,8 +285,9 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
                     height: 52,
                     child: ElevatedButton.icon(
                       onPressed: () async {
+                        final navigator = Navigator.of(context);
                         final result = await confirmAndSave();
-                        if (result != null && mounted) Navigator.pop(context, result);
+                        if (result != null && mounted) navigator.pop(result);
                       },
                       icon: const Icon(Icons.check_circle, size: 20),
                       label: const Text('Confirm Address', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
