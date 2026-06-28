@@ -558,9 +558,11 @@ class ApiService {
 
   Future<void> warmUp() async {
     try {
-      await _clientPool
+      final client = http.Client();
+      await client
           .get(Uri.parse('$_baseUrl/api/app-version'))
           .timeout(const Duration(seconds: 20));
+      client.close();
     } catch (e) {
       debugPrint('ApiService.warmUp: request failed: $e');
     }

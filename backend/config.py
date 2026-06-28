@@ -12,6 +12,7 @@ PUBLIC_PATHS: set[str] = {
     "/api/payments/webhook",
     "/api/banners",
     "/api/settings",
+    "/api/suggest-product",
 }
 
 PUBLIC_PATH_PREFIXES: set[str] = set()
