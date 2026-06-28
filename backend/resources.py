@@ -2060,7 +2060,7 @@ def add_pack_to_cart(body: PackAddRequest, request: Request, db: Session = Depen
 
 @router.post("/suggest-product", status_code=status.HTTP_201_CREATED)
 def suggest_product(body: SuggestProductRequest, request: Request, db: Session = Depends(get_db)):
-    user_id = _get_user_id(request)
+    user_id = getattr(request.state, "user_id", None)
     suggestion = ProductSuggestion(
         user_id=user_id,
         product_name=body.product_name.strip(),
