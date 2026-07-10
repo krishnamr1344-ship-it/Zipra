@@ -23,7 +23,7 @@ from typing import Optional
 from database import get_db
 from models import (
     User, Category, Product, ProductImage, Address, CartItem,
-    Order, OrderItem, Payment, DeliveryZone, ComboPack, ComboPackItem, Offer,
+    Order, OrderItem, Payment, DeliveryZone, DeliveryFee, ComboPack, ComboPackItem, Offer,
 )
 from schemas import (
     CategoryCreate, CategoryResponse,
@@ -606,7 +606,7 @@ def create_order(body: OrderCreateRequest, request: Request, db: Session = Depen
     order = Order(
         user_id=user_id,
         address_id=addr.id,
-        total_amount=total,
+        total_amount=total + (body.delivery_fee or Decimal("0.00")),
         payment_method=body.payment_method,
     )
     db.add(order)
@@ -690,7 +690,7 @@ def create_order_direct(body: OrderDirectCreateRequest, request: Request, db: Se
     order = Order(
         user_id=user_id,
         address_id=address_id,
-        total_amount=total,
+        total_amount=total + (body.delivery_fee or Decimal("0.00")),
         payment_method=body.payment_method,
     )
     db.add(order)
@@ -838,6 +838,24 @@ def check_delivery_zone(body: ZoneCheckRequest, db: Session = Depends(get_db)):
         # Fail open: if zones can't be verified (table missing, no zones, etc.),
         # allow delivery everywhere rather than blocking the whole app.
         return ZoneCheckResponse(serviceable=True, message="No delivery zones configured — allowing all areas")
+
+
+class DeliveryFeeRequest(BaseModel):
+    subtotal: Decimal
+
+
+@router.post("/delivery-fee")
+def get_delivery_fee(body: DeliveryFeeRequest, db: Session = Depends(get_db)):
+    fee = db.query(DeliveryFee).filter(
+        DeliveryFee.is_deleted == False,
+        DeliveryFee.is_active == True,
+        DeliveryFee.min_order_amount <= body.subtotal,
+    ).order_by(DeliveryFee.min_order_amount.desc()).first()
+    if not fee:
+        return {"fee": 0, "message": "Free delivery"}
+    if fee.max_order_amount is not None and body.subtotal > fee.max_order_amount:
+        return {"fee": 0, "message": "Free delivery"}
+    return {"fee": float(fee.fee), "message": "Delivery fee applied"}
 
 
 # ─── COMBO PACKS ──────────────────────────────────────────────────

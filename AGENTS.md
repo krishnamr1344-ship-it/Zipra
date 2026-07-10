@@ -59,6 +59,8 @@ Implement Zepto/Swiggy/Blinkit-style GPS delivery location system with editable 
 - Set up permanent tunnel with `cloudflared tunnel create`
 - Remove self-signed cert HttpOverrides before Play Store
 - Update _baseUrl in 3 files (api_service, admin_api_service, delivery_zone_service)
+- Deploy latest backend to Cloud Run
+- Build & test final APK with delivery fee logic
 - Play Store publish
 
 ## Critical Context
@@ -81,6 +83,10 @@ Implement Zepto/Swiggy/Blinkit-style GPS delivery location system with editable 
 - `lib/services/api_service.dart` — `getComboPacks()`, `addPackToCart()`
 - `lib/services/admin_api_service.dart` — Admin CRUD methods for packs
 - **Token Expiry Fix** — `delivery_location_page.dart` now detects token expiry on "Confirm Address", clears session, and redirects to login
+- **Delivery Fee System** — New `DeliveryFee` backend model (min/max order amount, fee) with admin CRUD, public `POST /api/delivery-fee` endpoint to calculate applicable fee, Flutter admin page (`admin_delivery_fee_page.dart`) for managing fee tiers, and PaymentPage integration to fetch, display, and apply delivery fee to order total. Also added `delivery_fee` field to `OrderCreateRequest`/`OrderDirectCreateRequest` schemas.
+- **Delivery Fee Public Endpoint** — `POST /api/delivery-fee` in `resources.py` accepts `subtotal` and returns matching fee tier (highest `min_order_amount` ≤ subtotal, respecting `max_order_amount` upper bound)
+- **Admin Delivery Fee Page** — `lib/pages/admin_delivery_fee_page.dart` with full CRUD (list, create/edit bottom sheet, delete), linked from admin home page
+- **PaymentPage Delivery Fee** — Fetches fee on init via `getDeliveryFee(subtotal)`, displays subtotal/fee/grand total breakdown, passes `deliveryFee` to `createOrder`
 
 ## Relevant Files
 - `backend/migrations/add_address_fields.sql` — schema migration

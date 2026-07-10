@@ -765,32 +765,32 @@ class _HomePageState extends State<HomePage> {
                   },
                   child: Container(
                     width: (MediaQuery.of(context).size.width - 52) / 2,
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(16),
                       boxShadow: [
-                        BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 2)),
+                        BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
                       ],
                     ),
                     child: Column(
                       children: [
                         ClipRRect(
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(12),
                           child: SizedBox(
                             width: double.infinity,
-                            height: 100,
+                            height: 80,
                             child: imageUrl != null
-                                ? Image.network(imageUrl, fit: BoxFit.cover, errorBuilder: (_, _, _) => _catFallback(cat))
-                                : _catFallback(cat),
+                                ? Image.network(imageUrl, fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox.shrink())
+                                : const SizedBox.shrink(),
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 8),
                         Text(
                           cat,
                           style: const TextStyle(
                             fontWeight: FontWeight.w600,
-                            fontSize: 14,
+                            fontSize: 13,
                             color: AppColors.textPrimary,
                           ),
                           textAlign: TextAlign.center,

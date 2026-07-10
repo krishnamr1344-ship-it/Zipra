@@ -8,6 +8,7 @@ import 'admin_categories_page.dart';
 import 'admin_orders_page.dart';
 import 'admin_users_page.dart';
 import 'admin_delivery_zone_page.dart';
+import 'admin_delivery_fee_page.dart';
 import 'admin_combo_packs_page.dart';
 import 'admin_offers_page.dart';
 
@@ -203,6 +204,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
                   _menuCard(Colors.green, Icons.receipt_long, 'Orders', 'View & manage', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminOrdersPage()))),
                   _menuCard(Colors.blue, Icons.people, 'Users', 'Manage accounts', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminUsersPage()))),
                   _menuCard(Colors.deepPurple, Icons.map, 'Delivery Zones', 'Set service areas', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminDeliveryZonePage()))),
+                  _menuCard(Colors.teal, Icons.local_shipping, 'Delivery Fees', 'Manage delivery charges', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminDeliveryFeePage()))),
                   _menuCard(AppColors.primary, Icons.inventory_2, 'Combo Packs', 'Monthly Needs packs', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminComboPacksPage())).then((_) => _load())),
                   _menuCard(Colors.orange, Icons.local_offer, 'Offers', 'Discount deals', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminOffersPage())).then((_) => _load())),
                 ]),

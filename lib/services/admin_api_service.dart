@@ -194,4 +194,32 @@ class AdminApiService {
     }
     return jsonDecode(res.body);
   }
+
+  // ─── Delivery Fees ───────────────────────────────────────────────
+
+  Future<List<dynamic>> getDeliveryFees() async {
+    final res = await http.get(Uri.parse('$_baseUrl/api/admin/delivery-fees'), headers: await _authHeader());
+    if (res.statusCode != 200) throw ApiException('Failed to load delivery fees');
+    return jsonDecode(res.body);
+  }
+
+  Future<Map<String, dynamic>> createDeliveryFee(Map<String, dynamic> data) async {
+    final res = await http.post(Uri.parse('$_baseUrl/api/admin/delivery-fees'), headers: await _authHeader(), body: jsonEncode(data));
+    if (res.statusCode != 201) throw ApiException(jsonDecode(res.body)['detail'] ?? 'Failed to create fee');
+    return jsonDecode(res.body);
+  }
+
+  Future<Map<String, dynamic>> updateDeliveryFee(String id, Map<String, dynamic> data) async {
+    final res = await http.put(Uri.parse('$_baseUrl/api/admin/delivery-fees/$id'), headers: await _authHeader(), body: jsonEncode(data));
+    if (res.statusCode != 200) throw ApiException(jsonDecode(res.body)['detail'] ?? 'Failed to update fee');
+    return jsonDecode(res.body);
+  }
+
+  Future<void> deleteDeliveryFee(String id) async {
+    final res = await http.delete(Uri.parse('$_baseUrl/api/admin/delivery-fees/$id'), headers: await _authHeader());
+    if (res.statusCode != 200) {
+      final msg = jsonDecode(res.body)['detail'] ?? 'Failed to delete fee';
+      throw ApiException('$msg');
+    }
+  }
 }

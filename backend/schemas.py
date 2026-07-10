@@ -480,6 +480,7 @@ class OrderItemInput(BaseModel):
 class OrderCreateRequest(BaseModel):
     address_id: str
     payment_method: str
+    delivery_fee: Optional[Decimal] = None
 
     @field_validator("payment_method")
     @classmethod
@@ -493,6 +494,7 @@ class OrderDirectCreateRequest(BaseModel):
     items: list[OrderItemInput] = Field(min_length=1)
     payment_method: str
     address_id: Optional[str] = None
+    delivery_fee: Optional[Decimal] = None
 
     @field_validator("payment_method")
     @classmethod
@@ -750,3 +752,27 @@ class StatusUpdateRequest(BaseModel):
         if v not in VALID_ORDER_STATUSES:
             raise ValueError(f"Status must be one of: {', '.join(sorted(VALID_ORDER_STATUSES))}")
         return v
+
+
+# ─── DELIVERY FEE ──────────────────────────────────────────────────
+
+class DeliveryFeeCreate(BaseModel):
+    min_order_amount: Decimal = Decimal("0.00")
+    max_order_amount: Optional[Decimal] = None
+    fee: Decimal = Field(..., gt=Decimal("0.00"))
+
+
+class DeliveryFeeUpdate(BaseModel):
+    min_order_amount: Optional[Decimal] = None
+    max_order_amount: Optional[Decimal] = None
+    fee: Optional[Decimal] = None
+    is_active: Optional[bool] = None
+
+
+class DeliveryFeeResponse(BaseModel):
+    id: str
+    min_order_amount: float
+    max_order_amount: Optional[float] = None
+    fee: float
+    is_active: bool
+    created_at: datetime

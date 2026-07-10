@@ -24,10 +24,31 @@ class _PaymentPageState extends State<PaymentPage> {
   String _deliveryLandmark = '';
   String _addressId = '';
 
+  double _deliveryFee = 0;
+  String _deliveryFeeMsg = '';
+  bool _feeLoading = true;
+
+  int get _grandTotal => widget.total + _deliveryFee.round();
+
   @override
   void initState() {
     super.initState();
     _loadAddress();
+    _loadFee();
+  }
+
+  Future<void> _loadFee() async {
+    try {
+      final data = await _api.getDeliveryFee(widget.total.toDouble());
+      if (!mounted) return;
+      setState(() {
+        _deliveryFee = (data['fee'] as num?)?.toDouble() ?? 0;
+        _deliveryFeeMsg = data['message'] as String? ?? '';
+        _feeLoading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _feeLoading = false);
+    }
   }
 
   Future<void> _loadAddress() async {
@@ -91,7 +112,7 @@ class _PaymentPageState extends State<PaymentPage> {
         'product_id': i.productId,
         'quantity': i.count,
       })).toList();
-      await _api.createOrder(items, 'cod', addressId: _addressId.isNotEmpty ? _addressId : null);
+      await _api.createOrder(items, 'cod', addressId: _addressId.isNotEmpty ? _addressId : null, deliveryFee: _deliveryFee);
     } catch (e) {
       setState(() => _processing = false);
       if (!mounted) return;
@@ -100,7 +121,7 @@ class _PaymentPageState extends State<PaymentPage> {
       );
       return;
     }
-    await orderNotifier.add(cartNotifier.items, widget.total);
+    await orderNotifier.add(cartNotifier.items, _grandTotal);
     cartNotifier.clear();
     if (!mounted) return;
     Navigator.pushReplacement(
@@ -125,11 +146,43 @@ class _PaymentPageState extends State<PaymentPage> {
                     color: const Color(0xFFF5F5FF),
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Row(
+                  child: Column(
                     children: [
-                      const Text('Total Amount', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-                      const Spacer(),
-                      Text('₹${widget.total}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                      Row(
+                        children: [
+                          const Text('Subtotal', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+                          const Spacer(),
+                          Text('₹${widget.total}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                      if (_deliveryFee > 0) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Text('Delivery Fee', style: TextStyle(fontSize: 14, color: Colors.teal.shade700)),
+                            const Spacer(),
+                            Text('₹${_deliveryFee.round()}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.teal.shade700)),
+                          ],
+                        ),
+                      ],
+                      if (_deliveryFeeMsg.isNotEmpty && _deliveryFee == 0) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(Icons.check_circle, size: 14, color: Colors.green.shade600),
+                            const SizedBox(width: 4),
+                            Text(_deliveryFeeMsg, style: TextStyle(fontSize: 12, color: Colors.green.shade600)),
+                          ],
+                        ),
+                      ],
+                      const Divider(height: 20),
+                      Row(
+                        children: [
+                          const Text('Total', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          const Spacer(),
+                          Text('₹$_grandTotal', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -232,7 +285,7 @@ class _PaymentPageState extends State<PaymentPage> {
                   ),
                   child: _processing
                       ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                      : Text('Place Order · ₹${widget.total}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                      : Text('Place Order · ₹$_grandTotal', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
               ),
             ),

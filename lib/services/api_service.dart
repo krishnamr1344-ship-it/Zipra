@@ -223,13 +223,14 @@ class ApiService {
     return _handleListResponse(res);
   }
 
-  Future<Map<String, dynamic>> createOrder(List<Map<String, dynamic>> items, String paymentMethod, {String? addressId}) async {
+  Future<Map<String, dynamic>> createOrder(List<Map<String, dynamic>> items, String paymentMethod, {String? addressId, double? deliveryFee}) async {
     final headers = await _authHeaders(required: true);
     final bodyMap = <String, dynamic>{
       'items': items,
       'payment_method': paymentMethod,
     };
     if (addressId != null) bodyMap['address_id'] = addressId;
+    if (deliveryFee != null) bodyMap['delivery_fee'] = deliveryFee;
     final res = await http.post(Uri.parse('$_baseUrl/api/orders/direct'), headers: headers, body: jsonEncode(bodyMap));
     return _handleResponse(res);
   }
@@ -265,6 +266,14 @@ class ApiService {
       body: jsonEncode({'pack_id': packId}),
     );
     return _handleResponse(res);
+  }
+
+  // ─── Delivery Fee ──────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> getDeliveryFee(double subtotal) async {
+    final res = await http.post(Uri.parse('$_baseUrl/api/delivery-fee'), headers: {'Content-Type': 'application/json'}, body: jsonEncode({'subtotal': subtotal}));
+    if (res.statusCode != 200) return {'fee': 0, 'message': 'Free delivery'};
+    return jsonDecode(res.body) as Map<String, dynamic>;
   }
 }
 
