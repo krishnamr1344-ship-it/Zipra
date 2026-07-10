@@ -10,6 +10,7 @@ Security:
 """
 import uuid
 from datetime import datetime, timezone
+from decimal import Decimal
 
 from sqlalchemy import (
     Column, String, Boolean, DateTime, Text, Integer, Numeric,

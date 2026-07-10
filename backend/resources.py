@@ -19,6 +19,8 @@ from sqlalchemy.orm import Session
 import httpx
 
 from typing import Optional
+from decimal import Decimal
+from pydantic import BaseModel
 
 from database import get_db
 from models import (
