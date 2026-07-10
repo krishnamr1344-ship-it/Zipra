@@ -757,11 +757,12 @@ class _HomePageState extends State<HomePage> {
         crossAxisCount: 2,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
-        childAspectRatio: 0.85,
+        childAspectRatio: 1.05,
       ),
       itemCount: cats.length,
       itemBuilder: (_, i) {
         final cat = cats[i];
+        final bgColor = _colorFor(cat);
         final catProducts = _allProducts.where((p) => p['category_name'] == cat).toList();
         final imageUrl = catProducts.isNotEmpty
             ? _extractImages(catProducts.first['images']).isNotEmpty
@@ -780,39 +781,47 @@ class _HomePageState extends State<HomePage> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
+                BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 2)),
               ],
             ),
             clipBehavior: Clip.antiAlias,
             child: Column(
               children: [
+                // Image area with tinted background
                 Expanded(
                   child: Container(
                     width: double.infinity,
-                    color: Colors.white,
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: imageUrl != null
-                              ? Image.network(imageUrl, fit: BoxFit.contain, errorBuilder: (_, _, _) => _catIconWidget(cat))
-                              : _catIconWidget(cat),
-                        ),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [bgColor.withValues(alpha: 0.5), bgColor.withValues(alpha: 0.2)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
+                    ),
+                    child: Center(
+                      child: imageUrl != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                imageUrl,
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, __, ___) =>
+                                    _catIconWidget(cat, bgColor),
+                              ),
+                            )
+                          : _catIconWidget(cat, bgColor),
                     ),
                   ),
                 ),
+                // Category name
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-                  decoration: BoxDecoration(
-                    color: AppColors.chipBg.withAlpha(80),
-                    border: Border(top: BorderSide(color: Colors.grey.withAlpha(15))),
-                  ),
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                   child: Text(
                     cat,
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textPrimary),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary),
                     textAlign: TextAlign.center,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -826,10 +835,14 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _catIconWidget(String cat) {
+  Widget _catIconWidget(String cat, Color bgColor) {
     return Container(
-      decoration: BoxDecoration(color: AppColors.chipBg, borderRadius: BorderRadius.circular(8)),
-      child: Center(child: Icon(_catIcon(cat), size: 40, color: _colorFor(cat).withAlpha(180))),
+      width: 52,
+      height: 52,
+      decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(14)),
+      child: Center(
+        child: Icon(_catIcon(cat), size: 28, color: AppColors.primary),
+      ),
     );
   }
 

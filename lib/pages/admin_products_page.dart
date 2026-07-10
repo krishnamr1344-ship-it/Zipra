@@ -56,8 +56,13 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
 
   void _showForm([Map<String, dynamic>? product]) {
     final nameCtl = TextEditingController(text: product?['name'] ?? '');
-    final priceCtl = TextEditingController(text: product?['price']?.toString() ?? '');
-    final originalPriceCtl = TextEditingController(text: product?['original_price']?.toString() ?? '');
+    final originalPriceCtl = TextEditingController(
+      text: product?['original_price']?.toString() ?? '',
+    );
+    final discountCtl = TextEditingController();
+    final offerPriceCtl = TextEditingController(
+      text: product?['price']?.toString() ?? '',
+    );
     final unitCtl = TextEditingController(text: product?['unit'] ?? '');
     final stockCtl = TextEditingController(text: product?['stock']?.toString() ?? '0');
     final images = List.generate(3, (i) => TextEditingController(
@@ -68,234 +73,370 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
     String? catId = product?['category_id'];
     bool saving = false;
 
+    // If editing, calculate discount % from existing prices
+    if (product != null) {
+      final orig = double.tryParse(product['original_price']?.toString() ?? '') ?? 0;
+      final offer = double.tryParse(product['price']?.toString() ?? '') ?? 0;
+      if (orig > 0 && offer > 0 && orig > offer) {
+        final disc = ((orig - offer) * 100 / orig).round();
+        discountCtl.text = disc.toString();
+      }
+    }
+
+    void recalculateOffer() {
+      final orig = double.tryParse(originalPriceCtl.text) ?? 0;
+      final disc = double.tryParse(discountCtl.text) ?? 0;
+      if (orig > 0 && disc > 0 && disc < 100) {
+        final offer = orig * (100 - disc) ~/ 100;
+        offerPriceCtl.text = offer.toString();
+      } else if (orig > 0 && (disc <= 0 || disc >= 100)) {
+        offerPriceCtl.text = orig.toStringAsFixed(0);
+      }
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheetState) => Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 24, right: 24, top: 24),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 40, height: 40,
-                      decoration: BoxDecoration(
-                        color: Theme.of(ctx).colorScheme.primary.withAlpha(20),
-                        borderRadius: BorderRadius.circular(12),
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.9),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Header ──
+                  Row(
+                    children: [
+                      Container(
+                        width: 44, height: 44,
+                        decoration: BoxDecoration(
+                          color: Theme.of(ctx).colorScheme.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Icon(product == null ? Icons.add : Icons.edit,
+                            color: Theme.of(ctx).colorScheme.primary, size: 22),
                       ),
-                      child: Icon(product == null ? Icons.add : Icons.edit, color: Theme.of(ctx).colorScheme.primary),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(product == null ? 'Add Product' : 'Edit Product', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                DropdownButtonFormField<String>(
-                  initialValue: catId,
-                  decoration: InputDecoration(
-                    labelText: 'Category',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      const SizedBox(width: 14),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(product == null ? 'Add Product' : 'Edit Product',
+                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                          Text(product == null ? 'Enter product details' : 'Update product information',
+                              style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+                        ],
+                      ),
+                    ],
                   ),
-                  items: _categories.map<DropdownMenuItem<String>>((c) {
-                    final cat = c as Map<String, dynamic>;
-                    return DropdownMenuItem<String>(value: cat['id'] as String?, child: Text(cat['name'] ?? ''));
-                  }).toList(),
-                  onChanged: (v) => setSheetState(() => catId = v),
-                ),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: nameCtl,
-                  decoration: InputDecoration(
-                    labelText: 'Name',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  const SizedBox(height: 24),
+
+                  // ── Category + Name ──
+                  DropdownButtonFormField<String>(
+                    initialValue: catId,
+                    decoration: InputDecoration(
+                      labelText: 'Category',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    ),
+                    items: _categories.map<DropdownMenuItem<String>>((c) {
+                      final cat = c as Map<String, dynamic>;
+                      return DropdownMenuItem<String>(value: cat['id'] as String?, child: Text(cat['name'] ?? ''));
+                    }).toList(),
+                    onChanged: (v) => setSheetState(() => catId = v),
                   ),
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: priceCtl,
-                        decoration: InputDecoration(
-                          labelText: 'Offer Price (₹)',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        ),
-                        keyboardType: TextInputType.number,
-                      ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: nameCtl,
+                    decoration: InputDecoration(
+                      labelText: 'Product Name',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: originalPriceCtl,
-                        decoration: InputDecoration(
-                          labelText: 'Original Price (₹)',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        ),
-                        keyboardType: TextInputType.number,
-                      ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // ── Pricing Section ──
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.04),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: stockCtl,
-                        decoration: InputDecoration(
-                          labelText: 'Stock',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.local_offer, size: 16, color: AppColors.primary),
+                            const SizedBox(width: 8),
+                            const Text('Pricing',
+                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                          ],
                         ),
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: unitCtl,
-                        decoration: InputDecoration(
-                          labelText: 'Unit',
-                          hintText: 'kg, pcs',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        const SizedBox(height: 14),
+                        // Original Price + Discount %
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: originalPriceCtl,
+                                decoration: InputDecoration(
+                                  labelText: 'Original Price (₹)',
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                ),
+                                keyboardType: TextInputType.number,
+                                onChanged: (_) {
+                                  recalculateOffer();
+                                  setSheetState(() {});
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: TextField(
+                                controller: discountCtl,
+                                decoration: InputDecoration(
+                                  labelText: 'Discount (%)',
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                  suffix: const Text('%', style: TextStyle(fontSize: 15, color: Colors.grey)),
+                                ),
+                                keyboardType: TextInputType.number,
+                                onChanged: (_) {
+                                  recalculateOffer();
+                                  setSheetState(() {});
+                                },
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
+                        const SizedBox(height: 12),
+                        // Auto-calculated Offer Price
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.sell, size: 18, color: Colors.green),
+                              const SizedBox(width: 8),
+                              const Text('Offer Price: ',
+                                  style: TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w500)),
+                              Text(
+                                offerPriceCtl.text.isNotEmpty ? '₹${offerPriceCtl.text}' : '—',
+                                style: const TextStyle(
+                                    fontSize: 18, fontWeight: FontWeight.w700, color: Colors.green),
+                              ),
+                              if (discountCtl.text.isNotEmpty && double.tryParse(discountCtl.text) != null && double.parse(discountCtl.text) > 0) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text('${discountCtl.text}% OFF',
+                                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.green)),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                const Text('Product Images (min 3)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF2D2D3A))),
-                const SizedBox(height: 8),
-                ...List.generate(3, (i) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Row(
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ── Stock + Unit ──
+                  Row(
                     children: [
                       Expanded(
                         child: TextField(
-                          controller: images[i],
+                          controller: stockCtl,
                           decoration: InputDecoration(
-                            labelText: 'Image URL ${i + 1}',
-                            hintText: images[i].text.isEmpty ? 'URL or tap upload' : '',
+                            labelText: 'Stock',
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                            suffixIcon: images[i].text.trim().isNotEmpty && images[i].text.trim().startsWith('http')
-                                ? Padding(
-                                    padding: const EdgeInsets.all(6),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Image.network(images[i].text.trim(), width: 36, height: 36, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox()),
-                                    ),
-                                  )
-                                : null,
                           ),
+                          keyboardType: TextInputType.number,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      SizedBox(
-                        height: 44,
-                        child: ElevatedButton(
-                          onPressed: saving ? null : () async {
-                            final picker = ImagePicker();
-                            final picked = await picker.pickImage(source: ImageSource.gallery);
-                            if (picked == null) return;
-                            if (product == null) {
-                              images[i].text = picked.path;
-                              setSheetState(() {});
-                              return;
-                            }
-                            try {
-                              final result = await _api.uploadProductImage(product['id'], File(picked.path));
-                              images[i].text = result['image_url'];
-                              setSheetState(() {});
-                            } catch (e) {
-                              if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('$e'), behavior: SnackBarBehavior.floating));
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.chipBg,
-                            foregroundColor: AppColors.primary,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            elevation: 0,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: unitCtl,
+                          decoration: InputDecoration(
+                            labelText: 'Unit',
+                            hintText: 'kg, pcs',
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           ),
-                          child: const Icon(Icons.image_outlined, size: 20),
                         ),
                       ),
                     ],
                   ),
-                )),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(ctx).colorScheme.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      elevation: 0,
+                  const SizedBox(height: 20),
+
+                  // ── Images ──
+                  const Text('Product Images (min 3)',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF2D2D3A))),
+                  const SizedBox(height: 4),
+                  Text('Add product photos from URL or upload',
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                  const SizedBox(height: 12),
+                  ...List.generate(3, (i) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: images[i],
+                            decoration: InputDecoration(
+                              labelText: 'Image ${i + 1}',
+                              hintText: images[i].text.isEmpty ? 'URL or upload' : '',
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              prefixIcon: images[i].text.trim().isNotEmpty && images[i].text.trim().startsWith('http')
+                                  ? Padding(
+                                      padding: const EdgeInsets.all(6),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.network(images[i].text.trim(), width: 32, height: 32, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox()),
+                                      ),
+                                    )
+                                  : const Icon(Icons.image_outlined, size: 20, color: Colors.grey),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        SizedBox(
+                          height: 46,
+                          child: ElevatedButton(
+                            onPressed: saving ? null : () async {
+                              final picker = ImagePicker();
+                              final picked = await picker.pickImage(source: ImageSource.gallery);
+                              if (picked == null) return;
+                              if (product == null) {
+                                images[i].text = picked.path;
+                                setSheetState(() {});
+                                return;
+                              }
+                              try {
+                                final result = await _api.uploadProductImage(product['id'], File(picked.path));
+                                images[i].text = result['image_url'];
+                                setSheetState(() {});
+                              } catch (e) {
+                                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('$e'), behavior: SnackBarBehavior.floating));
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.chipBg,
+                              foregroundColor: AppColors.primary,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              elevation: 0,
+                            ),
+                            child: const Icon(Icons.upload_file, size: 20),
+                          ),
+                        ),
+                      ],
                     ),
-                    onPressed: saving ? null : () async {
-                      if (images.any((c) => c.text.trim().isEmpty)) {
-                        ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Please provide at least 3 images'), behavior: SnackBarBehavior.floating));
-                        return;
-                      }
-                      setSheetState(() => saving = true);
-                      try {
-                        final List<String> imageUrls = [];
-                        for (final c in images) {
-                          final val = c.text.trim();
-                          if (val.startsWith('http')) {
-                            imageUrls.add(val);
-                          } else if (val.isNotEmpty) {
-                            if (product != null) {
-                              final result = await _api.uploadProductImage(product['id'], File(val));
-                              imageUrls.add(result['image_url']);
-                            }
-                          }
-                        }
-                        if (imageUrls.length < 3) {
-                          setSheetState(() => saving = false);
-                          ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Please provide at least 3 images (URL or upload)'), behavior: SnackBarBehavior.floating));
+                  )),
+                  const SizedBox(height: 24),
+
+                  // ── Save Button ──
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(ctx).colorScheme.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        elevation: 0,
+                      ),
+                      onPressed: saving ? null : () async {
+                        if (catId == null || catId!.isEmpty) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Select a category'), behavior: SnackBarBehavior.floating));
                           return;
                         }
-                        final data = {
-                          'category_id': catId ?? '',
-                          'name': nameCtl.text,
-                          'price': double.parse(priceCtl.text),
-                          'unit': unitCtl.text,
-                          'stock': int.parse(stockCtl.text),
-                          'images': imageUrls,
-                          'original_price': originalPriceCtl.text.isNotEmpty ? double.parse(originalPriceCtl.text) : null,
-                        };
-                        if (product == null) {
-                          await _api.createProduct(data);
-                        } else {
-                          await _api.updateProduct(product['id'], data);
+                        if (nameCtl.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Enter product name'), behavior: SnackBarBehavior.floating));
+                          return;
                         }
-                        if (!ctx.mounted) return;
-                        Navigator.pop(ctx);
-                        _load();
-                      } catch (e) {
-                        setSheetState(() => saving = false);
-                        ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(e.toString()), behavior: SnackBarBehavior.floating));
-                      }
-                    },
-                    child: saving ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : Text(product == null ? 'Add Product' : 'Save Changes', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                        if (originalPriceCtl.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Enter original price'), behavior: SnackBarBehavior.floating));
+                          return;
+                        }
+                        if (images.any((c) => c.text.trim().isEmpty)) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Please provide at least 3 images'), behavior: SnackBarBehavior.floating));
+                          return;
+                        }
+
+                        final origPrice = double.parse(originalPriceCtl.text);
+                        final discPct = double.tryParse(discountCtl.text) ?? 0;
+                        final offerPrice = discPct > 0 ? (origPrice * (100 - discPct) / 100).round() : origPrice.round();
+
+                        setSheetState(() => saving = true);
+                        try {
+                          final List<String> imageUrls = [];
+                          for (final c in images) {
+                            final val = c.text.trim();
+                            if (val.startsWith('http')) {
+                              imageUrls.add(val);
+                            } else if (val.isNotEmpty) {
+                              if (product != null) {
+                                final result = await _api.uploadProductImage(product['id'], File(val));
+                                imageUrls.add(result['image_url']);
+                              }
+                            }
+                          }
+                          if (imageUrls.length < 3) {
+                            setSheetState(() => saving = false);
+                            ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Please provide at least 3 images (URL or upload)'), behavior: SnackBarBehavior.floating));
+                            return;
+                          }
+                          final data = {
+                            'category_id': catId ?? '',
+                            'name': nameCtl.text,
+                            'price': offerPrice,
+                            'unit': unitCtl.text,
+                            'stock': int.parse(stockCtl.text),
+                            'images': imageUrls,
+                            'original_price': origPrice,
+                          };
+                          if (product == null) {
+                            await _api.createProduct(data);
+                          } else {
+                            await _api.updateProduct(product['id'], data);
+                          }
+                          if (!ctx.mounted) return;
+                          Navigator.pop(ctx);
+                          _load();
+                        } catch (e) {
+                          setSheetState(() => saving = false);
+                          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(e.toString()), behavior: SnackBarBehavior.floating));
+                        }
+                      },
+                      child: saving
+                          ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : Text(product == null ? 'Add Product' : 'Save Changes',
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 24),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -455,11 +596,27 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                                       const SizedBox(height: 4),
                                       Row(
                                         children: [
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                            decoration: BoxDecoration(color: Colors.green.withAlpha(20), borderRadius: BorderRadius.circular(8)),
-                                            child: Text('₹${p['price']} / ${p['unit']}', style: TextStyle(fontSize: 11, color: Colors.green.shade700, fontWeight: FontWeight.w500)),
-                                          ),
+                                      Row(
+                                        children: [
+                                          if (p['original_price'] != null && p['original_price'] != p['price'])
+                                            Text('₹${p['original_price']}',
+                                                style: TextStyle(fontSize: 11, color: Colors.grey.shade400, decoration: TextDecoration.lineThrough, decorationColor: Colors.grey.shade400)),
+                                          if (p['original_price'] != null && p['original_price'] != p['price']) const SizedBox(width: 4),
+                                          Text('₹${p['price']} / ${p['unit']}',
+                                              style: TextStyle(fontSize: 11, color: Colors.green.shade700, fontWeight: FontWeight.w600)),
+                                          if (p['original_price'] != null && p['original_price'] != p['price']) ...[
+                                            const SizedBox(width: 4),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                              decoration: BoxDecoration(color: Colors.green.withAlpha(20), borderRadius: BorderRadius.circular(4)),
+                                              child: Text(
+                                                '${((double.parse(p['original_price'].toString()) - double.parse(p['price'].toString())) * 100 / double.parse(p['original_price'].toString())).round()}% off',
+                                                style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.green),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
                                           const SizedBox(width: 6),
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -583,7 +740,16 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                                   children: [
                                     Text(p['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
                                     const SizedBox(height: 2),
-                                    Text('₹${p['price'] ?? '0'} / ${p['unit'] ?? ''}', style: TextStyle(fontSize: 12, color: Colors.green.shade700, fontWeight: FontWeight.w500)),
+                                    Row(
+                                      children: [
+                                        if (p['original_price'] != null && p['original_price'] != p['price'])
+                                          Text('₹${p['original_price']}',
+                                              style: TextStyle(fontSize: 11, color: Colors.grey.shade400, decoration: TextDecoration.lineThrough, decorationColor: Colors.grey.shade400)),
+                                        if (p['original_price'] != null && p['original_price'] != p['price']) const SizedBox(width: 4),
+                                        Text('₹${p['price'] ?? '0'} / ${p['unit'] ?? ''}',
+                                            style: TextStyle(fontSize: 12, color: Colors.green.shade700, fontWeight: FontWeight.w600)),
+                                      ],
+                                    ),
                                     Row(
                                       children: [
                                         Container(
