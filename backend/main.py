@@ -16,9 +16,14 @@ import uuid
 from decimal import Decimal
 from datetime import datetime, timezone
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 import bcrypt
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -27,7 +32,7 @@ from auth import router as auth_router
 from middleware import RateLimitMiddleware
 from resources import router as resources_router
 from admin import router as admin_router
-from models import Category, Product, ProductImage, User, ComboPack, ComboPackItem
+from models import Category, Product, ProductImage, User, ComboPack, ComboPackItem, Offer
 import supabase_db
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
@@ -59,6 +64,10 @@ app.add_middleware(RateLimitMiddleware)
 app.include_router(auth_router)
 app.include_router(resources_router)
 app.include_router(admin_router)
+
+# ─── Static files for uploaded images ──────────────────────────
+os.makedirs("uploads", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 
 def _seed_combo_packs(db: Session):

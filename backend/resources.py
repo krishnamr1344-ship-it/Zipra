@@ -23,7 +23,7 @@ from typing import Optional
 from database import get_db
 from models import (
     User, Category, Product, ProductImage, Address, CartItem,
-    Order, OrderItem, Payment, DeliveryZone, ComboPack, ComboPackItem,
+    Order, OrderItem, Payment, DeliveryZone, ComboPack, ComboPackItem, Offer,
 )
 from schemas import (
     CategoryCreate, CategoryResponse,
@@ -34,6 +34,7 @@ from schemas import (
     PaymentProcessRequest, PaymentResponse, MessageResponse,
     ZoneCheckRequest, ZoneCheckResponse,
     ComboPackItemInput, ComboPackItemResponse, ComboPackResponse, PackAddRequest,
+    OfferResponse,
 )
 
 router = APIRouter(prefix="/api")
@@ -425,8 +426,7 @@ def create_address_from_gps(body: GpsAddressCreate, request: Request, db: Sessio
 # ─── PLACES SEARCH ──────────────────────────────────────────────────
 
 @router.get("/places/search")
-def search_places(q: str, request: Request, db: Session = Depends(get_db)):
-    _get_user_id(request)
+def search_places(q: str, db: Session = Depends(get_db)):
     try:
         import httpx
         with httpx.Client(timeout=10) as client:
@@ -800,6 +800,20 @@ def get_payment(order_id: str, request: Request, db: Session = Depends(get_db)):
     return _payment_to_response(payment)
 
 
+@router.get("/offers", response_model=list[OfferResponse])
+def list_active_offers(db: Session = Depends(get_db)):
+    offers = db.query(Offer).filter(
+        Offer.is_deleted == False, Offer.is_active == True,
+    ).order_by(Offer.created_at.desc()).all()
+    return [
+        OfferResponse(
+            id=str(o.id), name=o.name, description=o.description,
+            discount_percent=o.discount_percent, image_url=o.image_url,
+            is_active=o.is_active, created_at=o.created_at,
+        ) for o in offers
+    ]
+
+
 @router.post("/check-zone", response_model=ZoneCheckResponse)
 def check_delivery_zone(body: ZoneCheckRequest, db: Session = Depends(get_db)):
     try:
@@ -821,7 +835,9 @@ def check_delivery_zone(body: ZoneCheckRequest, db: Session = Depends(get_db)):
                 return ZoneCheckResponse(serviceable=True)
         return ZoneCheckResponse(serviceable=False, message="Sorry, delivery not available in your area")
     except Exception:
-        return ZoneCheckResponse(serviceable=False, message="Unable to verify delivery area")
+        # Fail open: if zones can't be verified (table missing, no zones, etc.),
+        # allow delivery everywhere rather than blocking the whole app.
+        return ZoneCheckResponse(serviceable=True, message="No delivery zones configured — allowing all areas")
 
 
 # ─── COMBO PACKS ──────────────────────────────────────────────────

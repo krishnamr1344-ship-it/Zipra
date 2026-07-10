@@ -226,6 +226,19 @@ class ComboPackItem(Base):
     product = relationship("Product")
 
 
+class Offer(Base):
+    __tablename__ = "offers"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(200), nullable=False)
+    description = Column(Text, nullable=True)
+    discount_percent = Column(Integer, nullable=False)
+    image_url = Column(String(500), nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    is_deleted = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+
+
 class DeliveryZone(Base):
     __tablename__ = "delivery_zones"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/theme.dart';
 import '../services/api_service.dart';
-import '../services/location_service.dart';
-import '../services/delivery_zone_service.dart';
-import 'signup_page.dart';
-import 'forgot_password_page.dart';
+import '../services/firebase_service.dart';
 import 'home_page.dart';
 import 'admin_home_page.dart';
 
@@ -16,10 +13,7 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixin {
-  final _emailCtl = TextEditingController();
-  final _passCtl = TextEditingController();
   bool _loading = false;
-  bool _obscurePass = true;
   late AnimationController _animCtl;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
@@ -33,46 +27,37 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     _animCtl.forward();
   }
 
-  Future<void> _login() async {
-    if (_emailCtl.text.isEmpty || _passCtl.text.isEmpty) return;
+  Future<void> _loginWithGoogle() async {
     setState(() => _loading = true);
     try {
-      final resp = await ApiService().login(_emailCtl.text.trim(), _passCtl.text);
+      final info = await FirebaseService.instance.signInWithGoogle();
       if (!mounted) return;
-      final role = resp['user']?['role'] ?? 'user';
-
-      if (role != 'admin') {
-        try {
-          final locResult = await LocationService().getCurrentLocation();
-          if (locResult.error == null) {
-            final zoneCheck = await DeliveryZoneService().checkLocation(locResult.latitude, locResult.longitude);
-            if (!zoneCheck.serviceable && mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(zoneCheck.message ?? 'Sorry, delivery not available in your area'),
-                behavior: SnackBarBehavior.floating,
-                backgroundColor: AppColors.error,
-              ));
-            }
-            await LocationService().saveLocationToServer(locResult.latitude, locResult.longitude);
-          }
-        } catch (_) {}
-      }
-
+      final user = info['user'] as Map<String, dynamic>;
+      final body = await ApiService().socialLogin(
+        user['email'] ?? '',
+        user['name'] ?? '',
+        '',
+      );
       if (!mounted) return;
+
+      final role = body['user']?['role'] ?? 'user';
       final nav = Navigator.of(context);
       if (role == 'admin') {
-        nav.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const AdminHomePage()), (route) => false);
+        nav.pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const AdminHomePage()),
+          (route) => false,
+        );
       } else if (nav.canPop()) {
         nav.pop(true);
       } else {
         nav.pushReplacement(MaterialPageRoute(builder: (_) => const HomePage()));
       }
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message), behavior: SnackBarBehavior.floating));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Connection failed. Check server.'), behavior: SnackBarBehavior.floating));
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating),
+      );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -80,25 +65,8 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
   @override
   void dispose() {
-    _emailCtl.dispose();
-    _passCtl.dispose();
     _animCtl.dispose();
     super.dispose();
-  }
-
-  InputDecoration _fieldStyle(String label, IconData icon, {Widget? suffix}) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14, fontWeight: FontWeight.w500),
-      floatingLabelStyle: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
-      prefixIcon: Icon(icon, size: 20, color: Colors.grey.shade400),
-      prefixIconConstraints: const BoxConstraints(minWidth: 40),
-      suffixIcon: suffix,
-      border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey.shade300)),
-      enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey.shade200)),
-      focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary, width: 2)),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 20),
-    );
   }
 
   @override
@@ -128,7 +96,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                       child: const Icon(Icons.shopping_bag_rounded, size: 36, color: Colors.white),
                     ),
                     const SizedBox(height: 22),
-                    const Text('Welcome Back!', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: -0.5)),
+                    const Text('Welcome!', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: -0.5)),
                     const SizedBox(height: 8),
                     Text('Sign in to continue shopping', style: TextStyle(fontSize: 15, color: Colors.white.withValues(alpha: 0.8), letterSpacing: 0.2)),
                   ],
@@ -154,48 +122,31 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                         ),
                         child: Column(
                           children: [
-                            TextField(
-                              controller: _emailCtl,
-                              keyboardType: TextInputType.emailAddress,
-                              decoration: _fieldStyle('Email', Icons.email_outlined),
+                            const Text(
+                              'Continue with your Google account to start ordering groceries delivered to your door.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 14, color: Colors.grey, height: 1.5),
                             ),
-                            const SizedBox(height: 12),
-                            TextField(
-                              controller: _passCtl,
-                              obscureText: _obscurePass,
-                              decoration: _fieldStyle('Password', Icons.lock_outlined,
-                                suffix: IconButton(
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(),
-                                  icon: Icon(_obscurePass ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20, color: Colors.grey.shade400),
-                                  onPressed: () => setState(() => _obscurePass = !_obscurePass),
-                                ),
-                              ),
-                            ),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton(
-                                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ForgotPasswordPage())),
-                                style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 8)),
-                                child: const Text('Forgot Password?', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 13)),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 28),
                             SizedBox(
                               width: double.infinity,
                               height: 54,
-                              child: ElevatedButton(
-                                onPressed: _loading ? null : _login,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primary,
-                                  foregroundColor: Colors.white,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                  shadowColor: AppColors.primary.withValues(alpha: 0.3),
+                              child: OutlinedButton.icon(
+                                onPressed: _loading ? null : _loginWithGoogle,
+                                icon: Image.network(
+                                  'https://developers.google.com/identity/images/g-logo.png',
+                                  height: 22,
+                                  width: 22,
+                                  errorBuilder: (_, __, ___) => const Icon(Icons.g_mobiledata, size: 24),
                                 ),
-                                child: _loading
-                                    ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                                    : const Text('Sign In', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.3)),
+                                label: _loading
+                                    ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5))
+                                    : const Text('Continue with Google', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.grey.shade800,
+                                  side: BorderSide(color: Colors.grey.shade300),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                ),
                               ),
                             ),
                           ],
@@ -205,14 +156,6 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Text("Don't have an account? ", style: TextStyle(color: Colors.grey.shade500, fontSize: 14)),
-                GestureDetector(
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SignupPage())),
-                  child: const Text('Sign Up', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700, fontSize: 14)),
-                ),
-              ]),
               const SizedBox(height: 30),
             ],
           ),

@@ -12,7 +12,7 @@ class ProductDetailPage extends StatefulWidget {
   final String qty;
   final List<String> images;
   final bool inCart;
-  final VoidCallback onAdd;
+  final void Function(int quantity) onAdd;
 
   const ProductDetailPage({
     super.key,
@@ -326,7 +326,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           child: SizedBox(
             height: 52,
             child: ElevatedButton.icon(
-              onPressed: widget.onAdd,
+              onPressed: () => widget.onAdd(_qty),
               icon: Icon(widget.inCart ? Icons.check : Icons.add_shopping_cart, size: 20),
               label: Text(widget.inCart ? 'Added to Cart' : 'Add to Cart — ₹$totalPrice', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               style: ElevatedButton.styleFrom(

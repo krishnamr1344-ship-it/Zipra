@@ -1,9 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'api_service.dart';
 
 class AdminApiService {
-  static const _baseUrl = 'https://delivery-app-api-16t0.onrender.com';
+  static const _baseUrl = 'https://zipra-api-583825347591.asia-south1.run.app';
 
   Future<Map<String, String>> _authHeader() async {
     final token = await ApiService().getToken();
@@ -133,6 +134,34 @@ class AdminApiService {
     return body['is_enabled'] ?? false;
   }
 
+  // ─── Offers ─────────────────────────────────────────────────────
+
+  Future<List<dynamic>> getOffers() async {
+    final res = await http.get(Uri.parse('$_baseUrl/api/admin/offers'), headers: await _authHeader());
+    if (res.statusCode != 200) throw ApiException('Failed to load offers');
+    return jsonDecode(res.body);
+  }
+
+  Future<Map<String, dynamic>> createOffer(Map<String, dynamic> data) async {
+    final res = await http.post(Uri.parse('$_baseUrl/api/admin/offers'), headers: await _authHeader(), body: jsonEncode(data));
+    if (res.statusCode != 201) throw ApiException(jsonDecode(res.body)['detail'] ?? 'Failed to create offer');
+    return jsonDecode(res.body);
+  }
+
+  Future<Map<String, dynamic>> updateOffer(String id, Map<String, dynamic> data) async {
+    final res = await http.put(Uri.parse('$_baseUrl/api/admin/offers/$id'), headers: await _authHeader(), body: jsonEncode(data));
+    if (res.statusCode != 200) throw ApiException(jsonDecode(res.body)['detail'] ?? 'Failed to update offer');
+    return jsonDecode(res.body);
+  }
+
+  Future<void> deleteOffer(String id) async {
+    final res = await http.delete(Uri.parse('$_baseUrl/api/admin/offers/$id'), headers: await _authHeader());
+    if (res.statusCode != 200) {
+      final msg = jsonDecode(res.body)['detail'] ?? 'Failed to delete offer';
+      throw ApiException('$msg');
+    }
+  }
+
   Future<void> createDeliveryZone(String name, String geojsonData) async {
     final res = await http.post(Uri.parse('$_baseUrl/api/admin/delivery-zone'), headers: await _authHeader(), body: jsonEncode({
       'zone_name': name,
@@ -142,5 +171,27 @@ class AdminApiService {
       final msg = jsonDecode(res.body)['detail'] ?? 'Failed to create zone';
       throw ApiException('$msg');
     }
+  }
+
+  Future<void> deleteDeliveryZone(String id) async {
+    final res = await http.delete(Uri.parse('$_baseUrl/api/admin/delivery-zones/$id'), headers: await _authHeader());
+    if (res.statusCode != 200) {
+      final msg = jsonDecode(res.body)['detail'] ?? 'Failed to delete zone';
+      throw ApiException('$msg');
+    }
+  }
+
+  Future<Map<String, dynamic>> uploadProductImage(String productId, File file) async {
+    final token = await ApiService().getToken();
+    final req = http.MultipartRequest('POST', Uri.parse('$_baseUrl/api/admin/products/$productId/upload-image'));
+    req.headers['Authorization'] = 'Bearer ${token ?? ''}';
+    req.files.add(await http.MultipartFile.fromPath('file', file.path));
+    final streamed = await req.send();
+    final res = await http.Response.fromStream(streamed);
+    if (res.statusCode != 201) {
+      final msg = jsonDecode(res.body)['detail'] ?? 'Failed to upload image';
+      throw ApiException('$msg');
+    }
+    return jsonDecode(res.body);
   }
 }

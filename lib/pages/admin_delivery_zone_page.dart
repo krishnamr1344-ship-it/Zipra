@@ -108,67 +108,122 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
       body: Column(
         children: [
           Expanded(
-            child: FlutterMap(
-              options: MapOptions(
-                initialCenter: _center,
-                initialZoom: 11,
-                onTap: _onMapTap,
-              ),
+            child: Column(
               children: [
-                TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.example.myapp',
-                ),
-                if (_points.length >= 3)
-                  PolygonLayer(
-                    polygons: [
-                      Polygon(
-                        points: _points,
-                        color: Colors.deepPurple.withAlpha(50),
-                        borderColor: Colors.deepPurple,
-                        borderStrokeWidth: 2,
+                Expanded(
+                  flex: 3,
+                  child: FlutterMap(
+                    options: MapOptions(
+                      initialCenter: _center,
+                      initialZoom: 11,
+                      onTap: _onMapTap,
+                    ),
+                    children: [
+                      TileLayer(
+                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.example.myapp',
                       ),
+                      if (_points.length >= 3)
+                        PolygonLayer(
+                          polygons: [
+                            Polygon(
+                              points: _points,
+                              color: Colors.deepPurple.withAlpha(50),
+                              borderColor: Colors.deepPurple,
+                              borderStrokeWidth: 2,
+                            ),
+                          ],
+                        ),
+                      MarkerLayer(
+                        markers: _points.asMap().entries.map((e) {
+                          return Marker(
+                            point: e.value,
+                            child: Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                color: Colors.deepPurple,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2),
+                              ),
+                              child: Center(
+                                child: Text('${e.key + 1}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      if (_savedZones.isNotEmpty)
+                        ..._savedZones.map((z) {
+                          try {
+                            final geo = jsonDecode(z['geojson_data']);
+                            final coords = geo['coordinates'][0] as List;
+                            final pts = coords.map((c) => LatLng(c[1], c[0])).toList();
+                            return PolygonLayer(
+                              polygons: [
+                                Polygon(
+                                  points: pts,
+                                  color: Colors.green.withAlpha(40),
+                                  borderColor: Colors.green,
+                                  borderStrokeWidth: 2,
+                                ),
+                              ],
+                            );
+                          } catch (_) {
+                            return const SizedBox.shrink();
+                          }
+                        }),
                     ],
                   ),
-                MarkerLayer(
-                  markers: _points.asMap().entries.map((e) {
-                    return Marker(
-                      point: e.value,
-                      child: Container(
-                        width: 24,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          color: Colors.deepPurple,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                        ),
-                        child: Center(
-                          child: Text('${e.key + 1}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                        ),
-                      ),
-                    );
-                  }).toList(),
                 ),
                 if (_savedZones.isNotEmpty)
-                  ..._savedZones.map((z) {
-                    try {
-                      final geo = jsonDecode(z['geojson_data']);
-                      final coords = geo['coordinates'][0] as List;
-                      final pts = coords.map((c) => LatLng(c[1], c[0])).toList();
-                      return PolygonLayer(
-                        polygons: [
-                          Polygon(
-                            points: pts,
-                            color: Colors.green.withAlpha(40),
-                            borderColor: Colors.green,
-                            borderStrokeWidth: 2,
+                  Container(
+                    height: 100,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      boxShadow: [BoxShadow(color: Colors.black.withAlpha(6), blurRadius: 4, offset: const Offset(0, -1))],
+                    ),
+                    child: ListView(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      children: _savedZones.map((z) {
+                        final zname = z['zone_name'] ?? '';
+                        final zid = z['id'] ?? '';
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            children: [
+                              Icon(Icons.location_on, size: 16, color: Colors.green.shade600),
+                              const SizedBox(width: 8),
+                              Expanded(child: Text(zname, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500))),
+                              InkWell(
+                                onTap: () async {
+                                  final confirm = await showDialog<bool>(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      title: const Text('Delete Zone'),
+                                      content: Text('Delete "$zname"?'),
+                                      actions: [
+                                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                                        TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
+                                      ],
+                                    ),
+                                  );
+                                  if (confirm != true) return;
+                                  try {
+                                    await _api.deleteDeliveryZone(zid);
+                                    _loadZones();
+                                  } catch (e) {
+                                    if (mounted) _showSnack('$e');
+                                  }
+                                },
+                                child: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                              ),
+                            ],
                           ),
-                        ],
-                      );
-                    } catch (_) {
-                      return const SizedBox.shrink();
-                    }
-                  }),
+                        );
+                      }).toList(),
+                    ),
+                  ),
               ],
             ),
           ),

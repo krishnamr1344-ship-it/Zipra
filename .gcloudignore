@@ -1,0 +1,6 @@
+# Only the backend is deployed to Cloud Run
+*
+!backend/**
+!Dockerfile
+!.dockerignore
+!.gcloudignore

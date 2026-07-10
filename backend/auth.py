@@ -10,10 +10,12 @@ Security:
 import os
 import uuid
 from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 import bcrypt
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -85,68 +87,6 @@ def decode_jwt(token: str) -> dict:
 # ─── ENDPOINTS ───────────────────────────────────────────────────
 
 
-@router.post("/register", status_code=status.HTTP_201_CREATED)
-def register(body: RegisterRequest, db: Session = Depends(get_db)):
-    """
-    Register a new user.
-    Security:
-      - Input validated by Pydantic before DB access.
-      - Password bcrypt-hashed immediately.
-      - Duplicate email returns generic error (don't reveal if email exists).
-    """
-    # Security: check for existing user (soft-delete aware).
-    existing = db.query(User).filter(
-        User.email == body.email,
-        User.is_deleted == False,
-    ).first()
-    if existing:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Registration failed")
-
-    user = User(
-        email=body.email,
-        password_hash=_hash_password(body.password),
-        name=body.name,
-        phone=body.phone,
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-
-    token, jti, expires = _create_jwt(str(user.id), user.role)
-
-    return {
-        "message": "Registration successful",
-        "token": token,
-        "user": {"id": str(user.id), "name": user.name, "email": user.email, "role": user.role},
-    }
-
-
-@router.post("/login")
-def login(body: LoginRequest, db: Session = Depends(get_db)):
-    """
-    Authenticate user and return JWT.
-    Security:
-      - Constant-time password comparison.
-      - Generic error for any failure.
-      - Token expires in 30 minutes.
-    """
-    user = db.query(User).filter(
-        User.email == body.email,
-        User.is_deleted == False,
-    ).first()
-
-    if not user or not _verify_password(body.password, user.password_hash):
-        raise _generic_error()
-
-    token, jti, expires = _create_jwt(str(user.id), user.role)
-
-    return {
-        "message": "Login successful",
-        "token": token,
-        "user": {"id": str(user.id), "name": user.name, "email": user.email, "role": user.role},
-    }
-
-
 @router.post("/logout", status_code=status.HTTP_200_OK)
 def logout(body: LogoutRequest, db: Session = Depends(get_db)):
     """
@@ -179,3 +119,47 @@ def logout(body: LogoutRequest, db: Session = Depends(get_db)):
     db.commit()
 
     return {"message": "Logged out successfully"}
+
+
+class SocialLoginRequest(BaseModel):
+    email: str
+    name: Optional[str] = None
+    phone: Optional[str] = None
+
+
+@router.post("/social", status_code=status.HTTP_200_OK)
+def social_login(body: SocialLoginRequest, db: Session = Depends(get_db)):
+    """
+    Social (Google) login/registration.
+    The email is trusted from the OAuth provider. Finds the existing user
+    or creates one, then returns a backend JWT so the rest of the app
+    works identically to email/password login.
+    """
+    email = (body.email or "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email is required")
+
+    user = db.query(User).filter(User.email == email).first()
+    if user:
+        if user.is_deleted:
+            user.is_deleted = False
+            user.name = (body.name or email.split("@")[0]).strip() or "User"
+            user.phone = body.phone or ""
+    else:
+        user = User(
+            email=email,
+            name=(body.name or email.split("@")[0]).strip() or "User",
+            phone=body.phone or "",
+            password_hash="",  # social users authenticate via provider, not password
+            role="user",
+        )
+        db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    token, _jti, _expires = _create_jwt(str(user.id), user.role)
+    return {
+        "message": "Login successful",
+        "token": token,
+        "user": {"id": str(user.id), "name": user.name, "email": user.email, "role": user.role},
+    }

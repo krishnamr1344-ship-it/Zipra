@@ -19,7 +19,7 @@ final _initSsl = () {
 }();
 
 class ApiService {
-  static const _baseUrl = 'https://delivery-app-api-16t0.onrender.com';
+  static const _baseUrl = 'https://zipra-api-583825347591.asia-south1.run.app';
   static const _tokenKey = 'auth_token';
 
   // ─── Token Management ──────────────────────────────────────────
@@ -59,7 +59,15 @@ class ApiService {
       debugPrint('API Error ${res.statusCode}: ${res.body}');
       throw ApiException(_tryDecodeDetail(res.body) ?? 'Request failed (${res.statusCode})');
     }
-    return jsonDecode(res.body) as List<dynamic>;
+    final decoded = jsonDecode(res.body);
+    if (decoded is List) return decoded;
+    if (decoded is Map) {
+      for (final key in const ['products', 'items', 'data', 'results']) {
+        final v = decoded[key];
+        if (v is List) return v;
+      }
+    }
+    return [];
   }
 
   String? _tryDecodeDetail(String body) {
@@ -68,30 +76,6 @@ class ApiService {
       if (map is Map) return map['detail'] as String?;
     } catch (_) {}
     return null;
-  }
-
-  Future<Map<String, dynamic>> register(String name, String email, String phone, String password) async {
-    final res = await http.post(
-      Uri.parse('$_baseUrl/api/auth/register'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'name': name, 'email': email, 'phone': phone, 'password': password}),
-    );
-    final body = await _handleResponse(res);
-    await _saveToken(body['token']);
-    await _saveUserLocally(body['user']['name'], body['user']['email'], phone, body['user']['role'] ?? 'user');
-    return body;
-  }
-
-  Future<Map<String, dynamic>> login(String email, String password) async {
-    final res = await http.post(
-      Uri.parse('$_baseUrl/api/auth/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'password': password}),
-    );
-    final body = await _handleResponse(res);
-    await _saveToken(body['token']);
-    await _saveUserLocally(body['user']['name'], body['user']['email'], '', body['user']['role'] ?? 'user');
-    return body;
   }
 
   Future<void> logout() async {
@@ -106,6 +90,27 @@ class ApiService {
       } catch (_) {}
     }
     await _clearToken();
+  }
+
+  /// Exchange a Google (Supabase OAuth) profile for a backend JWT.
+  /// Calls POST /api/auth/social, then stores the backend token locally so the
+  /// rest of the app works identically to email/password login.
+  Future<Map<String, dynamic>> socialLogin(String email, String name, [String phone = '']) async {
+    final res = await http.post(
+      Uri.parse('$_baseUrl/api/auth/social'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email, 'name': name, 'phone': phone}),
+    );
+    final body = await _handleResponse(res);
+    final user = body['user'] as Map<String, dynamic>;
+    await _saveToken(body['token'] as String);
+    await _saveUserLocally(
+      user['name'] ?? '',
+      user['email'] ?? '',
+      phone,
+      user['role'] ?? 'user',
+    );
+    return body;
   }
 
   // ─── Local User Storage (fallback) ─────────────────────────────
@@ -234,6 +239,14 @@ class ApiService {
     if (headers['Authorization'] == null) return [];
     final res = await http.get(Uri.parse('$_baseUrl/api/orders'), headers: headers);
     return _handleListResponse(res);
+  }
+
+  // ─── Offers ─────────────────────────────────────────────────────
+
+  Future<List<dynamic>> getOffers() async {
+    final res = await http.get(Uri.parse('$_baseUrl/api/offers'));
+    if (res.statusCode != 200) return [];
+    return jsonDecode(res.body) as List<dynamic>;
   }
 
   // ─── Combo Packs ──────────────────────────────────────────────────

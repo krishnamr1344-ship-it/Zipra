@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class DeliveryZoneService {
-  static const _baseUrl = 'https://delivery-app-api-16t0.onrender.com';
+  static const _baseUrl = 'https://zipra-api-583825347591.asia-south1.run.app';
 
   Future<ZoneCheckResult> checkLocation(double lat, double lng) async {
     try {

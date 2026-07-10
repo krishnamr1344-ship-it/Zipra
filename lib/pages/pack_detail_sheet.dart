@@ -30,6 +30,7 @@ class _PackDetailSheetState extends State<PackDetailSheet> {
           color: AppColors.primaryLight,
           productId: item['product_id']?.toString() ?? '',
           count: item['quantity'] ?? 1,
+          imageUrl: item['image_url'] ?? '',
         ));
       }
       if (!mounted) return;

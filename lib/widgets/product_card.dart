@@ -33,8 +33,8 @@ class _ProductCardState extends State<ProductCard> {
     final p = widget.product;
     final screenW = MediaQuery.of(context).size.width;
     final cardW = (screenW - 44) / 2;
-    final imgH = cardW * 0.72;
-    final sz = cardW * 0.04;
+    final imgH = cardW * 0.52;
+    final sz = cardW * 0.035;
 
     return GestureDetector(
       onTap: widget.onTap,
@@ -59,51 +59,34 @@ class _ProductCardState extends State<ProductCard> {
               child: Stack(
                 children: [
                   widget.images.isNotEmpty && widget.images[0].startsWith('http')
-                      ? Image.network(widget.images[0], fit: BoxFit.cover, width: double.infinity, height: imgH, errorBuilder: (_, __, ___) => Center(child: Text(p.emoji, style: TextStyle(fontSize: cardW * 0.38))))
-                      : Center(child: Text(p.emoji, style: TextStyle(fontSize: cardW * 0.38))),
+                      ? Image.network(widget.images[0], fit: BoxFit.cover, width: double.infinity, height: imgH, errorBuilder: (_, __, ___) => Center(child: Text(p.emoji, style: TextStyle(fontSize: cardW * 0.3))))
+                      : Center(child: Text(p.emoji, style: TextStyle(fontSize: cardW * 0.3))),
                   if (p.discountPercent != null)
                     Positioned(
                       top: 0, left: 0,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFF6B00),
+                          color: Colors.red,
                           borderRadius: const BorderRadius.only(topLeft: Radius.circular(14), bottomRight: Radius.circular(6)),
                         ),
-                        child: Text('${p.discountPercent}% off', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                        child: Text('${p.discountPercent}%', style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
                       ),
                     ),
-                  Positioned(
-                    top: 4, right: 4,
-                    child: GestureDetector(
-                      onTap: widget.onFav,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withValues(alpha: 0.9),
-                          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
-                        ),
-                        child: Icon(widget.isFav ? Icons.favorite : Icons.favorite_border, size: 14, color: widget.isFav ? Colors.red : Colors.grey.shade500),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(7, 5, 7, 6),
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(p.weight, style: const TextStyle(fontSize: 10, color: Color(0xFF888888))),
-                  const SizedBox(height: 1),
                   Text(p.name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF1A1A1A)), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 1),
+                  Text(p.weight, style: const TextStyle(fontSize: 10, color: Color(0xFF888888))),
+                  const SizedBox(height: 5),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -114,7 +97,7 @@ class _ProductCardState extends State<ProductCard> {
                             Text('₹${p.originalPrice!.toStringAsFixed(0)}', style: const TextStyle(fontSize: 10, color: Color(0xFF999999), decoration: TextDecoration.lineThrough)),
                         ],
                       ),
-                      _quantity == 0 ? _buildAddBtn(sz) : _buildStepper(sz),
+                      _quantity == 0 ? _buildAddBtn() : _buildStepper(),
                     ],
                   ),
                 ],
@@ -126,30 +109,28 @@ class _ProductCardState extends State<ProductCard> {
     );
   }
 
-  Widget _buildAddBtn(double sz) {
-    return OutlinedButton(
-      onPressed: () {
+  Widget _buildAddBtn() {
+    return GestureDetector(
+      onTap: () {
         setState(() => _quantity = 1);
         widget.onAdd();
       },
-      style: OutlinedButton.styleFrom(
-        side: const BorderSide(color: Color(0xFFFF6B00), width: 1.5),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        padding: EdgeInsets.symmetric(horizontal: sz * 1.5, vertical: sz * 0.6),
-        minimumSize: Size.zero,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      child: Container(
+        width: 32, height: 32,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(colors: [Color(0xFFFF6B00), Color(0xFFFF8C38)]),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Icon(Icons.add, color: Colors.white, size: 18),
       ),
-      child: Text('ADD', style: TextStyle(color: const Color(0xFFFF6B00), fontSize: sz * 1.4, fontWeight: FontWeight.bold)),
     );
   }
 
-  Widget _buildStepper(double sz) {
-    final btnW = sz * 3;
-    final btnH = sz * 3.2;
+  Widget _buildStepper() {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFFF6B00), width: 1.5),
-        borderRadius: BorderRadius.circular(8),
+        color: const Color(0xFFFF6B00),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -160,12 +141,25 @@ class _ProductCardState extends State<ProductCard> {
                 if (_quantity > 1) { _quantity--; } else { _quantity = 0; }
               });
             },
-            child: Container(width: btnW, height: btnH, color: const Color(0xFFFF6B00), child: Icon(Icons.remove, color: Colors.white, size: sz * 1.5)),
+            child: Container(
+              width: 30, height: 30,
+              alignment: Alignment.center,
+              child: const Icon(Icons.remove, color: Colors.white, size: 16),
+            ),
           ),
-          Container(width: btnW, height: btnH, color: Colors.white, child: Center(child: Text(_quantity.toString(), style: TextStyle(color: const Color(0xFFFF6B00), fontSize: sz * 1.6, fontWeight: FontWeight.bold)))),
+          Container(
+            width: 30, height: 30,
+            color: Colors.white,
+            alignment: Alignment.center,
+            child: Text(_quantity.toString(), style: const TextStyle(color: Color(0xFFFF6B00), fontSize: 14, fontWeight: FontWeight.bold)),
+          ),
           GestureDetector(
             onTap: () => setState(() => _quantity++),
-            child: Container(width: btnW, height: btnH, color: const Color(0xFFFF6B00), child: Icon(Icons.add, color: Colors.white, size: sz * 1.5)),
+            child: Container(
+              width: 30, height: 30,
+              alignment: Alignment.center,
+              child: const Icon(Icons.add, color: Colors.white, size: 16),
+            ),
           ),
         ],
       ),

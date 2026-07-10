@@ -1,0 +1,7 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'asia-south1-docker.pkg.dev/project-012d9d96-4169-47de-841/zipra-backend/zipra-api:latest', '.']
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'asia-south1-docker.pkg.dev/project-012d9d96-4169-47de-841/zipra-backend/zipra-api:latest']
+images:
+  - 'asia-south1-docker.pkg.dev/project-012d9d96-4169-47de-841/zipra-backend/zipra-api:latest'

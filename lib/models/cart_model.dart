@@ -9,6 +9,7 @@ class CartItem {
   final IconData icon;
   final Color color;
   final String productId;
+  final String imageUrl;
   int count;
 
   CartItem({
@@ -18,6 +19,7 @@ class CartItem {
     required this.icon,
     required this.color,
     this.productId = '',
+    this.imageUrl = '',
     this.count = 1,
   });
 
@@ -28,6 +30,7 @@ class CartItem {
     'iconCodePoint': icon.codePoint,
     'colorValue': color.toARGB32(),
     'productId': productId,
+    'imageUrl': imageUrl,
     'count': count,
   };
 
@@ -38,6 +41,7 @@ class CartItem {
     icon: IconData(j['iconCodePoint'], fontFamily: 'MaterialIcons'),
     color: Color(j['colorValue']),
     productId: j['productId'] ?? '',
+    imageUrl: j['imageUrl'] ?? '',
     count: j['count'] ?? 1,
   );
 }

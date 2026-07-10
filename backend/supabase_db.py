@@ -5,8 +5,11 @@ Replaces SQLAlchemy for Supabase operations.
 Auto-commits on write — no separate commit() needed.
 """
 import os
+from dotenv import load_dotenv
 from typing import Optional
 from supabase import create_client, Client
+
+load_dotenv()
 
 _supabase: Optional[Client] = None
 

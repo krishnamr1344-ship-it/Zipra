@@ -5,7 +5,7 @@ import 'pages/home_page.dart';
 import 'pages/admin_home_page.dart';
 import 'services/api_service.dart';
 import 'services/theme_service.dart';
-import 'services/supabase_service.dart';
+import 'services/firebase_service.dart';
 import 'services/app_info.dart';
 import 'constants/theme.dart';
 
@@ -19,9 +19,9 @@ void main() async {
   };
 
     try {
-      await SupabaseService.initialize();
+      await FirebaseService.initialize();
     } catch (e, s) {
-      debugPrint('Supabase init failed: $e\n$s');
+      debugPrint('Firebase init failed: $e\n$s');
     }
     await AppInfo.load();
 

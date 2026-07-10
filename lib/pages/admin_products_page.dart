@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../constants/theme.dart';
 import '../services/admin_api_service.dart';
 
@@ -157,25 +159,57 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                 const SizedBox(height: 8),
                 ...List.generate(3, (i) => Padding(
                   padding: const EdgeInsets.only(bottom: 10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
                     children: [
-                      TextField(
-                        controller: images[i],
-                        decoration: InputDecoration(
-                          labelText: 'Image URL ${i + 1}',
-                          hintText: 'https://example.com/image${i + 1}.jpg',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          suffixIcon: images[i].text.trim().isNotEmpty && images[i].text.trim().startsWith('http')
-                              ? Padding(
-                                  padding: const EdgeInsets.all(6),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: Image.network(images[i].text.trim(), width: 36, height: 36, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox()),
-                                  ),
-                                )
-                              : null,
+                      Expanded(
+                        child: TextField(
+                          controller: images[i],
+                          decoration: InputDecoration(
+                            labelText: 'Image URL ${i + 1}',
+                            hintText: images[i].text.isEmpty ? 'URL or tap upload' : '',
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            suffixIcon: images[i].text.trim().isNotEmpty && images[i].text.trim().startsWith('http')
+                                ? Padding(
+                                    padding: const EdgeInsets.all(6),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.network(images[i].text.trim(), width: 36, height: 36, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox()),
+                                    ),
+                                  )
+                                : null,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        height: 44,
+                        child: ElevatedButton(
+                          onPressed: saving ? null : () async {
+                            final picker = ImagePicker();
+                            final picked = await picker.pickImage(source: ImageSource.gallery);
+                            if (picked == null) return;
+                            if (product == null) {
+                              images[i].text = picked.path;
+                              setSheetState(() {});
+                              return;
+                            }
+                            try {
+                              final result = await _api.uploadProductImage(product['id'], File(picked.path));
+                              images[i].text = result['image_url'];
+                              setSheetState(() {});
+                            } catch (e) {
+                              if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('$e'), behavior: SnackBarBehavior.floating));
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.chipBg,
+                            foregroundColor: AppColors.primary,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            elevation: 0,
+                          ),
+                          child: const Icon(Icons.image_outlined, size: 20),
                         ),
                       ),
                     ],
@@ -199,16 +233,36 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                       }
                       setSheetState(() => saving = true);
                       try {
+                        final List<String> imageUrls = [];
+                        for (final c in images) {
+                          final val = c.text.trim();
+                          if (val.startsWith('http')) {
+                            imageUrls.add(val);
+                          } else if (val.isNotEmpty) {
+                            if (product != null) {
+                              final result = await _api.uploadProductImage(product['id'], File(val));
+                              imageUrls.add(result['image_url']);
+                            }
+                          }
+                        }
+                        if (imageUrls.length < 3) {
+                          setSheetState(() => saving = false);
+                          ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Please provide at least 3 images (URL or upload)'), behavior: SnackBarBehavior.floating));
+                          return;
+                        }
                         final data = {
                           'category_id': catId ?? '',
                           'name': nameCtl.text,
                           'price': double.parse(priceCtl.text),
                           'unit': unitCtl.text,
                           'stock': int.parse(stockCtl.text),
-                          'images': images.map((c) => c.text.trim()).toList(),
+                          'images': imageUrls,
                         };
-                        if (product == null) await _api.createProduct(data);
-                        else await _api.updateProduct(product['id'], data);
+                        if (product == null) {
+                          await _api.createProduct(data);
+                        } else {
+                          await _api.updateProduct(product['id'], data);
+                        }
                         if (!ctx.mounted) return;
                         Navigator.pop(ctx);
                         _load();

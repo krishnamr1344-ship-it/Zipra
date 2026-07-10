@@ -44,27 +44,52 @@ class _HomePageState extends State<HomePage> {
   bool _loadingProducts = true;
   bool _serviceable = true;
   bool _zoneChecked = false;
+  bool _isLoggedIn = false;
+
+  List<Map<String, dynamic>> _offers = [];
+  final _searchCtl = TextEditingController();
+  String _searchQuery = '';
 
   IconData _catIcon(String cat) {
     switch (cat.toLowerCase()) {
-      case 'fruits': return Icons.apple;
-      case 'vegetables': return Icons.eco;
-      case 'dairy': return Icons.water_drop;
-      case 'bakery': return Icons.bakery_dining;
-      case 'beverages': return Icons.local_cafe;
-      case 'snacks': return Icons.cookie;
-      case 'meat & fish': return Icons.set_meal;
-      default: return Icons.shopping_bag;
+      case 'fruits':
+        return Icons.apple;
+      case 'vegetables':
+        return Icons.eco;
+      case 'dairy':
+        return Icons.water_drop;
+      case 'bakery':
+        return Icons.bakery_dining;
+      case 'beverages':
+        return Icons.local_cafe;
+      case 'snacks':
+        return Icons.cookie;
+      case 'meat & fish':
+        return Icons.set_meal;
+      default:
+        return Icons.shopping_bag;
     }
   }
 
   @override
   void initState() {
     super.initState();
-    _loadProfile();
+    _checkAuth();
     _loadData();
     _loadGpsAddress();
     orderNotifier.init();
+  }
+
+  @override
+  void dispose() {
+    _searchCtl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _checkAuth() async {
+    final token = await _api.getToken();
+    if (mounted) setState(() => _isLoggedIn = token != null);
+    if (token != null) _loadProfile();
   }
 
   Future<void> _loadGpsAddress() async {
@@ -74,7 +99,11 @@ class _HomePageState extends State<HomePage> {
       final line2 = addr['address_line2'] ?? '';
       final city = addr['city'] ?? '';
       setState(() {
-        _locationArea = line2.isNotEmpty ? '$line2, $city' : city.isNotEmpty ? city : 'Your Area';
+        _locationArea = line2.isNotEmpty
+            ? '$line2, $city'
+            : city.isNotEmpty
+            ? city
+            : 'Your Area';
         _locationDetail = line1;
       });
       final lat = double.tryParse(addr['latitude'] ?? '');
@@ -82,7 +111,10 @@ class _HomePageState extends State<HomePage> {
       if (lat != null && lng != null) {
         final result = await DeliveryZoneService().checkLocation(lat, lng);
         if (!mounted) return;
-        setState(() { _serviceable = result.serviceable; _zoneChecked = true; });
+        setState(() {
+          _serviceable = result.serviceable;
+          _zoneChecked = true;
+        });
       }
     } else {
       _detectCurrentLocation();
@@ -90,16 +122,25 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _detectCurrentLocation() async {
-    setState(() { _locationArea = 'Detecting...'; _locationDetail = ''; });
+    setState(() {
+      _locationArea = 'Detecting...';
+      _locationDetail = '';
+    });
     final loc = await LocationService().getCurrentLocation();
     if (!mounted) return;
     if (loc.error != null) {
-      setState(() { _locationArea = 'Your Area'; _locationDetail = ''; _zoneChecked = true; });
+      setState(() {
+        _locationArea = 'Your Area';
+        _locationDetail = '';
+        _zoneChecked = true;
+      });
       return;
     }
     try {
       final resp = await http.get(
-        Uri.parse('https://nominatim.openstreetmap.org/reverse?lat=${loc.latitude}&lon=${loc.longitude}&format=json&addressdetails=1'),
+        Uri.parse(
+          'https://nominatim.openstreetmap.org/reverse?lat=${loc.latitude}&lon=${loc.longitude}&format=json&addressdetails=1',
+        ),
         headers: {'User-Agent': 'DeliveryApp/1.0'},
       );
       if (!mounted) return;
@@ -110,49 +151,97 @@ class _HomePageState extends State<HomePage> {
           final road = a['road'] ?? '';
           final house = a['house_number'] ?? '';
           final area_raw = a['suburb'] ?? a['city_district'] ?? '';
-          final area = area_raw.replaceAll(RegExp(r'^Zone\s+\d+\s*', caseSensitive: false), '').trim();
-          final city_raw = a['city'] ?? a['town'] ?? a['village'] ?? a['county'] ?? '';
-          final city = city_raw.replaceAll(RegExp(r'\s+(Corporation|Municipal|Municipality|Municipal\s+Corporation)\s*$', caseSensitive: false), '').trim();
+          final area = area_raw
+              .replaceAll(RegExp(r'^Zone\s+\d+\s*', caseSensitive: false), '')
+              .trim();
+          final city_raw =
+              a['city'] ?? a['town'] ?? a['village'] ?? a['county'] ?? '';
+          final city = city_raw
+              .replaceAll(
+                RegExp(
+                  r'\s+(Corporation|Municipal|Municipality|Municipal\s+Corporation)\s*$',
+                  caseSensitive: false,
+                ),
+                '',
+              )
+              .trim();
           final parts = <String>[];
           if (road.isNotEmpty) parts.add(road);
           if (house.isNotEmpty) parts.add(house);
           final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('gps_address_line', parts.isNotEmpty ? parts.join(', ') : (data['display_name'] ?? ''));
-          await prefs.setString('gps_address_line2', area.isNotEmpty && city.isNotEmpty ? '$area, $city' : area);
+          await prefs.setString(
+            'gps_address_line',
+            parts.isNotEmpty ? parts.join(', ') : (data['display_name'] ?? ''),
+          );
+          await prefs.setString(
+            'gps_address_line2',
+            area.isNotEmpty && city.isNotEmpty ? '$area, $city' : area,
+          );
           await prefs.setString('gps_city', city);
           await prefs.setString('gps_latitude', '${loc.latitude}');
           await prefs.setString('gps_longitude', '${loc.longitude}');
-          if (mounted) setState(() {
-            _locationArea = area.isNotEmpty && city.isNotEmpty ? '$area, $city' : city.isNotEmpty ? city : 'Your Area';
-            _locationDetail = parts.isNotEmpty ? parts.join(', ') : (data['display_name'] ?? '');
-          });
+          if (mounted)
+            setState(() {
+              _locationArea = area.isNotEmpty && city.isNotEmpty
+                  ? '$area, $city'
+                  : city.isNotEmpty
+                  ? city
+                  : 'Your Area';
+              _locationDetail = parts.isNotEmpty
+                  ? parts.join(', ')
+                  : (data['display_name'] ?? '');
+            });
         }
       }
     } catch (_) {
-      if (mounted) setState(() { _locationArea = 'Your Area'; _locationDetail = ''; });
+      if (mounted)
+        setState(() {
+          _locationArea = 'Your Area';
+          _locationDetail = '';
+        });
     }
     if (mounted) setState(() => _zoneChecked = true);
   }
 
+  List<String> _extractImages(dynamic images) {
+    if (images is! List) return [];
+    final urls = <String>[];
+    for (final item in images) {
+      if (item is String) {
+        urls.add(item);
+      } else if (item is Map) {
+        final url = item['image_url'] ?? item['url'] ?? item['src'];
+        if (url is String && url.isNotEmpty) urls.add(url);
+      }
+    }
+    return urls;
+  }
+
   List<_ProductData> get _filteredProducts {
-    if (_selectedCategory == 'All') return _allProducts.map((p) => _ProductData(
-      p['id'] ?? '',
-      _catIcon(p['category_name'] ?? ''),
-      p['name'] ?? '',
-      (p['price'] ?? 0).toInt(),
-      p['unit'] ?? '',
-      p['category_name'] ?? '',
-      p['images'] is List ? (p['images'] as List).cast<String>() : [],
-    )).toList();
-    return _allProducts.where((p) => p['category_name'] == _selectedCategory).map((p) => _ProductData(
-      p['id'] ?? '',
-      _catIcon(p['category_name'] ?? ''),
-      p['name'] ?? '',
-      (p['price'] ?? 0).toInt(),
-      p['unit'] ?? '',
-      p['category_name'] ?? '',
-      p['images'] is List ? (p['images'] as List).cast<String>() : [],
-    )).toList();
+    var source = _allProducts;
+    if (_selectedCategory != 'All')
+      source = source.where((p) => p['category_name'] == _selectedCategory).toList();
+    if (_searchQuery.isNotEmpty) {
+      final q = _searchQuery.toLowerCase();
+      source = source.where((p) {
+        final name = (p['name'] ?? '').toString().toLowerCase();
+        final cat = (p['category_name'] ?? '').toString().toLowerCase();
+        return name.contains(q) || cat.contains(q);
+      }).toList();
+    }
+    return source
+        .map(
+          (p) => _ProductData(
+            p['id'] ?? '',
+            _catIcon(p['category_name'] ?? ''),
+            p['name'] ?? '',
+            (p['price'] ?? 0).toInt(),
+            p['unit'] ?? '',
+            p['category_name'] ?? '',
+            _extractImages(p['images']),
+          ),
+        )
+        .toList();
   }
 
   Future<void> _loadData() async {
@@ -160,6 +249,7 @@ class _HomePageState extends State<HomePage> {
     try {
       final cats = await _api.getCategories();
       final prods = await _api.getProducts();
+      _offers = (await _api.getOffers()).cast<Map<String, dynamic>>();
       if (!mounted) return;
       setState(() {
         _categories = ['All', ...cats.map<String>((c) => c['name'] as String)];
@@ -181,7 +271,10 @@ class _HomePageState extends State<HomePage> {
   Future<bool> _requireLogin() async {
     final token = await _api.getToken();
     if (token != null) return true;
-    final loggedIn = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => const LoginPage()));
+    final loggedIn = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+    );
     return loggedIn == true;
   }
 
@@ -202,7 +295,10 @@ class _HomePageState extends State<HomePage> {
       builder: (_) => const LocationPickerSheet(),
     );
     if (openMap == true) {
-      final confirmed = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => const MapPickerPage()));
+      final confirmed = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(builder: (_) => const MapPickerPage()),
+      );
       if (confirmed == true) _loadGpsAddress();
     } else {
       _loadGpsAddress();
@@ -227,41 +323,72 @@ class _HomePageState extends State<HomePage> {
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 20, offset: const Offset(0, -4))],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: BottomNavigationBar(
-              currentIndex: _selectedIndex,
-              onTap: (i) async {
-                if (i >= 3) {
-                  final token = await _api.getToken();
-                  if (token == null) {
-                    final loggedIn = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => const LoginPage()));
-                    if (loggedIn != true) return;
-                    await _loadProfile();
-                  }
-                }
-                setState(() => _selectedIndex = i);
-              },
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              selectedItemColor: AppColors.primary,
-              unselectedItemColor: AppColors.textHint,
-              type: BottomNavigationBarType.fixed,
-              selectedFontSize: 11,
-              unselectedFontSize: 11,
-              selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
-              items: [
-                BottomNavigationBarItem(icon: Icon(_selectedIndex == 0 ? Icons.home_filled : Icons.home_outlined), label: 'Home'),
-                const BottomNavigationBarItem(icon: Icon(Icons.category_outlined), label: 'Categories'),
-                BottomNavigationBarItem(icon: Icon(_selectedIndex == 2 ? Icons.local_offer : Icons.local_offer_outlined), label: 'Offers'),
-                BottomNavigationBarItem(icon: Icon(_selectedIndex == 3 ? Icons.shopping_cart : Icons.shopping_cart_outlined), label: 'Cart'),
-                BottomNavigationBarItem(icon: Icon(_selectedIndex == 4 ? Icons.person : Icons.person_outline), label: 'Account'),
-              ],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 20,
+              offset: const Offset(0, -4),
             ),
-          ),
+          ],
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          onTap: (i) async {
+            if (i >= 3) {
+              final token = await _api.getToken();
+              if (token == null) {
+                final loggedIn = await Navigator.push<bool>(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                );
+                if (loggedIn != true) return;
+                await _loadProfile();
+              }
+            }
+            setState(() => _selectedIndex = i);
+          },
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          selectedItemColor: AppColors.primary,
+          unselectedItemColor: AppColors.textHint,
+          type: BottomNavigationBarType.fixed,
+          selectedFontSize: 11,
+          unselectedFontSize: 11,
+          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+          items: [
+            BottomNavigationBarItem(
+              icon: Icon(
+                _selectedIndex == 0 ? Icons.home_filled : Icons.home_outlined,
+              ),
+              label: 'Home',
+            ),
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.category_outlined),
+              label: 'Categories',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(
+                _selectedIndex == 2
+                    ? Icons.local_offer
+                    : Icons.local_offer_outlined,
+              ),
+              label: 'Offers',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(
+                _selectedIndex == 3
+                    ? Icons.shopping_cart
+                    : Icons.shopping_cart_outlined,
+              ),
+              label: 'Cart',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(
+                _selectedIndex == 4 ? Icons.person : Icons.person_outline,
+              ),
+              label: 'Account',
+            ),
+          ],
         ),
       ),
     );
@@ -269,10 +396,18 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildHeader(String initial, String name) {
     return Container(
-      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 12, left: 20, right: 20, bottom: 24),
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top + 12,
+        left: 20,
+        right: 20,
+        bottom: 24,
+      ),
       decoration: const BoxDecoration(
         gradient: AppColors.headerGradient,
-        borderRadius: BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32)),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(32),
+          bottomRight: Radius.circular(32),
+        ),
       ),
       child: Column(
         children: [
@@ -284,7 +419,14 @@ class _HomePageState extends State<HomePage> {
                 child: CircleAvatar(
                   radius: 19,
                   backgroundColor: Colors.white,
-                  child: Text(initial, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 15)),
+                  child: Text(
+                    initial,
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -292,7 +434,10 @@ class _HomePageState extends State<HomePage> {
                 child: GestureDetector(
                   onTap: _showLocationPicker,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withAlpha(25),
                       borderRadius: BorderRadius.circular(14),
@@ -301,8 +446,15 @@ class _HomePageState extends State<HomePage> {
                       children: [
                         Container(
                           padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(color: AppColors.primary.withAlpha(30), borderRadius: BorderRadius.circular(8)),
-                          child: const Icon(Icons.location_on, size: 16, color: Colors.white),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withAlpha(30),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.location_on,
+                            size: 16,
+                            color: Colors.white,
+                          ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
@@ -313,25 +465,63 @@ class _HomePageState extends State<HomePage> {
                               Row(
                                 children: [
                                   Flexible(
-                                    child: Text(_locationArea, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
+                                    child: Text(
+                                      _locationArea,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
                                   ),
                                   const SizedBox(width: 4),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                    decoration: BoxDecoration(color: Colors.white.withAlpha(30), borderRadius: BorderRadius.circular(6)),
-                                    child: const Text('HOME', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 5,
+                                      vertical: 1,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withAlpha(30),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Text(
+                                      'HOME',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
                               if (_locationDetail.isNotEmpty)
-                                Text(_locationDetail, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10, color: Colors.white.withAlpha(180))),
+                                Text(
+                                  _locationDetail,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.white.withAlpha(180),
+                                  ),
+                                ),
                             ],
                           ),
                         ),
                         Container(
                           padding: const EdgeInsets.all(3),
-                          decoration: BoxDecoration(color: Colors.white.withAlpha(20), borderRadius: BorderRadius.circular(8)),
-                          child: const Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.white70),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withAlpha(20),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.keyboard_arrow_down,
+                            size: 16,
+                            color: Colors.white70,
+                          ),
                         ),
                       ],
                     ),
@@ -344,8 +534,15 @@ class _HomePageState extends State<HomePage> {
                   clipBehavior: Clip.none,
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.favorite_outline, color: Colors.white, size: 24),
-                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WishlistPage())),
+                      icon: const Icon(
+                        Icons.favorite_outline,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const WishlistPage()),
+                      ),
                     ),
                     if (wishlistNotifier.itemCount > 0)
                       Positioned(
@@ -353,8 +550,18 @@ class _HomePageState extends State<HomePage> {
                         top: 2,
                         child: Container(
                           padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
-                          child: Text('${wishlistNotifier.itemCount}', style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+                          decoration: const BoxDecoration(
+                            color: AppColors.error,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            '${wishlistNotifier.itemCount}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 8,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ),
                   ],
@@ -365,17 +572,34 @@ class _HomePageState extends State<HomePage> {
                 builder: (_, _) => Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    IconButton(icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white, size: 24), onPressed: () {
-                      setState(() => _selectedIndex = 3);
-                    }),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.shopping_cart_outlined,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                      onPressed: () {
+                        setState(() => _selectedIndex = 3);
+                      },
+                    ),
                     if (cartNotifier.itemCount > 0)
                       Positioned(
                         right: 4,
                         top: 2,
                         child: Container(
                           padding: const EdgeInsets.all(5),
-                          decoration: const BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
-                          child: Text('${cartNotifier.itemCount}', style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                          decoration: const BoxDecoration(
+                            color: AppColors.error,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            '${cartNotifier.itemCount}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ),
                   ],
@@ -396,7 +620,13 @@ class _HomePageState extends State<HomePage> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 4))],
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.08),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Row(
           children: [
@@ -407,9 +637,14 @@ class _HomePageState extends State<HomePage> {
               child: SizedBox(
                 height: 48,
                 child: TextField(
+                  controller: _searchCtl,
+                  onChanged: (v) => setState(() => _searchQuery = v),
                   decoration: const InputDecoration(
                     hintText: 'Search products...',
-                    hintStyle: TextStyle(color: Color(0xFFB0B0B0), fontSize: 14),
+                    hintStyle: TextStyle(
+                      color: Color(0xFFB0B0B0),
+                      fontSize: 14,
+                    ),
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.symmetric(vertical: 12),
                   ),
@@ -419,8 +654,13 @@ class _HomePageState extends State<HomePage> {
             Container(
               margin: const EdgeInsets.all(6),
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(12)),
-              child: const Center(child: Icon(Icons.tune, color: Colors.white, size: 20)),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Center(
+                child: Icon(Icons.tune, color: Colors.white, size: 20),
+              ),
             ),
           ],
         ),
@@ -452,13 +692,23 @@ class _HomePageState extends State<HomePage> {
             return Padding(
               padding: const EdgeInsets.only(right: 8),
               child: FilterChip(
-                label: Text(cat, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isSelected ? Colors.white : AppColors.textPrimary)),
+                label: Text(
+                  cat,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isSelected ? Colors.white : AppColors.textPrimary,
+                  ),
+                ),
                 selected: isSelected,
                 onSelected: (_) => setState(() => _selectedCategory = cat),
                 selectedColor: AppColors.primary,
                 checkmarkColor: Colors.white,
                 backgroundColor: AppColors.chipBg,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide.none),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: BorderSide.none,
+                ),
                 padding: const EdgeInsets.symmetric(horizontal: 4),
               ),
             );
@@ -476,19 +726,36 @@ class _HomePageState extends State<HomePage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 20),
-          const Text('Shop by Category', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+          const Text(
+            'Shop by Category',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
+          ),
           const SizedBox(height: 20),
           if (cats.isEmpty)
-            const Center(child: Padding(
-              padding: EdgeInsets.only(top: 60),
-              child: Text('No categories available', style: TextStyle(color: AppColors.textSecondary)),
-            ))
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.only(top: 60),
+                child: Text(
+                  'No categories available',
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
+              ),
+            )
           else
             Wrap(
               spacing: 12,
               runSpacing: 12,
               children: cats.map((cat) {
-                final icon = _catIcon(cat);
+                final catProducts = _allProducts.where((p) => p['category_name'] == cat).toList();
+                final imageUrl = catProducts.isNotEmpty
+                    ? _extractImages(catProducts.first['images']).isNotEmpty
+                        ? _extractImages(catProducts.first['images'])[0]
+                        : null
+                    : null;
                 return GestureDetector(
                   onTap: () {
                     setState(() {
@@ -498,16 +765,36 @@ class _HomePageState extends State<HomePage> {
                   },
                   child: Container(
                     width: (MediaQuery.of(context).size.width - 52) / 2,
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppColors.chipBg,
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 2)),
+                      ],
                     ),
                     child: Column(
                       children: [
-                        Icon(icon, size: 40, color: AppColors.primary),
-                        const SizedBox(height: 12),
-                        Text(cat, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary), textAlign: TextAlign.center),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: SizedBox(
+                            width: double.infinity,
+                            height: 100,
+                            child: imageUrl != null
+                                ? Image.network(imageUrl, fit: BoxFit.cover, errorBuilder: (_, _, _) => _catFallback(cat))
+                                : _catFallback(cat),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          cat,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                            color: AppColors.textPrimary,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                       ],
                     ),
                   ),
@@ -519,107 +806,351 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget _catFallback(String cat) {
+    return Container(
+      color: AppColors.chipBg,
+      child: Center(child: Icon(_catIcon(cat), size: 36, color: AppColors.primary)),
+    );
+  }
+
+  Widget _buildLoginPrompt() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.shopping_bag_outlined,
+              size: 72,
+              color: Colors.grey.shade300,
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Login to Browse Products',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Sign in to view our full catalog and start ordering.',
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () async {
+                final loggedIn = await Navigator.push<bool>(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                );
+                if (loggedIn == true) {
+                  _loadProfile();
+                  _loadData();
+                  if (mounted) setState(() {});
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 40,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              child: const Text(
+                'Login Now',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<bool> _checkLogin() async {
+    return await _api.getToken() != null;
+  }
+
   Widget _buildProductSection() {
     final products = _filteredProducts;
 
     return ListenableBuilder(
       listenable: Listenable.merge([cartNotifier, wishlistNotifier]),
-      builder: (_, _) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 80),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 4, height: 20,
-                  decoration: BoxDecoration(
-                    color: AppColors.success,
-                    borderRadius: BorderRadius.circular(2),
+      builder: (_, _) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 80),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_offers.isNotEmpty) ...[
+                SizedBox(
+                  height: 80,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: EdgeInsets.zero,
+                    itemCount: _offers.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 10),
+                    itemBuilder: (_, i) {
+                      final o = _offers[i];
+                      return Container(
+                        width: MediaQuery.of(context).size.width * 0.7,
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFF6B00), Color(0xFFFF8C38)],
+                          ),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withAlpha(40),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                Icons.local_offer,
+                                color: Colors.white,
+                                size: 22,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    o['name'] ?? '',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  if (o['description'] != null)
+                                    Text(
+                                      o['description'],
+                                      style: TextStyle(
+                                        color: Colors.white.withAlpha(200),
+                                        fontSize: 10,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '${o['discount_percent']}% OFF',
+                                style: const TextStyle(
+                                  color: Color(0xFFFF6B00),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                 ),
-                const SizedBox(width: 10),
-                Text(_selectedCategory == 'All' ? 'Featured Products' : _selectedCategory,
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                const Spacer(),
-                Text('${products.length} items',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
+                const SizedBox(height: 14),
               ],
-            ),
-            const SizedBox(height: 14),
-            if (_zoneChecked && !_serviceable)
-              Container(
-                padding: const EdgeInsets.all(20),
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withAlpha(15),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.orange.withAlpha(40)),
-                ),
-                child: Column(
-                  children: [
-                    Icon(Icons.map, size: 48, color: Colors.orange.shade400),
-                    const SizedBox(height: 12),
-                    const Text('Coming Soon!', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Delivery service is not yet available in your area.\nWe are expanding soon!',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 14, color: Colors.grey.shade600, height: 1.5),
+              Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: AppColors.success,
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                  ],
-                ),
-              )
-            else if (_loadingProducts)
-              const Padding(
-                padding: EdgeInsets.only(top: 40),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (products.isEmpty)
-              const Padding(
-                padding: EdgeInsets.only(top: 40),
-                child: Center(child: Text('No products in this category', style: TextStyle(color: AppColors.textSecondary))),
-              )
-            else
-              ProductGrid(
-                products: products.map((p) => _toGroceryProduct(p)).toList(),
-                cartMap: {for (final p in products) p.id.hashCode: cartNotifier.items.any((e) => e.name == p.name)},
-                favMap: {for (final p in products) p.name: wishlistNotifier.contains(p.name)},
-                getImages: (gp) {
-                  final p = products.firstWhere((e) => e.name == gp.name);
-                  return p.images;
-                },
-                onAdd: (gp) async {
-                  final p = products.firstWhere((e) => e.name == gp.name);
-                  if (!await _requireLogin()) return;
-                  if (!mounted) return;
-                  cartNotifier.add(CartItem(name: p.name, qty: p.qty, price: p.price, icon: p.icon, color: AppColors.success, productId: p.id));
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text('${p.name} added'),
-                    duration: const Duration(seconds: 1),
-                    backgroundColor: AppColors.success,
-                  ));
-                },
-                onFav: (gp) => wishlistNotifier.toggle(gp.name),
-                onTap: (gp) {
-                  final p = products.firstWhere((e) => e.name == gp.name);
-                  final count = cartNotifier.items.where((e) => e.name == p.name).firstOrNull?.count ?? 0;
-                  Navigator.push(context, MaterialPageRoute(
-                    builder: (_) => ProductDetailPage(
-                      icon: p.icon, color: AppColors.success, name: p.name, price: p.price, qty: p.qty, images: p.images,
-                      inCart: count > 0,
-                      onAdd: () async {
-                        if (!await _requireLogin()) return;
-                        if (!mounted) return;
-                        cartNotifier.add(CartItem(name: p.name, qty: p.qty, price: p.price, icon: p.icon, color: AppColors.success, productId: p.id));
-                      },
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    _selectedCategory == 'All'
+                        ? 'Featured Products'
+                        : _selectedCategory,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
                     ),
-                  ));
-                },
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${products.length} items',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                  ),
+                ],
               ),
-          ],
-        ),
-      ),
+              const SizedBox(height: 14),
+              if (_zoneChecked && !_serviceable)
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withAlpha(15),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.orange.withAlpha(40)),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(Icons.map, size: 48, color: Colors.orange.shade400),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Coming Soon!',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Delivery service is not yet available in your area.\nWe are expanding soon!',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade600,
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else if (_loadingProducts)
+                const Padding(
+                  padding: EdgeInsets.only(top: 40),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (products.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(top: 40),
+                  child: Center(
+                    child: Text(
+                      'No products in this category',
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
+                  ),
+                )
+              else
+                ProductGrid(
+                  products: products.map((p) => _toGroceryProduct(p)).toList(),
+                  cartMap: {
+                    for (final p in products)
+                      p.id.hashCode: cartNotifier.items.any(
+                        (e) => e.name == p.name,
+                      ),
+                  },
+                  favMap: {
+                    for (final p in products)
+                      p.name: wishlistNotifier.contains(p.name),
+                  },
+                  getQuantity: (name) =>
+                      cartNotifier.items
+                          .where((e) => e.name == name)
+                          .firstOrNull
+                          ?.count ??
+                      0,
+                  getImages: (gp) {
+                    final p = products.firstWhere((e) => e.name == gp.name);
+                    return p.images;
+                  },
+                  onAdd: (gp) async {
+                    final p = products.firstWhere((e) => e.name == gp.name);
+                    if (!await _requireLogin()) return;
+                    if (!mounted) return;
+                    cartNotifier.add(
+                      CartItem(
+                        name: p.name,
+                        qty: p.qty,
+                        price: p.price,
+                        icon: p.icon,
+                        color: AppColors.success,
+                        productId: p.id,
+                        imageUrl: p.images.isNotEmpty ? p.images[0] : '',
+                      ),
+                    );
+                  },
+                  onIncrement: (gp) {
+                    final p = products.firstWhere((e) => e.name == gp.name);
+                    cartNotifier.updateCount(p.name, 1);
+                  },
+                  onDecrement: (gp) {
+                    final p = products.firstWhere((e) => e.name == gp.name);
+                    cartNotifier.updateCount(p.name, -1);
+                  },
+                  onFav: (gp) => wishlistNotifier.toggle(gp.name),
+                  onTap: (gp) {
+                    final p = products.firstWhere((e) => e.name == gp.name);
+                    final count =
+                        cartNotifier.items
+                            .where((e) => e.name == p.name)
+                            .firstOrNull
+                            ?.count ??
+                        0;
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ProductDetailPage(
+                          icon: p.icon,
+                          color: AppColors.success,
+                          name: p.name,
+                          price: p.price,
+                          qty: p.qty,
+                          images: p.images,
+                          inCart: count > 0,
+                          onAdd: (qty) async {
+                            if (!await _requireLogin()) return;
+                            if (!mounted) return;
+                            final existing = cartNotifier.items.where((e) => e.name == p.name).firstOrNull;
+                            if (existing != null) {
+                              cartNotifier.updateCount(p.name, qty);
+                            } else {
+                              cartNotifier.add(CartItem(
+                                name: p.name,
+                                qty: p.qty,
+                                price: p.price,
+                                icon: p.icon,
+                                color: AppColors.success,
+                                productId: p.id,
+                                imageUrl: p.images.isNotEmpty ? p.images[0] : '',
+                                count: qty,
+                              ));
+                            }
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -638,23 +1169,51 @@ class _HomePageState extends State<HomePage> {
                 child: CircleAvatar(
                   radius: avatarR,
                   backgroundColor: AppColors.primary,
-                  child: Text(initial, style: TextStyle(color: Colors.white, fontSize: avatarR * 0.8, fontWeight: FontWeight.bold)),
+                  child: Text(
+                    initial,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: avatarR * 0.8,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 14),
-              Text(name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              Text(
+                name,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
               const SizedBox(height: 4),
-              Text(email, style: const TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+              Text(
+                email,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textSecondary,
+                ),
+              ),
               const SizedBox(height: 6),
               GestureDetector(
                 onTap: () async {
-                  final result = await Navigator.push<Map<String, dynamic>>(context, MaterialPageRoute(builder: (_) => EditProfilePage(user: _user ?? {})));
+                  final result = await Navigator.push<Map<String, dynamic>>(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => EditProfilePage(user: _user ?? {}),
+                    ),
+                  );
                   if (result != null) {
                     _loadProfile();
                   }
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(20),
@@ -664,35 +1223,119 @@ class _HomePageState extends State<HomePage> {
                     children: [
                       Icon(Icons.edit, size: 14, color: AppColors.primary),
                       SizedBox(width: 4),
-                      Text('Edit Profile', style: TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                      Text(
+                        'Edit Profile',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 28),
               _menuCard([
-                _menuItem(Icons.receipt_long_outlined, 'My Orders', 'View order history', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OrdersPage()))),
-                _menuItem(Icons.location_on_outlined, 'Addresses', 'Manage delivery addresses', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddressesPage()))),
-                _menuItem(Icons.credit_card_outlined, 'Payments', 'Saved cards & wallets', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PaymentsPage()))),
+                _menuItem(
+                  Icons.receipt_long_outlined,
+                  'My Orders',
+                  'View order history',
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const OrdersPage()),
+                  ),
+                ),
+                _menuItem(
+                  Icons.location_on_outlined,
+                  'Addresses',
+                  'Manage delivery addresses',
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AddressesPage()),
+                  ),
+                ),
+                _menuItem(
+                  Icons.credit_card_outlined,
+                  'Payments',
+                  'Saved cards & wallets',
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const PaymentsPage()),
+                  ),
+                ),
               ]),
               const SizedBox(height: 24),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 24),
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: Text('OTHER INFORMATION', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textHint, letterSpacing: 1.2)),
+                  child: Text(
+                    'OTHER INFORMATION',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textHint,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
               _menuCard([
-                _menuItem(Icons.feedback_outlined, 'Suggest Products', 'Tell us what you need', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SuggestProductsPage()))),
-                _menuItem(Icons.notifications_outlined, 'Notifications', 'Manage alerts & updates', () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Coming soon!'), behavior: SnackBarBehavior.floating, duration: Duration(seconds: 1)))),
-                _menuItem(Icons.favorite, 'Favorites', '${wishlistNotifier.itemCount} items', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WishlistPage()))),
-                _menuItem(Icons.support_outlined, 'Help & Support', 'FAQs & contact', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpSupportPage()))),
+                _menuItem(
+                  Icons.feedback_outlined,
+                  'Suggest Products',
+                  'Tell us what you need',
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const SuggestProductsPage(),
+                    ),
+                  ),
+                ),
+                _menuItem(
+                  Icons.notifications_outlined,
+                  'Notifications',
+                  'Manage alerts & updates',
+                  () => ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Coming soon!'),
+                      behavior: SnackBarBehavior.floating,
+                      duration: Duration(seconds: 1),
+                    ),
+                  ),
+                ),
+                _menuItem(
+                  Icons.favorite,
+                  'Favorites',
+                  '${wishlistNotifier.itemCount} items',
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const WishlistPage()),
+                  ),
+                ),
+                _menuItem(
+                  Icons.support_outlined,
+                  'Help & Support',
+                  'FAQs & contact',
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const HelpSupportPage()),
+                  ),
+                ),
               ]),
               const SizedBox(height: 16),
               _menuCard([
-                _menuItem(Icons.settings_outlined, 'Settings', 'App preferences', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()))),
+                _menuItem(
+                  Icons.settings_outlined,
+                  'Settings',
+                  'App preferences',
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SettingsPage()),
+                  ),
+                ),
               ]),
               const SizedBox(height: 24),
               Container(
@@ -703,12 +1346,20 @@ class _HomePageState extends State<HomePage> {
                   child: ElevatedButton.icon(
                     onPressed: _logout,
                     icon: const Icon(Icons.logout, size: 20),
-                    label: const Text('Logout', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                    label: const Text(
+                      'Logout',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFFFF5F5),
                       foregroundColor: const Color(0xFFF44336),
                       elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
                   ),
                 ),
@@ -721,20 +1372,30 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-
   Widget _menuCard(List<Widget> items) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(children: items),
     );
   }
 
-  Widget _menuItem(IconData icon, String title, String subtitle, VoidCallback onTap) {
+  Widget _menuItem(
+    IconData icon,
+    String title,
+    String subtitle,
+    VoidCallback onTap,
+  ) {
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -743,12 +1404,40 @@ class _HomePageState extends State<HomePage> {
           children: [
             Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: AppColors.chipBg, borderRadius: BorderRadius.circular(10)),
+              decoration: BoxDecoration(
+                color: AppColors.chipBg,
+                borderRadius: BorderRadius.circular(10),
+              ),
               child: Icon(icon, size: 20, color: AppColors.primary),
             ),
             const SizedBox(width: 14),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)), Text(subtitle, style: const TextStyle(fontSize: 11, color: AppColors.textHint))])),
-            const Icon(Icons.chevron_right, color: AppColors.textHint, size: 20),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textHint,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right,
+              color: AppColors.textHint,
+              size: 20,
+            ),
           ],
         ),
       ),
@@ -764,19 +1453,39 @@ class _ProductData {
   final String qty;
   final String category;
   final List<String> images;
-  const _ProductData(this.id, this.icon, this.name, this.price, this.qty, this.category, this.images);
+  const _ProductData(
+    this.id,
+    this.icon,
+    this.name,
+    this.price,
+    this.qty,
+    this.category,
+    this.images,
+  );
 }
 
 String _emojiFor(String name) {
   final n = name.toLowerCase();
   if (n.contains('rice')) return '🍚';
-  if (n.contains('milk') || n.contains('curd') || n.contains('paneer') || n.contains('cheese') || n.contains('butter') || n.contains('ghee'))
+  if (n.contains('milk') ||
+      n.contains('curd') ||
+      n.contains('paneer') ||
+      n.contains('cheese') ||
+      n.contains('butter') ||
+      n.contains('ghee'))
     return '🥛';
-  if (n.contains('coffee') || n.contains('boost') || n.contains('horlicks') || n.contains('tea')) return '☕';
+  if (n.contains('coffee') ||
+      n.contains('boost') ||
+      n.contains('horlicks') ||
+      n.contains('tea'))
+    return '☕';
   if (n.contains('biscuit') || n.contains('cookie')) return '🍪';
-  if (n.contains('chip') || n.contains('popcorn') || n.contains('noodle')) return '🍿';
-  if (n.contains('banana') || n.contains('apple') || n.contains('fruit')) return '🍌';
-  if (n.contains('notebook') || n.contains('pen') || n.contains('pencil')) return '📝';
+  if (n.contains('chip') || n.contains('popcorn') || n.contains('noodle'))
+    return '🍿';
+  if (n.contains('banana') || n.contains('apple') || n.contains('fruit'))
+    return '🍌';
+  if (n.contains('notebook') || n.contains('pen') || n.contains('pencil'))
+    return '📝';
   return '🛒';
 }
 
@@ -811,7 +1520,14 @@ Widget _placeholder(String letter, Color color) {
         end: Alignment.bottomRight,
       ),
     ),
-    child: Text(letter.toUpperCase(), style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: color.withAlpha(180))),
+    child: Text(
+      letter.toUpperCase(),
+      style: TextStyle(
+        fontSize: 32,
+        fontWeight: FontWeight.bold,
+        color: color.withAlpha(180),
+      ),
+    ),
   );
 }
 
@@ -848,7 +1564,11 @@ class _ProductCard extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 14, offset: const Offset(0, 4)),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 14,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
         clipBehavior: Clip.antiAlias,
@@ -868,7 +1588,14 @@ class _ProductCard extends StatelessWidget {
                       ),
                     ),
                     child: images.isNotEmpty && images[0].startsWith('http')
-                        ? Image.network(images[0], fit: BoxFit.cover, width: double.infinity, height: double.infinity, errorBuilder: (_, __, ___) => _placeholder(name[0], color))
+                        ? Image.network(
+                            images[0],
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                            errorBuilder: (_, __, ___) =>
+                                _placeholder(name[0], color),
+                          )
                         : _placeholder(name[0], color),
                   ),
                   Positioned(
@@ -882,10 +1609,17 @@ class _ProductCard extends StatelessWidget {
                           shape: BoxShape.circle,
                           color: Colors.white.withValues(alpha: 0.9),
                           boxShadow: [
-                            BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 6),
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 6,
+                            ),
                           ],
                         ),
-                        child: Icon(isFav ? Icons.favorite : Icons.favorite_border, size: 16, color: isFav ? Colors.red : Colors.grey.shade400),
+                        child: Icon(
+                          isFav ? Icons.favorite : Icons.favorite_border,
+                          size: 16,
+                          color: isFav ? Colors.red : Colors.grey.shade400,
+                        ),
                       ),
                     ),
                   ),
@@ -894,12 +1628,22 @@ class _ProductCard extends StatelessWidget {
                       top: 6,
                       left: 6,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: color,
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Text('In Cart', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white)),
+                        child: const Text(
+                          'In Cart',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
                     ),
                 ],
@@ -916,7 +1660,11 @@ class _ProductCard extends StatelessWidget {
                       height: 22,
                       child: Text(
                         name,
-                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.textPrimary),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          color: AppColors.textPrimary,
+                        ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -926,11 +1674,19 @@ class _ProductCard extends StatelessWidget {
                       children: [
                         Text(
                           '₹',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey.shade500),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade500,
+                          ),
                         ),
                         Text(
                           '$price',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.textPrimary),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            color: AppColors.textPrimary,
+                          ),
                         ),
                       ],
                     ),
@@ -941,18 +1697,28 @@ class _ProductCard extends StatelessWidget {
                       child: ElevatedButton(
                         onPressed: onAdd,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: inCart ? color.withValues(alpha: 0.12) : color,
+                          backgroundColor: inCart
+                              ? color.withValues(alpha: 0.12)
+                              : color,
                           foregroundColor: inCart ? color : Colors.white,
                           elevation: 0,
                           padding: EdgeInsets.zero,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(inCart ? Icons.check : Icons.add, size: 16),
                             const SizedBox(width: 4),
-                            Text(inCart ? 'Added' : 'Add', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                            Text(
+                              inCart ? 'Added' : 'Add',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           ],
                         ),
                       ),
