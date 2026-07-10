@@ -40,6 +40,11 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 # Create all tables on startup.
 Base.metadata.create_all(bind=engine)
 
+# Auto-migrate: add missing columns (safe, uses IF NOT EXISTS).
+with engine.connect() as conn:
+    conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS original_price NUMERIC(10,2) NULL"))
+    conn.commit()
+
 app = FastAPI(
     title="Delivery App API",
     description="Secure backend for delivery application",
