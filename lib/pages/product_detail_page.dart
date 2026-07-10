@@ -9,6 +9,7 @@ class ProductDetailPage extends StatefulWidget {
   final Color color;
   final String name;
   final int price;
+  final int originalPrice;
   final String qty;
   final List<String> images;
   final bool inCart;
@@ -20,6 +21,7 @@ class ProductDetailPage extends StatefulWidget {
     required this.color,
     required this.name,
     required this.price,
+    this.originalPrice = 0,
     required this.qty,
     this.images = const [],
     required this.inCart,
@@ -35,6 +37,8 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   int _currentImage = 0;
   Timer? _timer;
   int _qty = 1;
+
+  int get _discountPercent => widget.originalPrice > widget.price ? ((widget.originalPrice - widget.price) * 100 ~/ widget.originalPrice) : 0;
 
   @override
   void initState() {
@@ -176,18 +180,22 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                             const SizedBox(height: 4),
                             Row(
                               children: [
-                                Text('₹${widget.price}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF999999), decoration: TextDecoration.lineThrough)),
-                                const SizedBox(width: 8),
+                                if (widget.originalPrice > widget.price) ...[
+                                  Text('₹${widget.originalPrice}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF999999), decoration: TextDecoration.lineThrough)),
+                                  const SizedBox(width: 8),
+                                ],
                                 Text('₹$totalPrice', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color: Colors.green.withAlpha(15),
-                                    borderRadius: BorderRadius.circular(6),
+                                if (_discountPercent > 0) ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.withAlpha(15),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text('$_discountPercent% off', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.green)),
                                   ),
-                                  child: const Text('18% off', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.green)),
-                                ),
+                                ],
                               ],
                             ),
                           ],

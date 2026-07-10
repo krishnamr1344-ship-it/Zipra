@@ -181,6 +181,17 @@ class AdminApiService {
     }
   }
 
+  Future<void> updateDeliveryZone(String id, String name, String geojsonData) async {
+    final res = await http.put(Uri.parse('$_baseUrl/api/admin/delivery-zones/$id'), headers: await _authHeader(), body: jsonEncode({
+      'zone_name': name,
+      'geojson_data': geojsonData,
+    }));
+    if (res.statusCode != 200) {
+      final msg = jsonDecode(res.body)['detail'] ?? 'Failed to update zone';
+      throw ApiException('$msg');
+    }
+  }
+
   Future<Map<String, dynamic>> uploadProductImage(String productId, File file) async {
     final token = await ApiService().getToken();
     final req = http.MultipartRequest('POST', Uri.parse('$_baseUrl/api/admin/products/$productId/upload-image'));

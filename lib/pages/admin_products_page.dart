@@ -57,6 +57,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
   void _showForm([Map<String, dynamic>? product]) {
     final nameCtl = TextEditingController(text: product?['name'] ?? '');
     final priceCtl = TextEditingController(text: product?['price']?.toString() ?? '');
+    final originalPriceCtl = TextEditingController(text: product?['original_price']?.toString() ?? '');
     final unitCtl = TextEditingController(text: product?['unit'] ?? '');
     final stockCtl = TextEditingController(text: product?['stock']?.toString() ?? '0');
     final images = List.generate(3, (i) => TextEditingController(
@@ -123,7 +124,35 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                       child: TextField(
                         controller: priceCtl,
                         decoration: InputDecoration(
-                          labelText: 'Price (₹)',
+                          labelText: 'Offer Price (₹)',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: originalPriceCtl,
+                        decoration: InputDecoration(
+                          labelText: 'Original Price (₹)',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: stockCtl,
+                        decoration: InputDecoration(
+                          labelText: 'Stock',
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                         ),
@@ -143,16 +172,6 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                       ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: stockCtl,
-                  decoration: InputDecoration(
-                    labelText: 'Stock',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  ),
-                  keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 20),
                 const Text('Product Images (min 3)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF2D2D3A))),
@@ -257,6 +276,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                           'unit': unitCtl.text,
                           'stock': int.parse(stockCtl.text),
                           'images': imageUrls,
+                          'original_price': originalPriceCtl.text.isNotEmpty ? double.parse(originalPriceCtl.text) : null,
                         };
                         if (product == null) {
                           await _api.createProduct(data);

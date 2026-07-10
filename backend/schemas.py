@@ -181,6 +181,7 @@ class ProductCreate(BaseModel):
     name: str
     description: Optional[str] = None
     price: Decimal
+    original_price: Optional[Decimal] = None
     unit: str
     images: list[str] = []
     stock: int = 0
@@ -236,6 +237,7 @@ class ProductResponse(BaseModel):
     name: str
     description: Optional[str] = None
     price: float
+    original_price: Optional[float] = None
     unit: str
     images: list[str] = []
     stock: int

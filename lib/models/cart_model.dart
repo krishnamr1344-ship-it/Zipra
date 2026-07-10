@@ -6,6 +6,7 @@ class CartItem {
   final String name;
   final String qty;
   final int price;
+  final int originalPrice;
   final IconData icon;
   final Color color;
   final String productId;
@@ -18,15 +19,19 @@ class CartItem {
     required this.price,
     required this.icon,
     required this.color,
+    this.originalPrice = 0,
     this.productId = '',
     this.imageUrl = '',
     this.count = 1,
   });
 
+  int get discountPercent => originalPrice > price ? ((originalPrice - price) * 100 / originalPrice).round() : 0;
+
   Map<String, dynamic> toJson() => {
     'name': name,
     'qty': qty,
     'price': price,
+    'originalPrice': originalPrice,
     'iconCodePoint': icon.codePoint,
     'colorValue': color.toARGB32(),
     'productId': productId,
@@ -38,6 +43,7 @@ class CartItem {
     name: j['name'],
     qty: j['qty'],
     price: j['price'],
+    originalPrice: j['originalPrice'] ?? 0,
     icon: IconData(j['iconCodePoint'], fontFamily: 'MaterialIcons'),
     color: Color(j['colorValue']),
     productId: j['productId'] ?? '',
@@ -167,7 +173,7 @@ class OrderNotifier extends ChangeNotifier {
   Future<void> add(List<CartItem> items, int total) async {
     _orders.insert(0, OrderData(
       id: 'ORD${DateTime.now().millisecondsSinceEpoch}',
-      items: items.map((i) => CartItem(name: i.name, qty: i.qty, price: i.price, icon: i.icon, color: i.color, count: i.count)).toList(),
+      items: items.map((i) => CartItem(name: i.name, qty: i.qty, price: i.price, icon: i.icon, color: i.color, originalPrice: i.originalPrice, count: i.count)).toList(),
       total: total,
       status: 'Pending',
     ));

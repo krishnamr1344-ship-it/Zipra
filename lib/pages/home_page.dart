@@ -236,6 +236,7 @@ class _HomePageState extends State<HomePage> {
             _catIcon(p['category_name'] ?? ''),
             p['name'] ?? '',
             (p['price'] ?? 0).toInt(),
+            (p['original_price'] ?? 0).toInt(),
             p['unit'] ?? '',
             p['category_name'] ?? '',
             _extractImages(p['images']),
@@ -305,6 +306,8 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  DateTime _lastBack = DateTime(2000);
+
   @override
   Widget build(BuildContext context) {
     final name = _user?['name'] ?? 'User';
@@ -318,7 +321,26 @@ class _HomePageState extends State<HomePage> {
       _buildAccount(initial, name),
     ];
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (DateTime.now().difference(_lastBack).inSeconds < 2) {
+          Navigator.of(context).pop();
+        } else {
+          _lastBack = DateTime.now();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Press back again to exit'),
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 2),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              margin: const EdgeInsets.only(bottom: 100, left: 20, right: 20),
+            ),
+          );
+        }
+      },
+      child: Scaffold(
       body: IndexedStack(index: _selectedIndex, children: pages),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -391,6 +413,7 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
+    ),
     );
   }
 
@@ -720,96 +743,93 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildCategoriesTab() {
     final cats = _categories.where((c) => c != 'All').toList();
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 20),
-          const Text(
-            'Shop by Category',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
+    if (cats.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.only(top: 60),
+          child: Text('No categories available', style: TextStyle(color: AppColors.textSecondary)),
+        ),
+      );
+    }
+    return GridView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 0.85,
+      ),
+      itemCount: cats.length,
+      itemBuilder: (_, i) {
+        final cat = cats[i];
+        final catProducts = _allProducts.where((p) => p['category_name'] == cat).toList();
+        final imageUrl = catProducts.isNotEmpty
+            ? _extractImages(catProducts.first['images']).isNotEmpty
+                ? _extractImages(catProducts.first['images'])[0]
+                : null
+            : null;
+        return GestureDetector(
+          onTap: () {
+            setState(() {
+              _selectedCategory = cat;
+              _selectedIndex = 0;
+            });
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
+              ],
             ),
-          ),
-          const SizedBox(height: 20),
-          if (cats.isEmpty)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.only(top: 60),
-                child: Text(
-                  'No categories available',
-                  style: TextStyle(color: AppColors.textSecondary),
-                ),
-              ),
-            )
-          else
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: cats.map((cat) {
-                final catProducts = _allProducts.where((p) => p['category_name'] == cat).toList();
-                final imageUrl = catProducts.isNotEmpty
-                    ? _extractImages(catProducts.first['images']).isNotEmpty
-                        ? _extractImages(catProducts.first['images'])[0]
-                        : null
-                    : null;
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _selectedCategory = cat;
-                      _selectedIndex = 0;
-                    });
-                  },
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: [
+                Expanded(
                   child: Container(
-                    width: (MediaQuery.of(context).size.width - 52) / 2,
-                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: SizedBox(
-                            width: double.infinity,
-                            height: 80,
-                            child: imageUrl != null
-                                ? Image.network(imageUrl, fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox.shrink())
-                                : const SizedBox.shrink(),
-                          ),
+                    width: double.infinity,
+                    color: Colors.white,
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: imageUrl != null
+                              ? Image.network(imageUrl, fit: BoxFit.contain, errorBuilder: (_, _, _) => _catIconWidget(cat))
+                              : _catIconWidget(cat),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          cat,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                            color: AppColors.textPrimary,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
+                      ),
                     ),
                   ),
-                );
-              }).toList(),
+                ),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.chipBg.withAlpha(80),
+                    border: Border(top: BorderSide(color: Colors.grey.withAlpha(15))),
+                  ),
+                  child: Text(
+                    cat,
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textPrimary),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
-        ],
-      ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _catFallback(String cat) {
+  Widget _catIconWidget(String cat) {
     return Container(
-      color: AppColors.chipBg,
-      child: Center(child: Icon(_catIcon(cat), size: 36, color: AppColors.primary)),
+      decoration: BoxDecoration(color: AppColors.chipBg, borderRadius: BorderRadius.circular(8)),
+      child: Center(child: Icon(_catIcon(cat), size: 40, color: _colorFor(cat).withAlpha(180))),
     );
   }
 
@@ -1088,6 +1108,7 @@ class _HomePageState extends State<HomePage> {
                         name: p.name,
                         qty: p.qty,
                         price: p.price,
+                        originalPrice: p.originalPrice,
                         icon: p.icon,
                         color: AppColors.success,
                         productId: p.id,
@@ -1120,6 +1141,7 @@ class _HomePageState extends State<HomePage> {
                           color: AppColors.success,
                           name: p.name,
                           price: p.price,
+                          originalPrice: p.originalPrice,
                           qty: p.qty,
                           images: p.images,
                           inCart: count > 0,
@@ -1134,6 +1156,7 @@ class _HomePageState extends State<HomePage> {
                                 name: p.name,
                                 qty: p.qty,
                                 price: p.price,
+                                originalPrice: p.originalPrice,
                                 icon: p.icon,
                                 color: AppColors.success,
                                 productId: p.id,
@@ -1450,6 +1473,7 @@ class _ProductData {
   final IconData icon;
   final String name;
   final int price;
+  final int originalPrice;
   final String qty;
   final String category;
   final List<String> images;
@@ -1458,6 +1482,7 @@ class _ProductData {
     this.icon,
     this.name,
     this.price,
+    this.originalPrice,
     this.qty,
     this.category,
     this.images,
@@ -1500,11 +1525,14 @@ Color _colorFor(String category) {
 }
 
 GroceryProduct _toGroceryProduct(_ProductData p) {
+  final disc = p.originalPrice > p.price ? ((p.originalPrice - p.price) * 100 ~/ p.originalPrice) : 0;
   return GroceryProduct(
     id: p.id.hashCode,
     name: p.name,
     weight: p.qty,
     price: p.price.toDouble(),
+    originalPrice: p.originalPrice > 0 ? p.originalPrice.toDouble() : null,
+    discountPercent: disc > 0 ? disc : null,
     emoji: _emojiFor(p.name),
     imageBg: _colorFor(p.category),
   );

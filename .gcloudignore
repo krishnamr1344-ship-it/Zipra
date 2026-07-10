@@ -1,6 +1,18 @@
-# Only the backend is deployed to Cloud Run
-*
-!backend/**
-!Dockerfile
-!.dockerignore
-!.gcloudignore
+.git
+.gitignore
+AGENTS.md
+android/
+build/
+ios/
+lib/
+linux/
+macos/
+test/
+web/
+windows/
+*.g.dart
+*.freezed.dart
+*.log
+*.db
+.git/
+.github/

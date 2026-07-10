@@ -69,7 +69,7 @@ def list_products(request: Request, db: Session = Depends(get_db)):
             id=str(p.id), category_id=str(p.category_id),
             category_name=p.category.name if p.category else None,
             name=p.name, description=p.description,
-            price=float(p.price), unit=p.unit,
+            price=float(p.price), original_price=float(p.original_price) if p.original_price else None, unit=p.unit,
             images=[img.image_url for img in p.images if not img.is_deleted],
             stock=p.stock,
         ) for p in products
@@ -85,7 +85,7 @@ def create_product(body: ProductCreate, request: Request, db: Session = Depends(
     product = Product(
         category_id=body.category_id, name=body.name.strip(),
         description=body.description.strip() if body.description else None,
-        price=body.price, unit=body.unit.strip().lower(),
+        price=body.price, original_price=body.original_price, unit=body.unit.strip().lower(),
         stock=body.stock,
     )
     db.add(product)
@@ -98,7 +98,7 @@ def create_product(body: ProductCreate, request: Request, db: Session = Depends(
         id=str(product.id), category_id=str(product.category_id),
         category_name=cat.name,
         name=product.name, description=product.description,
-        price=float(product.price), unit=product.unit,
+        price=float(product.price), original_price=float(product.original_price) if product.original_price else None, unit=product.unit,
         images=[img.image_url for img in product.images if not img.is_deleted],
         stock=product.stock,
     )
@@ -117,6 +117,7 @@ def update_product(product_id: str, body: ProductCreate, request: Request, db: S
     product.name = body.name.strip()
     product.description = body.description.strip() if body.description else None
     product.price = body.price
+    product.original_price = body.original_price
     product.unit = body.unit.strip().lower()
     product.stock = body.stock
     # Replace images
@@ -130,7 +131,7 @@ def update_product(product_id: str, body: ProductCreate, request: Request, db: S
         id=str(product.id), category_id=str(product.category_id),
         category_name=cat.name,
         name=product.name, description=product.description,
-        price=float(product.price), unit=product.unit,
+        price=float(product.price), original_price=float(product.original_price) if product.original_price else None, unit=product.unit,
         images=[img.image_url for img in product.images if not img.is_deleted],
         stock=product.stock,
     )
@@ -592,6 +593,18 @@ def delete_delivery_zone(zone_id: str, request: Request, db: Session = Depends(g
     zone.is_deleted = True
     db.commit()
     return MessageResponse(message="Delivery zone deleted")
+
+
+@router.put("/delivery-zones/{zone_id}", response_model=MessageResponse)
+def update_delivery_zone(zone_id: str, body: DeliveryZoneCreate, request: Request, db: Session = Depends(get_db)):
+    _require_admin(request)
+    zone = db.query(DeliveryZone).filter(DeliveryZone.id == zone_id, DeliveryZone.is_deleted == False).first()
+    if not zone:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Delivery zone not found")
+    zone.zone_name = body.zone_name
+    zone.geojson_data = body.geojson_data
+    db.commit()
+    return MessageResponse(message="Delivery zone updated")
 
 
 # ─── DELIVERY FEE (Admin) ─────────────────────────────────────────
