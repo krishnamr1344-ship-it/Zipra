@@ -64,7 +64,7 @@ class CartPage extends StatelessWidget {
     final remaining = _freeDeliveryThreshold - subtotal;
 
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      padding: const EdgeInsets.fromLTRB(16, 60, 16, 16),
       itemCount: items.length + 1, // +1 for delivery progress banner
       itemBuilder: (_, i) {
         if (i == 0) return _deliveryProgress(remaining.toDouble(), subtotal.toDouble());
@@ -256,11 +256,13 @@ class CartPage extends StatelessWidget {
   }
 
   // ─── Quantity Selector ─────────────────────────────────────
+  static const Color _stepperGreen = Color(0xFF1CB66D);
+
   Widget _quantitySelector(CartItem item) {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
-        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _stepperGreen.withValues(alpha: 0.4)),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -270,14 +272,14 @@ class CartPage extends StatelessWidget {
             child: Container(
               width: 36,
               height: 36,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.08),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(11),
-                  bottomLeft: Radius.circular(11),
+              decoration: const BoxDecoration(
+                color: _stepperGreen,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(13),
+                  bottomLeft: Radius.circular(13),
                 ),
               ),
-              child: const Icon(Icons.remove, size: 18, color: AppColors.primary),
+              child: const Icon(Icons.remove, size: 18, color: Colors.white),
             ),
           ),
           Container(
@@ -293,11 +295,11 @@ class CartPage extends StatelessWidget {
             child: Container(
               width: 36,
               height: 36,
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: const BorderRadius.only(
-                  topRight: Radius.circular(11),
-                  bottomRight: Radius.circular(11),
+              decoration: const BoxDecoration(
+                color: _stepperGreen,
+                borderRadius: BorderRadius.only(
+                  topRight: Radius.circular(13),
+                  bottomRight: Radius.circular(13),
                 ),
               ),
               child: const Icon(Icons.add, size: 18, color: Colors.white),

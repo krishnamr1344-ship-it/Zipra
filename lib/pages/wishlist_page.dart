@@ -112,7 +112,7 @@ class _WishlistPageState extends State<WishlistPage> {
           originalPrice: originalPrice,
           qty: unit,
           images: images.cast<String>(),
-          inCart: cartNotifier.items.any((e) => e.name == name),
+          productId: p['id'] ?? '',
           onAdd: (qty) => _addToCart(name, price, originalPrice, unit, imageUrl, qty),
         ))),
         child: Padding(

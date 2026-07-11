@@ -325,6 +325,10 @@ class _HomePageState extends State<HomePage> {
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
+        if (_selectedIndex != 0) {
+          setState(() => _selectedIndex = 0);
+          return;
+        }
         if (DateTime.now().difference(_lastBack).inSeconds < 2) {
           Navigator.of(context).pop();
         } else {
@@ -1157,7 +1161,7 @@ class _HomePageState extends State<HomePage> {
                           originalPrice: p.originalPrice,
                           qty: p.qty,
                           images: p.images,
-                          inCart: count > 0,
+                          productId: p.id,
                           onAdd: (qty) async {
                             if (!await _requireLogin()) return;
                             if (!mounted) return;
@@ -1556,221 +1560,14 @@ Widget _placeholder(String letter, Color color) {
     alignment: Alignment.center,
     decoration: BoxDecoration(
       gradient: LinearGradient(
-        colors: [color.withAlpha(40), color.withAlpha(10)],
+        colors: [color.withValues(alpha: 0.2), color.withValues(alpha: 0.05)],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
     ),
     child: Text(
       letter.toUpperCase(),
-      style: TextStyle(
-        fontSize: 32,
-        fontWeight: FontWeight.bold,
-        color: color.withAlpha(180),
-      ),
+      style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: color.withValues(alpha: 0.7)),
     ),
   );
-}
-
-class _ProductCard extends StatelessWidget {
-  final IconData icon;
-  final String name;
-  final int price;
-  final List<String> images;
-  final bool isFav;
-  final bool inCart;
-  final VoidCallback onAdd;
-  final VoidCallback onFav;
-  final VoidCallback onTap;
-
-  const _ProductCard({
-    required this.icon,
-    required this.name,
-    required this.price,
-    required this.images,
-    required this.isFav,
-    required this.inCart,
-    required this.onAdd,
-    required this.onFav,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final color = AppColors.success;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 14,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          children: [
-            Expanded(
-              flex: 5,
-              child: Stack(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [color.withAlpha(20), color.withAlpha(40)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
-                    child: images.isNotEmpty && images[0].startsWith('http')
-                        ? Image.network(
-                            images[0],
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: double.infinity,
-                            errorBuilder: (_, __, ___) =>
-                                _placeholder(name[0], color),
-                          )
-                        : _placeholder(name[0], color),
-                  ),
-                  Positioned(
-                    top: 6,
-                    right: 6,
-                    child: GestureDetector(
-                      onTap: onFav,
-                      child: Container(
-                        padding: const EdgeInsets.all(5),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withValues(alpha: 0.9),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 6,
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          isFav ? Icons.favorite : Icons.favorite_border,
-                          size: 16,
-                          color: isFav ? Colors.red : Colors.grey.shade400,
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (inCart)
-                    Positioned(
-                      top: 6,
-                      left: 6,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: color,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Text(
-                          'In Cart',
-                          style: TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            Expanded(
-              flex: 4,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      height: 22,
-                      child: Text(
-                        name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                          color: AppColors.textPrimary,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Text(
-                          '₹',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade500,
-                          ),
-                        ),
-                        Text(
-                          '$price',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Spacer(),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 32,
-                      child: ElevatedButton(
-                        onPressed: onAdd,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: inCart
-                              ? color.withValues(alpha: 0.12)
-                              : color,
-                          foregroundColor: inCart ? color : Colors.white,
-                          elevation: 0,
-                          padding: EdgeInsets.zero,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(inCart ? Icons.check : Icons.add, size: 16),
-                            const SizedBox(width: 4),
-                            Text(
-                              inCart ? 'Added' : 'Add',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
