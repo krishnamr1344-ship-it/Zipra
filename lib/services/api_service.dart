@@ -1,22 +1,7 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-
-/// Allow self‑signed SSL certificates (development only).
-class _AllowSelfSignedCert extends HttpOverrides {
-  @override
-  HttpClient createHttpClient(SecurityContext? context) {
-    return super.createHttpClient(context)
-      ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
-  }
-}
-
-final _initSsl = () {
-  HttpOverrides.global = _AllowSelfSignedCert();
-  return true;
-}();
 
 class ApiService {
   static const _baseUrl = 'https://zipra-api-583825347591.asia-south1.run.app';

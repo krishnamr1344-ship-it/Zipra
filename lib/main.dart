@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'pages/home_page.dart';
 import 'pages/admin_home_page.dart';
@@ -8,9 +6,10 @@ import 'services/theme_service.dart';
 import 'services/firebase_service.dart';
 import 'services/app_info.dart';
 import 'constants/theme.dart';
+import 'utils/ssl_overrides.dart';
 
 void main() async {
-  HttpOverrides.global = _AllowSelfSignedCert();
+  configureSslOverrides();
   WidgetsFlutterBinding.ensureInitialized();
 
   FlutterError.onError = (details) {
@@ -26,14 +25,6 @@ void main() async {
     await AppInfo.load();
 
     runApp(const MyApp());
-}
-
-class _AllowSelfSignedCert extends HttpOverrides {
-  @override
-  HttpClient createHttpClient(SecurityContext? context) {
-    return super.createHttpClient(context)
-      ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
-  }
 }
 
 class NoGlowScrollBehavior extends ScrollBehavior {
