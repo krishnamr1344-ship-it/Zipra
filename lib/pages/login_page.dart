@@ -33,9 +33,11 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       final info = await FirebaseService.instance.signInWithGoogle();
       if (!mounted) return;
       final user = info['user'] as Map<String, dynamic>;
+      final idToken = info['token'] as String;
       final body = await ApiService().socialLogin(
         user['email'] ?? '',
         user['name'] ?? '',
+        idToken,
         '',
       );
       if (!mounted) return;

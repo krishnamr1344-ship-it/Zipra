@@ -5,11 +5,6 @@ Security:
   - CORS: only allows FRONTEND_URL from .env, never wildcard.
   - Rate-limit + JWT middleware applied globally.
   - Generic error responses only.
-
-Database:
-  - Local PostgreSQL via SQLAlchemy (models.py, database.py)
-  - Supabase via supabase-py (supabase_db.py) — service_role key
-  - Both run in parallel during migration
 """
 import os
 import uuid
@@ -33,7 +28,6 @@ from middleware import RateLimitMiddleware
 from resources import router as resources_router
 from admin import router as admin_router
 from models import Category, Product, ProductImage, User, ComboPack, ComboPackItem, Offer
-import supabase_db
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
@@ -159,8 +153,11 @@ def _seed_data():
             db.rollback()
 
         # Create admin user if not exists – credentials from .env.
-        admin_email = os.getenv("ADMIN_EMAIL", "admin@yourdomain.com")
-        admin_password = os.getenv("ADMIN_PASSWORD", "YourStrongAdminPass#2024")
+        admin_email = os.getenv("ADMIN_EMAIL")
+        admin_password = os.getenv("ADMIN_PASSWORD")
+        if not admin_email or not admin_password:
+            print("WARNING: ADMIN_EMAIL and ADMIN_PASSWORD must be set in .env")
+            return
         admin = db.query(User).filter(User.email == admin_email).first()
         if not admin:
             hashed = bcrypt.hashpw(admin_password.encode("utf-8"), bcrypt.gensalt(rounds=12)).decode("utf-8")

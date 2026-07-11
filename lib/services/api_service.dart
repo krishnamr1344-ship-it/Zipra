@@ -92,14 +92,14 @@ class ApiService {
     await _clearToken();
   }
 
-  /// Exchange a Google (Supabase OAuth) profile for a backend JWT.
-  /// Calls POST /api/auth/social, then stores the backend token locally so the
-  /// rest of the app works identically to email/password login.
-  Future<Map<String, dynamic>> socialLogin(String email, String name, [String phone = '']) async {
+  /// Exchange a Firebase ID token for a backend JWT.
+  /// Calls POST /api/auth/social with the Firebase ID token. The backend
+  /// verifies the token and returns a backend JWT that the app stores locally.
+  Future<Map<String, dynamic>> socialLogin(String email, String name, String idToken, [String phone = '']) async {
     final res = await http.post(
       Uri.parse('$_baseUrl/api/auth/social'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'name': name, 'phone': phone}),
+      body: jsonEncode({'email': email, 'name': name, 'phone': phone, 'id_token': idToken}),
     );
     final body = await _handleResponse(res);
     final user = body['user'] as Map<String, dynamic>;

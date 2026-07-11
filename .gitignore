@@ -39,6 +39,7 @@ app.*.symbols
 # Environment files (contains secrets)
 .env
 backend/.env
+*.bak
 
 # SSL certs (self-signed, local only)
 *.pem
