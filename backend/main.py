@@ -25,8 +25,20 @@ from sqlalchemy.orm import Session
 from database import engine, SessionLocal, Base
 from auth import router as auth_router
 from middleware import RateLimitMiddleware
-from resources import router as resources_router
-from admin import router as admin_router
+from routes.categories import router as categories_router
+from routes.products import router as products_router
+from routes.addresses import router as addresses_router
+from routes.cart import router as cart_router
+from routes.orders import router as orders_router
+from routes.payments import router as payments_router
+from routes.offers import router as offers_router
+from routes.delivery import router as delivery_router
+from routes.admin_products import router as admin_products_router
+from routes.admin_categories import router as admin_categories_router
+from routes.admin_orders import router as admin_orders_router
+from routes.admin_users import router as admin_users_router
+from routes.admin_delivery import router as admin_delivery_router
+from routes.admin_offers import router as admin_offers_router
 from models import Category, Product, ProductImage, User, ComboPack, ComboPackItem, Offer
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
@@ -61,8 +73,22 @@ app.add_middleware(RateLimitMiddleware)
 
 # ─── Routers ─────────────────────────────────────────────────────
 app.include_router(auth_router)
-app.include_router(resources_router)
-app.include_router(admin_router)
+# User/public routes
+app.include_router(categories_router)
+app.include_router(products_router)
+app.include_router(addresses_router)
+app.include_router(cart_router)
+app.include_router(orders_router)
+app.include_router(payments_router)
+app.include_router(offers_router)
+app.include_router(delivery_router)
+# Admin routes
+app.include_router(admin_products_router)
+app.include_router(admin_categories_router)
+app.include_router(admin_orders_router)
+app.include_router(admin_users_router)
+app.include_router(admin_delivery_router)
+app.include_router(admin_offers_router)
 
 # ─── Static files for uploaded images ──────────────────────────
 os.makedirs("uploads", exist_ok=True)

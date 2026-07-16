@@ -16,12 +16,15 @@ Implement Zepto/Swiggy/Blinkit-style GPS delivery location system with editable 
 ## Progress
 
 ### Done
+- **Major Refactoring**: Split `api_service.dart` into 8 feature modules (auth, product, cart, order, payment, address, offer, upload) using Dart `part`/`part of` pattern. All existing imports unchanged.
+- **Major Refactoring**: Split `resources.py` into 9 route modules under `routes/` (categories, products, addresses, cart, orders, payments, offers, delivery, helpers). Split `admin.py` into 7 modules (admin_products, admin_categories, admin_orders, admin_users, admin_delivery, admin_offers, admin_utils). Updated `main.py` to register all 16 routers.
+- **Cleanup**: Removed 4 unused files: `place_search_page.dart`, `premium_product_grid.dart`, `forgot_password_page.dart`, `about_page.dart`
 - All 5 admin pages redesigned with gradient SliverAppBar, search bars, status filters, card shadows
 - Created `admin_order_detail_page.dart` with order items, user details, GPS address, maps link, status change
 - Added logout button to admin home page
 - Added `address_line2`, `landmark`, `maps_link` to backend responses (admin.py, resources.py, schemas.py)
 - Added `address_type` (Home/Work/Other), `house_number`, `floor_number` columns to addresses table + migration
-- Updated backend models.py, schemas.py, resources.py, admin.py for all new address fields
+- Updated backend models.py, schemas.py, routes/ (split from resources.py, admin.py) for all new address fields
 - Added `GET /api/places/search` endpoint (Nominatim autocomplete)
 - Added `createAddress`, `searchPlaces`, `updateAddress` to `api_service.dart`
 - Added `url_launcher: ^6.2.6` to pubspec.yaml
@@ -74,8 +77,8 @@ Implement Zepto/Swiggy/Blinkit-style GPS delivery location system with editable 
 - **Monthly Needs (Combo Packs)** — "Monthly Needs" section on Offers tab with ready-made grocery packs (Family Pack, PG/Hostel Pack, Small Hotel Pack, Tea Shop Pack)
 - `backend/models.py` — `ComboPack` + `ComboPackItem` models
 - `backend/schemas.py` — `ComboPackCreate/Update/Response`, `ComboPackItemInput/Response`, `PackAddRequest`
-- `backend/resources.py` — `GET /api/combo-packs`, `POST /api/combo-packs/add-to-cart`
-- `backend/admin.py` — Admin CRUD for packs (create/edit/delete/toggle enable)
+- `backend/resources.py` (now routes/) — `GET /api/combo-packs`, `POST /api/combo-packs/add-to-cart`
+- `backend/admin.py` (now routes/) — Admin CRUD for packs (create/edit/delete/toggle enable)
 - `backend/migrations/create_combo_packs.sql` — schema migration
 - `lib/models/combo_pack.dart` — Flutter model
 - `lib/pages/offers_page.dart` — Offers tab with Monthly Needs UI, big combo cards, offer badge, savings text, one-click add to cart
@@ -84,18 +87,25 @@ Implement Zepto/Swiggy/Blinkit-style GPS delivery location system with editable 
 - `lib/services/admin_api_service.dart` — Admin CRUD methods for packs
 - **Token Expiry Fix** — `delivery_location_page.dart` now detects token expiry on "Confirm Address", clears session, and redirects to login
 - **Delivery Fee System** — New `DeliveryFee` backend model (min/max order amount, fee) with admin CRUD, public `POST /api/delivery-fee` endpoint to calculate applicable fee, Flutter admin page (`admin_delivery_fee_page.dart`) for managing fee tiers, and PaymentPage integration to fetch, display, and apply delivery fee to order total. Also added `delivery_fee` field to `OrderCreateRequest`/`OrderDirectCreateRequest` schemas.
-- **Delivery Fee Public Endpoint** — `POST /api/delivery-fee` in `resources.py` accepts `subtotal` and returns matching fee tier (highest `min_order_amount` ≤ subtotal, respecting `max_order_amount` upper bound)
+- **Delivery Fee Public Endpoint** — `POST /api/delivery-fee` in `routes/delivery.py` accepts `subtotal` and returns matching fee tier (highest `min_order_amount` ≤ subtotal, respecting `max_order_amount` upper bound)
 - **Admin Delivery Fee Page** — `lib/pages/admin_delivery_fee_page.dart` with full CRUD (list, create/edit bottom sheet, delete), linked from admin home page
 - **PaymentPage Delivery Fee** — Fetches fee on init via `getDeliveryFee(subtotal)`, displays subtotal/fee/grand total breakdown, passes `deliveryFee` to `createOrder`
 
 ## Relevant Files
-- `backend/migrations/add_address_fields.sql` — schema migration
-- `lib/pages/address_form_page.dart` — address editor
-- `lib/pages/place_search_page.dart` — place search
-- `lib/pages/location_picker_sheet.dart` — Zepto-style location picker
-- `lib/pages/home_page.dart` — 2-line location bar
-- `lib/pages/admin_order_detail_page.dart` — admin maps link
-- `lib/services/api_service.dart` — new endpoints
+- `lib/services/api_service.dart` — barrel file (re-exports split modules)
+- `lib/services/api_service_base.dart` — core class with token management, helpers
+- `lib/services/auth_api.dart` — auth methods mixin
+- `lib/services/product_api.dart` — product/category methods mixin
+- `lib/services/order_api.dart` — order methods mixin
+- `lib/services/payment_api.dart` — delivery fee methods mixin
+- `lib/services/address_api.dart` — address/place search methods mixin
+- `lib/services/offer_api.dart` — offers/combo packs methods mixin
+- `lib/services/admin_api_service.dart` — admin HTTP client
+- `backend/routes/` — split route modules (categories, products, addresses, cart, orders, payments, offers, delivery, helpers)
+- `backend/routes/admin_*` — split admin route modules (products, categories, orders, users, delivery, offers, admin_utils)
+- `backend/main.py` — registers all 16 routers
+- `backend/resources.py` — deprecated barrel (re-exports routes/)
+- `backend/admin.py` — deprecated barrel (re-exports routes/)
 - `lib/services/location_service.dart` — prefs persistence
 - `lib/main.dart` — HttpOverrides + error handling
 - `android/app/build.gradle.kts` — signing config + package com.jvs.app
