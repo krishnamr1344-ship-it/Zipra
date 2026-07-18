@@ -53,9 +53,8 @@ class _AdminLoginPageState extends State<AdminLoginPage> with SingleTickerProvid
       if (!mounted) return;
       final role = body['user']?['role'] ?? '';
       if (role == 'admin') {
-        Navigator.of(context).pushAndRemoveUntil(
+        Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const AdminHomePage()),
-          (route) => false,
         );
         return;
       }

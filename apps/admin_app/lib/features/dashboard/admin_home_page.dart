@@ -73,9 +73,9 @@ class _AdminHomePageState extends State<AdminHomePage> {
     if (confirm == true) {
       await _api.logout();
       if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
+      Navigator.of(context).popUntil((route) => route.isFirst);
+      Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const AdminLoginPage()),
-        (r) => false,
       );
     }
   }
