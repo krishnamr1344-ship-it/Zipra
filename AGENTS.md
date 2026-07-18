@@ -1,7 +1,12 @@
-# Delivery App Project
+# Zipra Multi-App Project
 
 ## Goal
-Implement Zepto/Swiggy/Blinkit-style GPS delivery location system with editable address form, place search, multiple address types, and admin maps integration.
+Multi-app grocery delivery platform with 3 separate Flutter apps:
+1. **Customer App** (`apps/customer_app/`) — Customer-facing grocery shopping
+2. **Shop Owner App** (`apps/shop_app/`) — Shop inventory, orders, earnings
+3. **Admin App** (`apps/admin_app/`) — Full admin dashboard
+
+Shared Python FastAPI backend serves all 3 apps.
 
 ## Constraints & Preferences
 - All payments COD only; 3 product images required; Flipkart-style order tracker; auto-redirect 20s after order
@@ -10,103 +15,136 @@ Implement Zepto/Swiggy/Blinkit-style GPS delivery location system with editable 
 - Tap location opens bottom sheet with: current location detect, search places, saved addresses
 - Address form includes: house number, floor, landmark, address type (Home/Work/Other)
 - Admin must receive: customer name, phone, full address, GPS coordinates, Google Maps link
-- App language: Tamil (user communicates in Tamil)
 - Backend port 8000; emulator uses host IP 192.168.1.3:8000
+
+## Architecture
+
+### Backend (FastAPI) — `backend/app/`
+- **Entry point:** `backend/app/main.py`
+- **Models:** `backend/app/models/` (14 files: user, category, product, address, cart, order, payment, combo_pack, offer, delivery, shop, delivery_partner, earning, notification)
+- **Schemas:** `backend/app/schemas/` (12 files: user, category, product, address, cart, order, payment, combo_pack, offer, delivery, shop, notification, common)
+- **API Routes:**
+  - Customer: `backend/app/api/customer/` (categories, products, cart, orders, addresses, payments, offers, delivery)
+  - Admin: `backend/app/api/admin/` (products, categories, orders, users, delivery, offers, shops)
+  - Shop: `backend/app/api/shop/` (shop_auth, products, orders, earnings)
+  - Auth: `backend/app/api/auth.py`
+- **Core:** `backend/app/core/` (config.py, security.py, constants.py)
+- **DB:** `backend/app/db/` (base.py, session.py)
+- **Middleware:** `backend/app/middleware/rate_limit.py`
+- **Utils:** `backend/app/utils/helpers.py`
+- **22 database tables**, **~107 API endpoints**
+- Auth: Firebase (customer) + email/password (admin/shop owner)
+- Backend URL: `https://zipra-api-583825347591.asia-south1.run.app`
+
+### Database Tables
+**Original (15):** users, categories, products, addresses, cart_items, orders, order_items, payments, tokens_blacklist, delivery_zones, offers, offer_products, delivery_fees, combo_packs, combo_pack_items
+**New (7):** shops, product_approvals, shop_orders, delivery_partners, delivery_assignments, earnings, notifications
 
 ## Progress
 
-### Done
-- **Major Refactoring**: Split `api_service.dart` into 8 feature modules (auth, product, cart, order, payment, address, offer, upload) using Dart `part`/`part of` pattern. All existing imports unchanged.
-- **Major Refactoring**: Split `resources.py` into 9 route modules under `routes/` (categories, products, addresses, cart, orders, payments, offers, delivery, helpers). Split `admin.py` into 7 modules (admin_products, admin_categories, admin_orders, admin_users, admin_delivery, admin_offers, admin_utils). Updated `main.py` to register all 16 routers.
-- **Cleanup**: Removed 4 unused files: `place_search_page.dart`, `premium_product_grid.dart`, `forgot_password_page.dart`, `about_page.dart`
-- All 5 admin pages redesigned with gradient SliverAppBar, search bars, status filters, card shadows
-- Created `admin_order_detail_page.dart` with order items, user details, GPS address, maps link, status change
-- Added logout button to admin home page
-- Added `address_line2`, `landmark`, `maps_link` to backend responses (admin.py, resources.py, schemas.py)
-- Added `address_type` (Home/Work/Other), `house_number`, `floor_number` columns to addresses table + migration
-- Updated backend models.py, schemas.py, routes/ (split from resources.py, admin.py) for all new address fields
-- Added `GET /api/places/search` endpoint (Nominatim autocomplete)
-- Added `createAddress`, `searchPlaces`, `updateAddress` to `api_service.dart`
-- Added `url_launcher: ^6.2.6` to pubspec.yaml
-- Created `address_form_page.dart` — full address editor with house/floor/landmark/type
-- Created `place_search_page.dart` — Nominatim search with 500ms debounce
-- Created `location_picker_sheet.dart` — Zepto-style bottom sheet (current location, search, saved addresses)
-- Updated home page location bar to 2-line Zepto format (Area+City bold, street gray)
-- Updated `api_service.dart`: `createGpsAddress` accepts optional landmark + address_type; added `searchPlaces`, `createAddress`, `updateAddress`
-- Updated `location_service.dart`: saves all new address fields to SharedPreferences
-- Fixed bug in `payment_page.dart`: `_loadAddress()` was not awaited causing empty `_addressId`
-- HTTPS setup with self-signed cert + HttpOverrides
-- Cloudflare Tunnel for public HTTPS access
-- APK & AAB signed and built (package: com.jvs.app)
-- Fixed MainActivity class path for release builds
+### Phase 1: Backend Foundation — DONE
+- All 20 routers registered, 22 tables, 55 schemas, ~107 endpoints
+- Shop owner auth (email/password), product CRUD, order workflow, earnings
+- Admin shop management, delivery partner CRUD, product approval APIs
+- Auth system: Firebase + email/password + forgot/reset/change password
+- `delivery_fee` column added to Order model
+
+### Phase 2: Shop Owner App — DONE
+- 18 Dart files, 9 pages, 23 API methods, `flutter analyze` → 0 errors
+- Login, Dashboard, Products (4-tab filter, CRUD, stock, images), Orders (4-tab filter, status workflow), Earnings (summary + history), Profile, Settings
+- All at `apps/shop_app/` — independent Flutter project, package: `com.zipra.shop_owner`
+
+### Phase 3: Admin App — DONE
+- 16 Dart files, 9 admin pages, `flutter analyze` → 0 errors, 15 infos only
+- Login (email/password), Dashboard (4 stat cards, 8 management tiles), Products, Categories, Orders (4-tab filter + detail), Users, Delivery Zones (map), Delivery Fees, Combo Packs, Offers
+- All at `apps/admin_app/` — independent Flutter project, package: `com.zipra.zipra_admin`
+
+### Phase 4: Customer App Cleanup — DONE
+- Removed 10 admin pages + admin_api_service.dart from customer app
+- Removed admin routing from main.dart and login_page.dart
+- Customer app now customer-only, `flutter analyze` → 0 errors
+
+### Bug Fixes Done
+- Fixed `add_lat_lng_to_addresses.sql` — added `IF NOT EXISTS`
+- Fixed `Order` model — added `delivery_fee` column
+- Removed dead `PUBLIC_PATHS` entries (`/api/auth/register`, `/api/auth/login`)
+- Removed deprecated `resources.py` and `admin.py` barrel files
 
 ### In Progress
 - (none)
 
+### Completed
+- **Phase 5: Enterprise Reorganization** — DONE
+  - Backend: `backend/app/` modular structure (models/, schemas/, api/customer|admin|shop/, core/, db/, middleware/, utils/)
+  - Customer App: `apps/customer_app/lib/` feature-based (`core/` + `features/` with 12 feature folders), 0 errors
+  - Shop App: `apps/shop_app/lib/` feature-based (`core/` + `features/` with 6 feature folders), 0 errors
+  - Admin App: `apps/admin_app/lib/` feature-based (`core/` + `features/` with 10 feature folders), 0 errors, 10 infos
+- **Phase 6: Root Folder Reorganization** — DONE
+  - All 3 Flutter apps moved under `apps/` directory
+  - Customer app: root → `apps/customer_app/`
+  - Shop app: `shop_app/` → `apps/shop_app/`
+  - Admin app: `admin_app/` → `apps/admin_app/`
+  - Created `docs/` and `scripts/` directories
+  - Updated `.gitignore` and `AGENTS.md` paths
+
 ### Known Issues
-- ⚠️ trycloudflare tunnel URL is EPHEMERAL — changes every time cloudflared restarts. Need a permanent domain before Play Store publish.
+- trycloudflare tunnel URL is EPHEMERAL — need permanent domain before Play Store
+- `admin_combo_packs_page.dart` imports `api_service.dart` but only uses `AdminApiService` (unused import, harmless)
 
 ### Key Decisions
-- Used separate Nominatim search endpoint (`/api/places/search`) to avoid API key exposure
-- Address types: Home/Work/Other with Pydantic enum validation
+- 3 separate Flutter apps sharing one FastAPI backend
+- Shop owner app uses local `api_service.dart` (simplified, no Firebase)
+- Admin app uses local `api_service.dart` (simplified, email/password login only)
 - All address fields in separate columns (not JSON) for queryability
-- New fields via ALTER TABLE migrations (not dropping/recreating)
 - `url_launcher` for Google Maps navigation (lighter than webview)
-- Location picker as bottom sheet using `LocationPickerSheet` widget
 - SSL bypass via `HttpOverrides.global` in both `main.dart` and `api_service.dart`
 - Cloudflare Tunnel for free public HTTPS
 - Signing: upload-keystore.jks (password: myapp123)
+- Order model has `delivery_fee` column (nullable, default 0)
 
 ### Next Steps
-- Buy a domain (e.g., jvsgrocery.com) for permanent Cloudflare Tunnel
-- Set up permanent tunnel with `cloudflared tunnel create`
+- Buy a domain for permanent Cloudflare Tunnel
 - Remove self-signed cert HttpOverrides before Play Store
-- Update _baseUrl in 3 files (api_service, admin_api_service, delivery_zone_service)
 - Deploy latest backend to Cloud Run
-- Build & test final APK with delivery fee logic
+- Build & test final APKs for all 3 apps
 - Play Store publish
 
 ## Critical Context
-- New columns: `address_type VARCHAR(20) DEFAULT 'Home'`, `house_number VARCHAR(50)`, `floor_number VARCHAR(50)` in addresses table
-- Backend port 8000; admin: admin@admin.com / Admin@123; DB: delivery_user@localhost:5432/delivery_db
+- Backend port 8000; admin: admin@admin.com / Admin@123; DB: Cloud SQL (PostgreSQL 16) - delivery_user@34.14.136.128:5432/delivery_db
+- Backend URL: `https://zipra-api-583825347591.asia-south1.run.app`
+- Customer app: package `com.jvs.app`; Shop app: `com.zipra.shop_owner`; Admin app: `com.zipra.zipra_admin`
 - `maps_link` format: `https://www.google.com/maps?q={lat},{lng}`
-- PSelva user: selva555@gmail.com (password unknown)
-- Tunnel URL (ephemeral): https://assist-legislature-temporarily-trackbacks.trycloudflare.com
-
-### Added
-- **Monthly Needs (Combo Packs)** — "Monthly Needs" section on Offers tab with ready-made grocery packs (Family Pack, PG/Hostel Pack, Small Hotel Pack, Tea Shop Pack)
-- `backend/models.py` — `ComboPack` + `ComboPackItem` models
-- `backend/schemas.py` — `ComboPackCreate/Update/Response`, `ComboPackItemInput/Response`, `PackAddRequest`
-- `backend/resources.py` (now routes/) — `GET /api/combo-packs`, `POST /api/combo-packs/add-to-cart`
-- `backend/admin.py` (now routes/) — Admin CRUD for packs (create/edit/delete/toggle enable)
-- `backend/migrations/create_combo_packs.sql` — schema migration
-- `lib/models/combo_pack.dart` — Flutter model
-- `lib/pages/offers_page.dart` — Offers tab with Monthly Needs UI, big combo cards, offer badge, savings text, one-click add to cart
-- `lib/pages/admin_combo_packs_page.dart` — Admin management page (list, create/edit bottom sheet, enable/disable toggle, delete)
-- `lib/services/api_service.dart` — `getComboPacks()`, `addPackToCart()`
-- `lib/services/admin_api_service.dart` — Admin CRUD methods for packs
-- **Token Expiry Fix** — `delivery_location_page.dart` now detects token expiry on "Confirm Address", clears session, and redirects to login
-- **Delivery Fee System** — New `DeliveryFee` backend model (min/max order amount, fee) with admin CRUD, public `POST /api/delivery-fee` endpoint to calculate applicable fee, Flutter admin page (`admin_delivery_fee_page.dart`) for managing fee tiers, and PaymentPage integration to fetch, display, and apply delivery fee to order total. Also added `delivery_fee` field to `OrderCreateRequest`/`OrderDirectCreateRequest` schemas.
-- **Delivery Fee Public Endpoint** — `POST /api/delivery-fee` in `routes/delivery.py` accepts `subtotal` and returns matching fee tier (highest `min_order_amount` ≤ subtotal, respecting `max_order_amount` upper bound)
-- **Admin Delivery Fee Page** — `lib/pages/admin_delivery_fee_page.dart` with full CRUD (list, create/edit bottom sheet, delete), linked from admin home page
-- **PaymentPage Delivery Fee** — Fetches fee on init via `getDeliveryFee(subtotal)`, displays subtotal/fee/grand total breakdown, passes `deliveryFee` to `createOrder`
 
 ## Relevant Files
-- `lib/services/api_service.dart` — barrel file (re-exports split modules)
-- `lib/services/api_service_base.dart` — core class with token management, helpers
-- `lib/services/auth_api.dart` — auth methods mixin
-- `lib/services/product_api.dart` — product/category methods mixin
-- `lib/services/order_api.dart` — order methods mixin
-- `lib/services/payment_api.dart` — delivery fee methods mixin
-- `lib/services/address_api.dart` — address/place search methods mixin
-- `lib/services/offer_api.dart` — offers/combo packs methods mixin
-- `lib/services/admin_api_service.dart` — admin HTTP client
-- `backend/routes/` — split route modules (categories, products, addresses, cart, orders, payments, offers, delivery, helpers)
-- `backend/routes/admin_*` — split admin route modules (products, categories, orders, users, delivery, offers, admin_utils)
-- `backend/main.py` — registers all 16 routers
-- `backend/resources.py` — deprecated barrel (re-exports routes/)
-- `backend/admin.py` — deprecated barrel (re-exports routes/)
-- `lib/services/location_service.dart` — prefs persistence
-- `lib/main.dart` — HttpOverrides + error handling
-- `android/app/build.gradle.kts` — signing config + package com.jvs.app
-- `android/app/src/main/AndroidManifest.xml` — full MainActivity path
+
+### Backend
+- `backend/app/main.py` — registers all 20 routers, seed data
+- `backend/app/models/` — 14 SQLAlchemy model files
+- `backend/app/schemas/` — 12 Pydantic schema files
+- `backend/app/api/customer/` — 8 customer route modules
+- `backend/app/api/admin/` — 7 admin route modules
+- `backend/app/api/shop/` — 4 shop route modules
+- `backend/app/api/auth.py` — auth endpoints
+- `backend/app/core/` — config, security, constants
+- `backend/app/db/` — base, session
+- `backend/app/middleware/rate_limit.py`
+- `backend/app/utils/helpers.py`
+
+### Customer App (`apps/customer_app/lib/`)
+- `apps/customer_app/lib/main.dart` — entry point (admin routing removed)
+- `apps/customer_app/lib/core/api/api_service.dart` — barrel file (8 feature modules)
+- `apps/customer_app/lib/core/api/api_service_base.dart` — core class with token management
+- `apps/customer_app/lib/features/` — 11 feature folders with pages
+
+### Shop Owner App (`apps/shop_app/lib/`)
+- `apps/shop_app/lib/main.dart` — entry point with auth check
+- `apps/shop_app/lib/core/api/shop_api_service.dart` — 23 API methods
+- `apps/shop_app/lib/core/models/` — shop_model, shop_product, shop_order, earning
+- `apps/shop_app/lib/features/` — 6 feature folders (auth, dashboard, earnings, orders, products, profile)
+
+### Admin App (`apps/admin_app/lib/`)
+- `apps/admin_app/lib/main.dart` — entry point with auth check
+- `apps/admin_app/lib/core/api/api_service.dart` — simplified (token + login)
+- `apps/admin_app/lib/core/api/admin_api_service.dart` — 27 admin API methods
+- `apps/admin_app/lib/core/constants/theme.dart` — AppColors (shared design tokens)
+- `apps/admin_app/lib/features/` — 10 feature folders (auth, categories, combo_packs, dashboard, delivery, offers, orders, products, shops, users)
