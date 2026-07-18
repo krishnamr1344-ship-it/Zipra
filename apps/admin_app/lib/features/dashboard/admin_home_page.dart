@@ -375,7 +375,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.xl,
-        -AppSpacing.md,
+        0,
         AppSpacing.xl,
         0,
       ),
