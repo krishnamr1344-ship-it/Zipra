@@ -75,7 +75,8 @@ class ShopApiService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('shop_owner_name', user['name'] ?? '');
     await prefs.setString('shop_owner_email', user['email'] ?? '');
-    await prefs.setString('shop_id', body['shop_id'] ?? '');
+    final shop = body['shop'] as Map<String, dynamic>?;
+    await prefs.setString('shop_id', shop?['id'] ?? '');
     return body;
   }
 
@@ -103,7 +104,7 @@ class ShopApiService {
   }
 
   Future<String> toggleOpen() async {
-    final res = await http.put(
+    final res = await http.post(
       Uri.parse('$_baseUrl/api/shop/toggle-open'),
       headers: await _headers(),
     );

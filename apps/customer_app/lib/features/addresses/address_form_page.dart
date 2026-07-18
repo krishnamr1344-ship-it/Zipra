@@ -56,6 +56,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
     setState(() => _saving = true);
     try {
       final data = {
+        'label': _addressType,
         'address_line1': _line1Ctl.text.trim(),
         'address_line2': _line2Ctl.text.trim(),
         'city': _cityCtl.text.trim(),

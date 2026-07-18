@@ -153,7 +153,7 @@ class _MapPickerPageState extends State<MapPickerPage> {
                   children: [
                     TileLayer(
                       urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.example.myapp',
+                      userAgentPackageName: 'com.jvs.app',
                     ),
                     MarkerLayer(
                       markers: [
@@ -298,8 +298,8 @@ class _MapPickerPageState extends State<MapPickerPage> {
       final results = await _api.searchPlaces(query);
       if (!mounted || results.isEmpty) return;
       final first = results.first;
-      final lat = (first['lat'] as num?)?.toDouble();
-      final lon = (first['lon'] as num?)?.toDouble();
+      final lat = (first['latitude'] as num?)?.toDouble();
+      final lon = (first['longitude'] as num?)?.toDouble();
       if (lat != null && lon != null) {
         setState(() {
           _center = LatLng(lat, lon);
