@@ -53,12 +53,19 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       await _api.shopLogin(_emailCtrl.text.trim(), _passwordCtrl.text);
       if (!mounted) return;
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ShopHomePage()));
+      return;
     } on ShopApiException catch (e) {
-      setState(() => _error = e.message);
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e.message;
+      });
     } catch (_) {
-      setState(() => _error = 'Connection failed. Please try again.');
-    } finally {
-      if (mounted) setState(() => _loading = false);
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = 'Connection failed. Please try again.';
+      });
     }
   }
 

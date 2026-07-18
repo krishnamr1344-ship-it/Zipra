@@ -57,18 +57,19 @@ class _AdminLoginPageState extends State<AdminLoginPage> with SingleTickerProvid
           MaterialPageRoute(builder: (_) => const AdminHomePage()),
           (route) => false,
         );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Access denied. Admin only.')),
-        );
+        return;
       }
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Access denied. Admin only.')),
+      );
     } catch (e) {
       if (!mounted) return;
+      setState(() => _loading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString())),
       );
-    } finally {
-      if (mounted) setState(() => _loading = false);
     }
   }
 

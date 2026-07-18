@@ -17,47 +17,8 @@ void main() async {
   runApp(const ZipraShopApp());
 }
 
-class ZipraShopApp extends StatefulWidget {
+class ZipraShopApp extends StatelessWidget {
   const ZipraShopApp({super.key});
-
-  @override
-  State<ZipraShopApp> createState() => _ZipraShopAppState();
-}
-
-class _ZipraShopAppState extends State<ZipraShopApp> {
-  Widget _initialPage = const Scaffold(
-    body: Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          CircularProgressIndicator(color: AppColors.primary),
-          SizedBox(height: 16),
-          Text('Loading...', style: TextStyle(color: AppColors.textSecondary)),
-        ],
-      ),
-    ),
-  );
-
-  @override
-  void initState() {
-    super.initState();
-    _checkAuth();
-  }
-
-  Future<void> _checkAuth() async {
-    try {
-      final token = await ShopApiService().getToken();
-      if (!mounted) return;
-      setState(() {
-        _initialPage = token != null ? const ShopHomePage() : const LoginPage();
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _initialPage = const LoginPage();
-      });
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -116,7 +77,53 @@ class _ZipraShopAppState extends State<ZipraShopApp> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
         ),
       ),
-      home: _initialPage,
+      home: const _AppEntry(),
     );
+  }
+}
+
+class _AppEntry extends StatefulWidget {
+  const _AppEntry();
+
+  @override
+  State<_AppEntry> createState() => _AppEntryState();
+}
+
+class _AppEntryState extends State<_AppEntry> {
+  Widget? _startPage;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuth();
+  }
+
+  Future<void> _checkAuth() async {
+    try {
+      final token = await ShopApiService().getToken();
+      _startPage = token != null ? const ShopHomePage() : const LoginPage();
+    } catch (_) {
+      _startPage = const LoginPage();
+    }
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_startPage == null) {
+      return const Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: AppColors.primary),
+              SizedBox(height: 16),
+              Text('Loading...', style: TextStyle(color: AppColors.textSecondary)),
+            ],
+          ),
+        ),
+      );
+    }
+    return _startPage!;
   }
 }

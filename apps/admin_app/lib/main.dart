@@ -16,38 +16,8 @@ void main() async {
   runApp(const ZipraAdminApp());
 }
 
-class ZipraAdminApp extends StatefulWidget {
+class ZipraAdminApp extends StatelessWidget {
   const ZipraAdminApp({super.key});
-
-  @override
-  State<ZipraAdminApp> createState() => _ZipraAdminAppState();
-}
-
-class _ZipraAdminAppState extends State<ZipraAdminApp> {
-  Widget? _startPage;
-  bool _checking = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkAuth();
-  }
-
-  Future<void> _checkAuth() async {
-    try {
-      final token = await ApiService().getToken();
-      final user = await ApiService().getSavedUser();
-      final role = user['role'] ?? '';
-      if (token != null && role == 'admin') {
-        _startPage = const AdminHomePage();
-      } else {
-        _startPage = const AdminLoginPage();
-      }
-    } catch (_) {
-      _startPage = const AdminLoginPage();
-    }
-    if (mounted) setState(() => _checking = false);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -106,20 +76,59 @@ class _ZipraAdminAppState extends State<ZipraAdminApp> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
         ),
       ),
-      home: _checking
-          ? const Scaffold(
-              body: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(color: AppColors.accent),
-                    SizedBox(height: 16),
-                    Text('Loading...', style: TextStyle(color: AppColors.textSecondary)),
-                  ],
-                ),
-              ),
-            )
-          : _startPage!,
+      home: const _AppEntry(),
     );
+  }
+}
+
+class _AppEntry extends StatefulWidget {
+  const _AppEntry();
+
+  @override
+  State<_AppEntry> createState() => _AppEntryState();
+}
+
+class _AppEntryState extends State<_AppEntry> {
+  Widget? _startPage;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuth();
+  }
+
+  Future<void> _checkAuth() async {
+    try {
+      final token = await ApiService().getToken();
+      final user = await ApiService().getSavedUser();
+      final role = user['role'] ?? '';
+      if (token != null && role == 'admin') {
+        _startPage = const AdminHomePage();
+      } else {
+        _startPage = const AdminLoginPage();
+      }
+    } catch (_) {
+      _startPage = const AdminLoginPage();
+    }
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_startPage == null) {
+      return const Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: AppColors.accent),
+              SizedBox(height: 16),
+              Text('Loading...', style: TextStyle(color: AppColors.textSecondary)),
+            ],
+          ),
+        ),
+      );
+    }
+    return _startPage!;
   }
 }
