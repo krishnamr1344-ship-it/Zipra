@@ -34,7 +34,7 @@ Shared Python FastAPI backend serves all 3 apps.
 - **Utils:** `backend/app/utils/helpers.py`
 - **22 database tables**, **~107 API endpoints**
 - Auth: Firebase (customer) + email/password (admin/shop owner)
-- Backend URL: `https://zipra-api-txlyzg2aeq-el.a.run.app`
+- Backend URL: `https://zipra-api-583825347591.asia-south1.run.app`
 
 ### Database Tables
 **Original (15):** users, categories, products, addresses, cart_items, orders, order_items, payments, tokens_blacklist, delivery_zones, offers, offer_products, delivery_fees, combo_packs, combo_pack_items
@@ -111,7 +111,7 @@ Shared Python FastAPI backend serves all 3 apps.
 
 ## Critical Context
 - Backend port 8000; admin: admin@admin.com / Admin@123; DB: Cloud SQL (PostgreSQL 16) - delivery_user@34.14.136.128:5432/delivery_db
-- Backend URL: `https://zipra-api-txlyzg2aeq-el.a.run.app`
+- Backend URL: `https://zipra-api-583825347591.asia-south1.run.app`
 - Customer app: package `com.jvs.app`; Shop app: `com.zipra.shop_owner`; Admin app: `com.zipra.zipra_admin`
 - `maps_link` format: `https://www.google.com/maps?q={lat},{lng}`
 

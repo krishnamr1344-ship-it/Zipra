@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'api_service.dart';
 
 class AdminApiService {
-  static const _baseUrl = 'https://zipra-api-txlyzg2aeq-el.a.run.app';
+  static const _baseUrl = 'https://zipra-api-583825347591.asia-south1.run.app';
 
   Future<Map<String, String>> _authHeader() async {
     final token = await ApiService().getToken();
