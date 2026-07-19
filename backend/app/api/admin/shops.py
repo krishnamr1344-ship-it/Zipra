@@ -2,7 +2,6 @@ import os
 import uuid
 from datetime import datetime, timezone
 
-import bcrypt
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
@@ -13,6 +12,7 @@ from app.schemas import (
     DeliveryPartnerCreate, DeliveryPartnerUpdate, DeliveryPartnerResponse,
     MessageResponse, ShopProductResponse,
 )
+from app.core.security import hash_password
 from app.utils.helpers import require_admin
 
 router = APIRouter(prefix="/api/admin", tags=["admin-shops"])
@@ -44,7 +44,7 @@ def create_shop_owner(body: ShopOwnerCreate, request: Request, db: Session = Dep
     existing = db.query(User).filter(User.email == body.email.lower()).first()
     if existing:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
-    hashed = bcrypt.hashpw(body.password.encode("utf-8"), bcrypt.gensalt(rounds=12)).decode("utf-8")
+    hashed = hash_password(body.password)
     user = User(
         email=body.email.lower(),
         password_hash=hashed,

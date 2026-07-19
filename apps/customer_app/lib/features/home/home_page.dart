@@ -852,72 +852,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildLoginPrompt() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.shopping_bag_outlined,
-              size: 72,
-              color: Colors.grey.shade300,
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Login to Browse Products',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Sign in to view our full catalog and start ordering.',
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () async {
-                final loggedIn = await Navigator.push<bool>(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginPage()),
-                );
-                if (loggedIn == true) {
-                  _loadProfile();
-                  _loadData();
-                  if (mounted) setState(() {});
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 40,
-                  vertical: 14,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              child: const Text(
-                'Login Now',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<bool> _checkLogin() async {
-    return await _api.getToken() != null;
-  }
-
   Widget _buildProductSection() {
     final products = _filteredProducts;
 
@@ -1562,22 +1496,5 @@ GroceryProduct _toGroceryProduct(_ProductData p) {
     imageBg: _colorFor(p.category),
     stock: p.stock,
     description: p.description,
-  );
-}
-
-Widget _placeholder(String letter, Color color) {
-  return Container(
-    alignment: Alignment.center,
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        colors: [color.withValues(alpha: 0.2), color.withValues(alpha: 0.05)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-    ),
-    child: Text(
-      letter.toUpperCase(),
-      style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: color.withValues(alpha: 0.7)),
-    ),
   );
 }

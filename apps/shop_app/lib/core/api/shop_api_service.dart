@@ -109,7 +109,7 @@ class ShopApiService {
       headers: await _headers(),
     );
     final body = _handleResponse(res);
-    return body['message'] as String;
+    return body['is_open'] == true ? 'Shop is now open' : 'Shop is now closed';
   }
 
   // ─── PRODUCTS ─────────────────────────────────────────────────

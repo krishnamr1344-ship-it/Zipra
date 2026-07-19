@@ -69,10 +69,4 @@ class AppColors {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
-
-  static const LinearGradient adminHeaderGradient = LinearGradient(
-    colors: [Color(0xFFE65100), Color(0xFFFF6B00), Color(0xFF1A1A1A)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
 }

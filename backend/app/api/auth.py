@@ -1,7 +1,6 @@
 import os
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Optional
 
 import bcrypt
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -10,7 +9,10 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.models import User, TokenBlacklist
-from app.schemas import RegisterRequest, LoginRequest, LogoutRequest
+from app.schemas.user import (
+    LogoutRequest, SocialLoginRequest, EmailLoginRequest,
+    ForgotPasswordRequest, ResetPasswordRequest, ChangePasswordRequest,
+)
 from app.core.security import hash_password, verify_password, create_jwt, decode_jwt
 from app.core.config import JWT_SECRET, JWT_EXPIRY_MINUTES, BCRYPT_ROUNDS
 
@@ -104,22 +106,6 @@ def logout(body: LogoutRequest, db: Session = Depends(get_db)):
     return {"message": "Logged out successfully"}
 
 
-class SocialLoginRequest(BaseModel):
-    email: str
-    name: Optional[str] = None
-    phone: Optional[str] = None
-    id_token: str
-
-    @field_validator("id_token")
-    @classmethod
-    def nonempty_token(cls, v):
-        if not v or not v.strip():
-            raise ValueError("Firebase ID token is required")
-        if len(v) > MAX_TOKEN_LENGTH:
-            raise ValueError(f"Token must not exceed {MAX_TOKEN_LENGTH} characters")
-        return v.strip()
-
-
 @router.post("/social", status_code=status.HTTP_200_OK)
 def social_login(body: SocialLoginRequest, db: Session = Depends(get_db)):
     decoded_token = _verify_firebase_token(body.id_token)
@@ -157,26 +143,6 @@ def social_login(body: SocialLoginRequest, db: Session = Depends(get_db)):
     }
 
 
-class EmailLoginRequest(BaseModel):
-    email: str
-    password: str
-
-    @field_validator("email")
-    @classmethod
-    def valid_email(cls, v):
-        v = v.strip()
-        if not v:
-            raise ValueError("Email is required")
-        return v.lower()
-
-    @field_validator("password")
-    @classmethod
-    def nonempty(cls, v):
-        if not v:
-            raise ValueError("Password is required")
-        return v
-
-
 @router.post("/login-email", status_code=status.HTTP_200_OK)
 def email_login(body: EmailLoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(
@@ -198,18 +164,6 @@ def email_login(body: EmailLoginRequest, db: Session = Depends(get_db)):
     }
 
 
-class ForgotPasswordRequest(BaseModel):
-    email: str
-
-    @field_validator("email")
-    @classmethod
-    def valid_email(cls, v):
-        v = v.strip()
-        if not v:
-            raise ValueError("Email is required")
-        return v.lower()
-
-
 @router.post("/forgot-password", status_code=status.HTTP_200_OK)
 def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(
@@ -223,20 +177,6 @@ def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
     user.password_reset_token_expires = datetime.now(timezone.utc) + timedelta(hours=1)
     db.commit()
     return {"message": "If the email exists, a reset link has been sent", "reset_token": reset_token}
-
-
-class ResetPasswordRequest(BaseModel):
-    token: str
-    new_password: str
-
-    @field_validator("new_password")
-    @classmethod
-    def password_strength(cls, v):
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters")
-        if len(v) > MAX_TOKEN_LENGTH:
-            raise ValueError(f"Password must not exceed {MAX_TOKEN_LENGTH} characters")
-        return v
 
 
 @router.post("/reset-password", status_code=status.HTTP_200_OK)
@@ -254,18 +194,6 @@ def reset_password(body: ResetPasswordRequest, db: Session = Depends(get_db)):
     user.password_reset_token_expires = None
     db.commit()
     return {"message": "Password reset successful"}
-
-
-class ChangePasswordRequest(BaseModel):
-    current_password: str
-    new_password: str
-
-    @field_validator("new_password")
-    @classmethod
-    def password_strength(cls, v):
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters")
-        return v
 
 
 @router.post("/change-password", status_code=status.HTTP_200_OK)

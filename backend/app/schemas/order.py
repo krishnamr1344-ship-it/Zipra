@@ -73,6 +73,7 @@ class OrderResponse(BaseModel):
     status: str
     total_amount: float
     payment_method: str
+    delivery_fee: Optional[float] = None
     items: list[OrderItemResponse] = []
     delivery_address: Optional[DeliveryAddress] = None
     created_at: datetime

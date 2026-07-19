@@ -1,5 +1,5 @@
 from app.schemas.user import (
-    RegisterRequest, LoginRequest, LogoutRequest, EmailLoginRequest,
+    LogoutRequest, EmailLoginRequest,
     SocialLoginRequest, ForgotPasswordRequest, ResetPasswordRequest, ChangePasswordRequest,
 )
 from app.schemas.category import CategoryCreate, CategoryResponse
@@ -32,7 +32,7 @@ from app.schemas.common import MessageResponse
 from app.schemas.order import StatusUpdateRequest
 
 __all__ = [
-    "RegisterRequest", "LoginRequest", "LogoutRequest", "EmailLoginRequest",
+    "LogoutRequest", "EmailLoginRequest",
     "SocialLoginRequest", "ForgotPasswordRequest", "ResetPasswordRequest", "ChangePasswordRequest",
     "CategoryCreate", "CategoryResponse",
     "ProductCreate", "ProductResponse",

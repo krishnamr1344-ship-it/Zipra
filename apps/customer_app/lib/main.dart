@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'features/home/home_page.dart';
-import 'core/api/api_service.dart';
 import 'core/utils/theme_service.dart';
 import 'core/utils/firebase_service.dart';
 import 'core/utils/app_info.dart';
@@ -113,35 +112,8 @@ class _AppEntry extends StatefulWidget {
 }
 
 class _AppEntryState extends State<_AppEntry> {
-  final _api = ApiService();
-  Widget? _startPage;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkAuth();
-  }
-
-  Future<void> _checkAuth() async {
-    final token = await _api.getToken();
-    if (token != null) {
-      if (mounted) {
-        setState(() {
-          _startPage = const HomePage();
-        });
-      }
-    } else {
-      if (mounted) {
-        setState(() => _startPage = const HomePage());
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    if (_startPage == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-    return _startPage!;
+    return const HomePage();
   }
 }

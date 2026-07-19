@@ -1,7 +1,6 @@
 library;
 
 export 'api_service_base.dart';
-export 'api_service_base.dart' show ApiException;
 
 /// Barrel file: re-exports the split ApiService modules.
 /// All existing `import 'api_service.dart'` statements continue to work.

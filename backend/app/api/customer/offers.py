@@ -1,7 +1,6 @@
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
