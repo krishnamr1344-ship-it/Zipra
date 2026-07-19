@@ -40,7 +40,7 @@ class ShopProduct {
       images: List<String>.from(json['images'] ?? []),
       stock: json['stock'] ?? 0,
       approvalStatus: json['approval_status'] ?? 'pending',
-      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
     );
   }
 }

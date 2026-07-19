@@ -67,11 +67,9 @@ class _ShopHomePageState extends State<ShopHomePage> {
       setState(() {
         _loading = false;
       });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load data: $e')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load data: $e')),
+      );
     }
   }
 
@@ -105,6 +103,7 @@ class _ShopHomePageState extends State<ShopHomePage> {
             onPressed: () async {
               await _api.logout();
               if (!mounted) return;
+              Navigator.pop(ctx);
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (_) => const LoginPage()),
@@ -173,20 +172,16 @@ class _ShopHomePageState extends State<ShopHomePage> {
   }
 
   Widget _buildBody() {
-    switch (_currentIndex) {
-      case 0:
-        return _buildDashboardTab();
-      case 1:
-        return const ShopProductsPage();
-      case 2:
-        return const ShopOrdersPage();
-      case 3:
-        return const ShopEarningsPage();
-      case 4:
-        return _buildProfileTab();
-      default:
-        return _buildDashboardTab();
-    }
+    return IndexedStack(
+      index: _currentIndex,
+      children: [
+        _buildDashboardTab(),
+        const ShopProductsPage(),
+        const ShopOrdersPage(),
+        const ShopEarningsPage(),
+        _buildProfileTab(),
+      ],
+    );
   }
 
   // ─── DASHBOARD TAB ─────────────────────────────────────────────
@@ -566,7 +561,7 @@ class _ShopHomePageState extends State<ShopHomePage> {
                 separatorBuilder: (context, index) => const SizedBox(width: 12),
                 itemBuilder: (context, index) {
                   final o = _recentOrders[index];
-                  final orderId = o['order_id'] ?? o['id'] ?? '';
+                  final orderId = o['id'] ?? o['order_id'] ?? '';
                   final status = o['status'] as String?;
                   final total = (o['total_amount'] as num?)?.toDouble() ?? 0;
                   final itemCount = o['item_count'] ?? 0;
@@ -817,7 +812,7 @@ class _ShopHomePageState extends State<ShopHomePage> {
             icon: Icons.help_outline_rounded,
             title: 'Help & Support',
             subtitle: 'Get assistance',
-            onTap: () {},
+            onTap: () { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Coming soon'))); },
           ),
           const SizedBox(height: 12),
           Container(

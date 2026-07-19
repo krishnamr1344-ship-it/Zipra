@@ -30,8 +30,8 @@ class Earning {
       commission: (json['commission'] as num?)?.toDouble() ?? 0,
       netAmount: (json['net_amount'] as num?)?.toDouble() ?? 0,
       status: json['status'] ?? 'pending',
-      settledAt: json['settled_at'] != null ? DateTime.parse(json['settled_at']) : null,
-      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
+      settledAt: json['settled_at'] != null ? DateTime.tryParse(json['settled_at'] ?? '') ?? DateTime.now() : null,
+      createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
     );
   }
 }

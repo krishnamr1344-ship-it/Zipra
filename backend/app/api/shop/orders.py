@@ -189,7 +189,7 @@ def mark_delivered(order_id: str, request: Request, db: Session = Depends(get_db
 
     parent_order = db.query(Order).filter(Order.id == so.order_id).first()
     if parent_order:
-        parent_order.status = "Delivered"
+        parent_order.status = "delivered"
         parent_order.updated_at = datetime.now(timezone.utc)
 
     db.commit()

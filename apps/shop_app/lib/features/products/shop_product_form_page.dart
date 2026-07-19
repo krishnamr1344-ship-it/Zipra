@@ -76,11 +76,9 @@ class _ShopProductFormPageState extends State<ShopProductFormPage> {
       setState(() {
         _loading = false;
       });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load categories: $e')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load categories: $e')),
+      );
     }
   }
 
@@ -148,7 +146,11 @@ class _ShopProductFormPageState extends State<ShopProductFormPage> {
       if (productId != null) {
         for (final file in _newImages) {
           try {
-            await _api.uploadProductImage(productId, file.path);
+            final imageUrl = await _api.uploadProductImage(productId, file.path);
+            if (imageUrl.isNotEmpty) {
+              _existingImages.add(imageUrl);
+              setState(() {});
+            }
           } catch (e) {
             debugPrint('Image upload failed: $e');
           }
@@ -543,7 +545,7 @@ class _ImageTile extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppRadius.md),
             child: imageUrl != null
                 ? Image.network(
-                    imageUrl!,
+                    resolveImageUrl(imageUrl!),
                     width: 100,
                     height: 100,
                     fit: BoxFit.cover,

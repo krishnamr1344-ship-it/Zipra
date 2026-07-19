@@ -155,6 +155,7 @@ class SettingsPage extends StatelessWidget {
             onPressed: () async {
               await ShopApiService().logout();
               if (!context.mounted) return;
+              Navigator.pop(ctx);
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (_) => const LoginPage()),

@@ -69,11 +69,9 @@ class _ShopProfilePageState extends State<ShopProfilePage> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load profile: $e')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load profile: $e')),
+      );
     }
   }
 
@@ -204,7 +202,7 @@ class _ShopProfilePageState extends State<ShopProfilePage> {
             child: _shop?.logoUrl != null && _shop!.logoUrl!.isNotEmpty
                 ? ClipOval(
                     child: Image.network(
-                      _shop!.logoUrl!,
+                      resolveImageUrl(_shop!.logoUrl!),
                       width: 72,
                       height: 72,
                       fit: BoxFit.cover,

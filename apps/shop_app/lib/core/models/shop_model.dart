@@ -58,7 +58,7 @@ class ShopModel {
       gstNumber: json['gst_number'],
       isActive: json['is_active'] ?? true,
       isOpen: json['is_open'] ?? true,
-      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
     );
   }
 }

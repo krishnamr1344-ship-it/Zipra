@@ -41,11 +41,9 @@ class _ShopEarningsPageState extends State<ShopEarningsPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load earnings: $e')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load earnings: $e')),
+      );
     }
   }
 

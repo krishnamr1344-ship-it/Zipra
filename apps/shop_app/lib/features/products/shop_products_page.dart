@@ -35,6 +35,7 @@ class _ShopProductsPageState extends State<ShopProductsPage>
   }
 
   Future<void> _loadProducts() async {
+    if (_loading) return;
     setState(() {
       _loading = true;
     });
@@ -59,11 +60,9 @@ class _ShopProductsPageState extends State<ShopProductsPage>
       setState(() {
         _loading = false;
       });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load products: $e')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load products: $e')),
+      );
     }
   }
 
@@ -137,7 +136,7 @@ class _ShopProductsPageState extends State<ShopProductsPage>
           ),
         ],
       ),
-    );
+    ).then((_) { ctrl.dispose(); });
     if (newStock == null) return;
     try {
       await _api.updateStock(product.id, newStock);
@@ -522,7 +521,7 @@ class _ProductCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: product.images.isNotEmpty
           ? Image.network(
-              product.images.first,
+              resolveImageUrl(product.images.first),
               fit: BoxFit.cover,
               errorBuilder: (_, a, b) => const Center(
                 child: Icon(Icons.image_outlined, color: AppColors.textHint, size: 28),
@@ -604,7 +603,7 @@ class _ProductCard extends StatelessWidget {
           Icon(_statusIcon, size: 11, color: _statusColor),
           const SizedBox(width: 3),
           Text(
-            product.approvalStatus[0].toUpperCase() + product.approvalStatus.substring(1),
+            product.approvalStatus.isNotEmpty ? product.approvalStatus[0].toUpperCase() + product.approvalStatus.substring(1) : 'Unknown',
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,

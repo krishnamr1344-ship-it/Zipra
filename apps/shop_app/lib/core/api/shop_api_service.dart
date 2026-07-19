@@ -6,6 +6,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 const String _baseUrl = 'https://zipra-api-txlyzg2aeq-el.a.run.app';
 const String _tokenKey = 'shop_token';
 
+String resolveImageUrl(String? url) {
+  if (url == null || url.isEmpty) return '';
+  if (url.startsWith('http')) return url;
+  return '$_baseUrl$url';
+}
+
 class ShopApiService {
   Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -36,7 +42,10 @@ class ShopApiService {
 
   Map<String, dynamic> _handleResponse(http.Response res) {
     if (res.statusCode >= 200 && res.statusCode < 300) {
-      return jsonDecode(res.body) as Map<String, dynamic>;
+      final decoded = jsonDecode(res.body);
+      if (decoded is Map<String, dynamic>) return decoded;
+      if (decoded is Map) return Map<String, dynamic>.from(decoded);
+      return {'data': decoded};
     }
     debugPrint('API Error ${res.statusCode}: ${res.body}');
     final msg = _tryDecodeDetail(res.body) ?? 'Request failed (${res.statusCode})';
@@ -70,7 +79,7 @@ class ShopApiService {
       body: jsonEncode({'email': email, 'password': password}),
     );
     final body = _handleResponse(res);
-    await _saveToken(body['token'] as String);
+    await _saveToken(body['token']?.toString() ?? '');
     final user = body['user'] as Map<String, dynamic>;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('shop_owner_name', user['name'] ?? '');
@@ -154,7 +163,7 @@ class ShopApiService {
       headers: await _headers(),
     );
     final body = _handleResponse(res);
-    return body['message'] as String;
+    return body['message']?.toString() ?? 'Done';
   }
 
   Future<Map<String, dynamic>> updateStock(String productId, int stock) async {
@@ -269,7 +278,7 @@ class ShopApiService {
     final response = await http.Response.fromStream(streamedResponse);
     if (response.statusCode >= 200 && response.statusCode < 300) {
       final body = jsonDecode(response.body) as Map<String, dynamic>;
-      return body['image_url'] as String;
+      return body['image_url']?.toString() ?? '';
     }
     throw ShopApiException('Image upload failed');
   }
@@ -288,7 +297,7 @@ class ShopApiService {
     final response = await http.Response.fromStream(streamedResponse);
     if (response.statusCode >= 200 && response.statusCode < 300) {
       final body = jsonDecode(response.body) as Map<String, dynamic>;
-      return body['logo_url'] as String;
+      return body['logo_url']?.toString() ?? '';
     }
     throw ShopApiException('Logo upload failed');
   }
@@ -307,7 +316,7 @@ class ShopApiService {
     final response = await http.Response.fromStream(streamedResponse);
     if (response.statusCode >= 200 && response.statusCode < 300) {
       final body = jsonDecode(response.body) as Map<String, dynamic>;
-      return body['banner_url'] as String;
+      return body['banner_url']?.toString() ?? '';
     }
     throw ShopApiException('Banner upload failed');
   }

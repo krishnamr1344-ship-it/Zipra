@@ -51,13 +51,13 @@ class ShopOrder {
           .toList(),
       totalAmount: (json['total_amount'] as num?)?.toDouble() ?? 0,
       paymentMethod: json['payment_method'] ?? 'COD',
-      acceptedAt: json['accepted_at'] != null ? DateTime.parse(json['accepted_at']) : null,
-      packingAt: json['packing_at'] != null ? DateTime.parse(json['packing_at']) : null,
-      readyAt: json['ready_at'] != null ? DateTime.parse(json['ready_at']) : null,
-      deliveredAt: json['delivered_at'] != null ? DateTime.parse(json['delivered_at']) : null,
-      cancelledAt: json['cancelled_at'] != null ? DateTime.parse(json['cancelled_at']) : null,
+      acceptedAt: json['accepted_at'] != null ? DateTime.tryParse(json['accepted_at'] ?? '') ?? DateTime.now() : null,
+      packingAt: json['packing_at'] != null ? DateTime.tryParse(json['packing_at'] ?? '') ?? DateTime.now() : null,
+      readyAt: json['ready_at'] != null ? DateTime.tryParse(json['ready_at'] ?? '') ?? DateTime.now() : null,
+      deliveredAt: json['delivered_at'] != null ? DateTime.tryParse(json['delivered_at'] ?? '') ?? DateTime.now() : null,
+      cancelledAt: json['cancelled_at'] != null ? DateTime.tryParse(json['cancelled_at'] ?? '') ?? DateTime.now() : null,
       cancellationReason: json['cancellation_reason'],
-      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
     );
   }
 }
