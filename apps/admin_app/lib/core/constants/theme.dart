@@ -3,119 +3,74 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  static const Color primary = Color(0xFF111827);
-  static const Color primaryLight = Color(0xFF1F2937);
-  static const Color primaryDark = Color(0xFF030712);
-  static const Color accent = Color(0xFFF97316);
-  static const Color accentLight = Color(0xFFFED7AA);
-  static const Color accentDark = Color(0xFFEA580C);
-  static const Color accentBg = Color(0xFFFFF7ED);
+  // Core
+  static const Color primary = Color(0xFF5B3DF5);
+  static const Color primaryLight = Color(0xFF7B61FF);
+  static const Color primaryDark = Color(0xFF4A2FD4);
+  static const Color secondary = Color(0xFF00D09C);
+  static const Color accent = Color(0xFFFF6B6B);
+  static const Color accentLight = Color(0xFFFF8E8E);
 
-  static const Color background = Color(0xFFF8FAFC);
+  // Backgrounds
+  static const Color background = Color(0xFFF8F9FC);
   static const Color surface = Colors.white;
-  static const Color surfaceDim = Color(0xFFF1F5F9);
-  static const Color surfaceDark = Color(0xFFE2E8F0);
+  static const Color surfaceElevated = Colors.white;
+  static const Color card = Colors.white;
 
-  static const Color textPrimary = Color(0xFF0F172A);
-  static const Color textSecondary = Color(0xFF64748B);
-  static const Color textHint = Color(0xFF94A3B8);
-  static const Color textOnDark = Colors.white;
+  // Text
+  static const Color textPrimary = Color(0xFF1A1D2E);
+  static const Color textSecondary = Color(0xFF6B7280);
+  static const Color textHint = Color(0xFF9CA3AF);
+  static const Color textOnPrimary = Colors.white;
 
-  static const Color success = Color(0xFF10B981);
-  static const Color successLight = Color(0xFFD1FAE5);
-  static const Color error = Color(0xFFEF4444);
-  static const Color errorLight = Color(0xFFFEE2E2);
-  static const Color warning = Color(0xFFF59E0B);
-  static const Color warningLight = Color(0xFFFEF3C7);
+  // Status
+  static const Color success = Color(0xFF00D09C);
+  static const Color warning = Color(0xFFFFB800);
+  static const Color error = Color(0xFFFF4757);
   static const Color info = Color(0xFF3B82F6);
-  static const Color infoLight = Color(0xFFDBEAFE);
 
-  static const Color divider = Color(0xFFE2E8F0);
+  // Surfaces
+  static const Color surfaceDim = Color(0xFFF3F4F6);
+  static const Color surfaceDark = Color(0xFFE5E7EB);
 
-  static const Color purple = Color(0xFF8B5CF6);
-  static const Color purpleLight = Color(0xFFEDE9FE);
-  static const Color teal = Color(0xFF14B8A6);
-  static const Color tealLight = Color(0xFFCCFBF1);
+  // Light status backgrounds
+  static const Color successLight = Color(0xFFECFDF5);
+  static const Color errorLight = Color(0xFFFEF2F2);
+  static const Color warningLight = Color(0xFFFFFBEB);
+  static const Color infoLight = Color(0xFFEFF6FF);
+  static const Color accentBg = Color(0xFFFFF1F0);
 
-  static const Color orderPending = Color(0xFFF59E0B);
-  static const Color orderPendingLight = Color(0xFFFEF3C7);
-  static const Color orderConfirmed = Color(0xFF3B82F6);
-  static const Color orderConfirmedLight = Color(0xFFDBEAFE);
-  static const Color orderPacked = Color(0xFF8B5CF6);
-  static const Color orderPackedLight = Color(0xFFEDE9FE);
-  static const Color orderOutForDelivery = Color(0xFF14B8A6);
-  static const Color orderOutForDeliveryLight = Color(0xFFCCFBF1);
-  static const Color orderDelivered = Color(0xFF10B981);
-  static const Color orderDeliveredLight = Color(0xFFD1FAE5);
-  static const Color orderCancelled = Color(0xFFEF4444);
-  static const Color orderCancelledLight = Color(0xFFFEE2E2);
+  // Borders
+  static const Color border = Color(0xFFE5E7EB);
+  static const Color divider = Color(0xFFF0F1F5);
 
-  static const List<Color> chartColors = [
-    Color(0xFFF97316),
-    Color(0xFF3B82F6),
-    Color(0xFF10B981),
-    Color(0xFF8B5CF6),
-    Color(0xFFEC4899),
-    Color(0xFFF59E0B),
-  ];
-
-  static LinearGradient statusGradient(String status) {
-    switch (status.toLowerCase()) {
-      case 'pending':
-        return warningGradient;
-      case 'confirmed':
-        return infoGradient;
-      case 'packed':
-        return const LinearGradient(colors: [Color(0xFF8B5CF6), Color(0xFFA78BFA)], begin: Alignment.topLeft, end: Alignment.bottomRight);
-      case 'out_for_delivery':
-        return const LinearGradient(colors: [Color(0xFF14B8A6), Color(0xFF2DD4BF)], begin: Alignment.topLeft, end: Alignment.bottomRight);
-      case 'delivered':
-        return successGradient;
-      case 'cancelled':
-        return const LinearGradient(colors: [Color(0xFFEF4444), Color(0xFFF87171)], begin: Alignment.topLeft, end: Alignment.bottomRight);
-      default:
-        return const LinearGradient(colors: [Color(0xFF94A3B8), Color(0xFFCBD5E1)], begin: Alignment.topLeft, end: Alignment.bottomRight);
-    }
-  }
-
-  static Color statusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'pending': return orderPending;
-      case 'confirmed': return orderConfirmed;
-      case 'packed': return orderPacked;
-      case 'out_for_delivery': return orderOutForDelivery;
-      case 'delivered': return orderDelivered;
-      case 'cancelled': return orderCancelled;
-      default: return const Color(0xFF94A3B8);
-    }
-  }
-
-  static Color statusLightColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'pending': return orderPendingLight;
-      case 'confirmed': return orderConfirmedLight;
-      case 'packed': return orderPackedLight;
-      case 'out_for_delivery': return orderOutForDeliveryLight;
-      case 'delivered': return orderDeliveredLight;
-      case 'cancelled': return orderCancelledLight;
-      default: return const Color(0xFFF1F5F9);
-    }
-  }
-
-  static const LinearGradient accentGradient = LinearGradient(
-    colors: [Color(0xFFF97316), Color(0xFFFB923C)],
+  // Gradients
+  static const LinearGradient primaryGradient = LinearGradient(
+    colors: [Color(0xFF5B3DF5), Color(0xFF7B61FF)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
-  static const LinearGradient primaryGradient = LinearGradient(
-    colors: [Color(0xFF111827), Color(0xFF1F2937)],
+  static const LinearGradient headerGradient = LinearGradient(
+    colors: [Color(0xFF5B3DF5), Color(0xFF7B61FF)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient successGradient = LinearGradient(
-    colors: [Color(0xFF10B981), Color(0xFF34D399)],
+    colors: [Color(0xFF00D09C), Color(0xFF00E6B8)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const LinearGradient warningGradient = LinearGradient(
+    colors: [Color(0xFFFFB800), Color(0xFFFFCF44)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const LinearGradient errorGradient = LinearGradient(
+    colors: [Color(0xFFFF4757), Color(0xFFFF6B6B)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
@@ -126,76 +81,149 @@ class AppColors {
     end: Alignment.bottomRight,
   );
 
-  static const LinearGradient warningGradient = LinearGradient(
-    colors: [Color(0xFFF59E0B), Color(0xFFFBBF24)],
+  static const LinearGradient orangeGradient = LinearGradient(
+    colors: [Color(0xFFFF8C42), Color(0xFFFFB347)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
-  static const LinearGradient purpleGradient = LinearGradient(
-    colors: [Color(0xFF8B5CF6), Color(0xFFA78BFA)],
+  static const LinearGradient accentGradient = LinearGradient(
+    colors: [Color(0xFFFF4757), Color(0xFFFF6B6B)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
-  static const LinearGradient tealGradient = LinearGradient(
-    colors: [Color(0xFF14B8A6), Color(0xFF2DD4BF)],
+  static const LinearGradient pinkGradient = LinearGradient(
+    colors: [Color(0xFFE91E8C), Color(0xFFFF6BB5)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
-  static const LinearGradient errorGradient = LinearGradient(
-    colors: [Color(0xFFEF4444), Color(0xFFF87171)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
+  // Status helpers
+  static Color statusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'completed':
+      case 'delivered':
+      case 'approved':
+      case 'active':
+        return success;
+      case 'pending':
+      case 'processing':
+      case 'new':
+      case 'pending_approval':
+        return warning;
+      case 'cancelled':
+      case 'rejected':
+      case 'failed':
+        return error;
+      case 'in_transit':
+      case 'out_for_delivery':
+        return info;
+      default:
+        return textSecondary;
+    }
+  }
+
+  static LinearGradient statusGradient(String status) {
+    switch (status.toLowerCase()) {
+      case 'completed':
+      case 'delivered':
+      case 'approved':
+      case 'active':
+        return successGradient;
+      case 'pending':
+      case 'processing':
+      case 'new':
+      case 'pending_approval':
+        return warningGradient;
+      case 'cancelled':
+      case 'rejected':
+      case 'failed':
+        return errorGradient;
+      case 'in_transit':
+      case 'out_for_delivery':
+        return infoGradient;
+      default:
+        return primaryGradient;
+    }
+  }
 }
 
 class AppText {
   AppText._();
 
-  static const TextStyle h1 = TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: AppColors.textPrimary);
-  static const TextStyle h2 = TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.textPrimary);
-  static const TextStyle h3 = TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary);
-  static const TextStyle body = TextStyle(fontSize: 14, color: AppColors.textPrimary);
-  static const TextStyle bodySmall = TextStyle(fontSize: 13, color: AppColors.textSecondary);
-  static const TextStyle caption = TextStyle(fontSize: 12, color: AppColors.textHint);
-  static const TextStyle label = TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.5);
-  static const TextStyle button = TextStyle(fontSize: 15, fontWeight: FontWeight.w600, letterSpacing: 0.3);
+  static const TextStyle h1 = TextStyle(
+    fontSize: 28, fontWeight: FontWeight.w800, color: AppColors.textPrimary,
+    letterSpacing: -0.5, height: 1.2,
+  );
+  static const TextStyle h2 = TextStyle(
+    fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textPrimary,
+    letterSpacing: -0.3, height: 1.3,
+  );
+  static const TextStyle h3 = TextStyle(
+    fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary,
+    height: 1.3,
+  );
+  static const TextStyle subtitle = TextStyle(
+    fontSize: 15, fontWeight: FontWeight.w500, color: AppColors.textSecondary,
+    height: 1.4,
+  );
+  static const TextStyle body = TextStyle(
+    fontSize: 14, fontWeight: FontWeight.w400, color: AppColors.textPrimary,
+    height: 1.5,
+  );
+  static const TextStyle bodySmall = TextStyle(
+    fontSize: 12, fontWeight: FontWeight.w400, color: AppColors.textSecondary,
+    height: 1.4,
+  );
+  static const TextStyle label = TextStyle(
+    fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary,
+    letterSpacing: 0.5, height: 1.3,
+  );
+  static const TextStyle button = TextStyle(
+    fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white,
+    height: 1.3,
+  );
 }
 
 class AppShadows {
-  static const soft = BoxShadow(
-    color: Color(0x0A000000),
-    blurRadius: 8,
-    offset: Offset(0, 2),
+  AppShadows._();
+
+  static BoxShadow get soft => BoxShadow(
+    color: Colors.black.withValues(alpha: 0.04),
+    blurRadius: 12, offset: const Offset(0, 4),
   );
-  static const medium = BoxShadow(
-    color: Color(0x14000000),
-    blurRadius: 16,
-    offset: Offset(0, 4),
+  static BoxShadow get medium => BoxShadow(
+    color: Colors.black.withValues(alpha: 0.08),
+    blurRadius: 20, offset: const Offset(0, 8),
   );
-  static const strong = BoxShadow(
-    color: Color(0x1A000000),
-    blurRadius: 24,
-    offset: Offset(0, 8),
+  static BoxShadow get strong => BoxShadow(
+    color: Colors.black.withValues(alpha: 0.12),
+    blurRadius: 28, offset: const Offset(0, 12),
+  );
+  static BoxShadow get colored => BoxShadow(
+    color: AppColors.primary.withValues(alpha: 0.2),
+    blurRadius: 20, offset: const Offset(0, 8),
   );
 }
 
 class AppRadius {
-  static const double sm = 8;
-  static const double md = 12;
-  static const double lg = 16;
-  static const double xl = 20;
-  static const double xxl = 24;
+  AppRadius._();
+  static const double sm = 10;
+  static const double md = 14;
+  static const double lg = 20;
+  static const double xl = 24;
+  static const double xxl = 28;
+  static const double full = 999;
 }
 
 class AppSpacing {
+  AppSpacing._();
   static const double xs = 4;
   static const double sm = 8;
-  static const double md = 12;
-  static const double lg = 16;
-  static const double xl = 20;
-  static const double xxl = 24;
-  static const double xxxl = 32;
+  static const double md = 16;
+  static const double lg = 24;
+  static const double xl = 32;
+  static const double xxl = 48;
+  static const double xxxl = 64;
 }

@@ -609,7 +609,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(AppRadius.xl),
-                    boxShadow: const [AppShadows.soft],
+                    boxShadow: [AppShadows.soft],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -791,7 +791,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(AppRadius.xl),
-                  boxShadow: const [AppShadows.soft],
+                  boxShadow: [AppShadows.soft],
                 ),
                 child: Column(
                   children: [
@@ -905,7 +905,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(AppRadius.xl),
-                  boxShadow: const [AppShadows.soft],
+                  boxShadow: [AppShadows.soft],
                 ),
                 child: Row(
                   children: [
@@ -985,7 +985,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(AppRadius.xl),
-                  boxShadow: const [AppShadows.soft],
+                  boxShadow: [AppShadows.soft],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1192,7 +1192,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(AppRadius.xl),
-                    boxShadow: const [AppShadows.soft],
+                    boxShadow: [AppShadows.soft],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

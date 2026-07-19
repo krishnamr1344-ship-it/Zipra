@@ -926,7 +926,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                             child: Container(
                             width: 22,
                             height: 22,
-                            decoration: const BoxDecoration(
+                            decoration: BoxDecoration(
                               color: AppColors.accent,
                               shape: BoxShape.circle,
                               boxShadow: [AppShadows.soft],

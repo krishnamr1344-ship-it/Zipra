@@ -100,7 +100,7 @@ class AdminCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: color ?? AppColors.surface,
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          boxShadow: const [AppShadows.soft],
+          boxShadow: [AppShadows.soft],
         ),
         child: child,
       ),
@@ -258,7 +258,7 @@ class AdminSearchBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.md),
-        boxShadow: const [AppShadows.soft],
+        boxShadow: [AppShadows.soft],
       ),
       child: TextField(
         controller: controller,
@@ -313,7 +313,7 @@ class AdminTabBar extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: sel ? AppColors.surface : Colors.transparent,
                   borderRadius: BorderRadius.circular(AppRadius.sm),
-                  boxShadow: sel ? const [AppShadows.soft] : null,
+                  boxShadow: sel ? [AppShadows.soft] : null,
                 ),
                 child: Center(
                   child: Text(

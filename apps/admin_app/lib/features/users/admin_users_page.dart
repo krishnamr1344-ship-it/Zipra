@@ -207,7 +207,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          boxShadow: const [AppShadows.soft],
+          boxShadow: [AppShadows.soft],
           border: Border.all(color: AppColors.divider),
         ),
         child: TextField(
@@ -253,7 +253,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        boxShadow: const [AppShadows.soft],
+        boxShadow: [AppShadows.soft],
       ),
       child: Material(
         color: Colors.transparent,
@@ -467,7 +467,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          boxShadow: const [AppShadows.soft],
+          boxShadow: [AppShadows.soft],
         ),
         child: Row(
           children: [

@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/theme.dart';
-import '../../core/widgets/admin_widgets.dart';
 import '../../core/api/api_service.dart';
 import '../../core/api/admin_api_service.dart';
-import '../auth/admin_login_page.dart';
-import '../products/admin_products_page.dart';
+import '../orders/admin_order_detail_page.dart';
 import '../categories/admin_categories_page.dart';
-import '../orders/admin_orders_page.dart';
-import '../users/admin_users_page.dart';
 import '../delivery/admin_delivery_zone_page.dart';
 import '../delivery/admin_delivery_fee_page.dart';
 import '../combo_packs/admin_combo_packs_page.dart';
@@ -27,6 +23,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
   final _adminApi = AdminApiService();
   Map<String, dynamic> _user = {};
   Map<String, dynamic> _stats = {};
+  List<dynamic> _recentOrders = [];
   bool _loading = true;
 
   @override
@@ -39,799 +36,559 @@ class _AdminHomePageState extends State<AdminHomePage> {
     try {
       final user = await _api.getSavedUser();
       final stats = await _adminApi.getStats();
+      List<dynamic> orders = [];
+      try {
+        orders = await _adminApi.getOrders();
+      } catch (_) {}
       if (!mounted) return;
       setState(() {
         _user = user;
         _stats = stats;
+        _recentOrders = orders.length > 5 ? orders.sublist(0, 5) : orders;
         _loading = false;
       });
     } catch (_) {
       if (!mounted) return;
-      setState(() { _loading = false; });
-    }
-  }
-
-  Future<void> _logout() async {
-    final confirm = await showAdminConfirmDialog(
-      context,
-      title: 'Logout',
-      message: 'Are you sure you want to logout?',
-      confirmText: 'Logout',
-      isDestructive: true,
-    );
-    if (confirm) {
-      await _api.logout();
-      if (!mounted) return;
-      Navigator.of(context).popUntil((route) => route.isFirst);
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const AdminLoginPage()),
-      );
+      setState(() {
+        _loading = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: RefreshIndicator(
+    return SafeArea(
+      child: RefreshIndicator(
         onRefresh: _load,
-        color: AppColors.accent,
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(
-            parent: BouncingScrollPhysics(),
-          ),
-          slivers: [
-            SliverToBoxAdapter(child: _buildHeader()),
-            SliverToBoxAdapter(child: _buildStatsRow()),
-            SliverToBoxAdapter(child: _buildQuickActions()),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.xl,
-                  AppSpacing.xl,
-                  AppSpacing.xl,
-                  AppSpacing.sm,
+        color: AppColors.primary,
+        child: _loading
+            ? const Center(
+                child: CircularProgressIndicator(color: AppColors.primary))
+            : CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
                 ),
-                child: Text(
-                  'MANAGEMENT',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textHint,
-                    letterSpacing: 1.2,
-                  ),
-                ),
+                slivers: [
+                  SliverToBoxAdapter(child: _buildHeader()),
+                  SliverToBoxAdapter(child: _buildStatsSection()),
+                  SliverToBoxAdapter(child: _buildQuickActions()),
+                  SliverToBoxAdapter(child: _buildRecentOrders()),
+                  const SliverToBoxAdapter(
+                      child: SizedBox(height: AppSpacing.xl)),
+                ],
               ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: AppSpacing.lg,
-                  crossAxisSpacing: AppSpacing.lg,
-                  childAspectRatio: 1.15,
-                ),
-                delegate: SliverChildListDelegate([
-                  _MenuCard(
-                    icon: Icons.inventory_2_rounded,
-                    title: 'Products',
-                    subtitle: 'Manage catalog',
-                    color: AppColors.accent,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const AdminProductsPage()),
-                    ).then((_) => _load()),
-                  ),
-                  _MenuCard(
-                    icon: Icons.category_rounded,
-                    title: 'Categories',
-                    subtitle: 'Organize items',
-                    color: AppColors.warning,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const AdminCategoriesPage()),
-                    ).then((_) => _load()),
-                  ),
-                  _MenuCard(
-                    icon: Icons.receipt_long_rounded,
-                    title: 'Orders',
-                    subtitle: 'View & manage',
-                    color: AppColors.success,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const AdminOrdersPage()),
-                    ),
-                  ),
-                  _MenuCard(
-                    icon: Icons.people_rounded,
-                    title: 'Users',
-                    subtitle: 'Manage accounts',
-                    color: AppColors.info,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const AdminUsersPage()),
-                    ),
-                  ),
-                  _MenuCard(
-                    icon: Icons.map_rounded,
-                    title: 'Delivery Zones',
-                    subtitle: 'Set service areas',
-                    color: AppColors.purple,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const AdminDeliveryZonePage()),
-                    ),
-                  ),
-                  _MenuCard(
-                    icon: Icons.local_shipping_rounded,
-                    title: 'Delivery Fees',
-                    subtitle: 'Manage charges',
-                    color: AppColors.teal,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const AdminDeliveryFeePage()),
-                    ),
-                  ),
-                  _MenuCard(
-                    icon: Icons.inventory_2_rounded,
-                    title: 'Combo Packs',
-                    subtitle: 'Monthly bundles',
-                    color: AppColors.primary,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const AdminComboPacksPage()),
-                    ).then((_) => _load()),
-                  ),
-                  _MenuCard(
-                    icon: Icons.local_offer_rounded,
-                    title: 'Offers',
-                    subtitle: 'Discount deals',
-                    color: AppColors.accent,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const AdminOffersPage()),
-                    ).then((_) => _load()),
-                  ),
-                  _MenuCard(
-                    icon: Icons.store_rounded,
-                    title: 'Shops',
-                    subtitle: 'Shop owners',
-                    color: AppColors.teal,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const AdminShopsPage()),
-                    ).then((_) => _load()),
-                  ),
-                  _MenuCard(
-                    icon: Icons.approval_rounded,
-                    title: 'Approvals',
-                    subtitle: 'Pending review',
-                    color: AppColors.warning,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const AdminProductApprovalsPage()),
-                    ).then((_) => _load()),
-                  ),
-                ]),
-              ),
-            ),
-            SliverToBoxAdapter(child: _buildReportsRow()),
-            const SliverToBoxAdapter(child: SizedBox(height: 40)),
-          ],
-        ),
       ),
     );
   }
 
   Widget _buildHeader() {
-    final name = (_user['name'] ?? 'Admin').toString();
-    final email = (_user['email'] ?? '').toString();
-    final initial = name.isNotEmpty ? name[0].toUpperCase() : 'A';
-
+    final name = _user['name'] ?? 'Admin';
     return Container(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.xl),
       decoration: const BoxDecoration(
-        gradient: AppColors.primaryGradient,
+        gradient: AppColors.headerGradient,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(AppRadius.xl),
+          bottomRight: Radius.circular(AppRadius.xl),
+        ),
       ),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, AppSpacing.xxl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withAlpha(25),
-                      borderRadius: BorderRadius.circular(AppRadius.lg),
-                      border: Border.all(
-                        color: Colors.white.withAlpha(40),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        initial,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                child: Center(
+                  child: Text(
+                    name.toString().substring(0, 1).toUpperCase(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Welcome back',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.white.withAlpha(160),
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          name,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.accent.withAlpha(30),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: AppColors.accent.withAlpha(60),
-                        width: 1,
-                      ),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.shield_rounded, size: 12, color: AppColors.accent),
-                        SizedBox(width: 4),
-                        Text(
-                          'ADMIN',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.accent,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withAlpha(15),
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.logout_rounded, size: 20, color: Colors.white70),
-                      onPressed: _logout,
-                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                      padding: EdgeInsets.zero,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.xxl),
-              const Text(
-                'Dashboard',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  letterSpacing: -0.5,
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                email,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.white.withAlpha(130),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Welcome back,',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
+              ),
+              _buildHeaderIcon(
+                icon: Icons.notifications_outlined,
+                onTap: () {},
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildStatsRow() {
-    if (_loading) {
-      return const Padding(
-        padding: EdgeInsets.fromLTRB(AppSpacing.xl, 0, AppSpacing.xl, 0),
-        child: AdminShimmerList(itemCount: 1, itemHeight: 100),
-      );
-    }
+  Widget _buildHeaderIcon({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 42,
+        height: 42,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+        child: Icon(icon, color: Colors.white, size: 22),
+      ),
+    );
+  }
+
+  Widget _buildStatsSection() {
+    final products = _stats['total_products'] ?? 0;
+    final orders = _stats['total_orders'] ?? 0;
+    final users = _stats['total_users'] ?? 0;
+    final revenue = _stats['total_revenue'] ?? 0;
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.xl, 0, AppSpacing.xl, 0),
-      child: Transform.translate(
-        offset: const Offset(0, -AppSpacing.md),
-        child: Row(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Overview', style: AppText.h3),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: _StatCard(
+                  title: 'Products',
+                  value: '$products',
+                  icon: Icons.inventory_2_rounded,
+                  gradient: AppColors.primaryGradient,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: _StatCard(
+                  title: 'Orders',
+                  value: '$orders',
+                  icon: Icons.receipt_long_rounded,
+                  gradient: AppColors.successGradient,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: _StatCard(
+                  title: 'Users',
+                  value: '$users',
+                  icon: Icons.people_rounded,
+                  gradient: AppColors.infoGradient,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: _StatCard(
+                  title: 'Revenue',
+                  value: '₹${_formatRevenue(revenue)}',
+                  icon: Icons.account_balance_wallet_rounded,
+                  gradient: AppColors.warningGradient,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatRevenue(dynamic value) {
+    final double amount = (value is num) ? value.toDouble() : 0.0;
+    if (amount >= 100000) return '${(amount / 100000).toStringAsFixed(1)}L';
+    if (amount >= 1000) return '${(amount / 1000).toStringAsFixed(1)}K';
+    return amount.toStringAsFixed(0);
+  }
+
+  Widget _buildQuickActions() {
+    final actions = [
+      _ActionItem(Icons.category_rounded, 'Categories', AppColors.primaryGradient,
+          () => _open(const AdminCategoriesPage())),
+      _ActionItem(Icons.map_rounded, 'Zones', AppColors.infoGradient,
+          () => _open(const AdminDeliveryZonePage())),
+      _ActionItem(Icons.delivery_dining_rounded, 'Fees', AppColors.warningGradient,
+          () => _open(const AdminDeliveryFeePage())),
+      _ActionItem(Icons.local_offer_rounded, 'Offers', AppColors.successGradient,
+          () => _open(const AdminOffersPage())),
+      _ActionItem(Icons.store_rounded, 'Shops', AppColors.orangeGradient,
+          () => _open(const AdminShopsPage())),
+      _ActionItem(Icons.inventory_2_outlined, 'Combos', AppColors.pinkGradient,
+          () => _open(const AdminComboPacksPage())),
+      _ActionItem(Icons.verified_rounded, 'Approvals',
+          const LinearGradient(
+            colors: [Color(0xFF8B5CF6), Color(0xFFA78BFA)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          () => _open(const AdminProductApprovalsPage())),
+      _ActionItem(Icons.logout_rounded, 'Logout', AppColors.errorGradient,
+          _confirmLogout),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg, AppSpacing.xl, AppSpacing.lg, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Quick Actions', style: AppText.h3),
+          const SizedBox(height: AppSpacing.md),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 4,
+              mainAxisSpacing: AppSpacing.md,
+              crossAxisSpacing: AppSpacing.md,
+              childAspectRatio: 0.85,
+            ),
+            itemCount: actions.length,
+            itemBuilder: (_, i) => _buildActionCard(actions[i]),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionCard(_ActionItem action) {
+    return GestureDetector(
+      onTap: action.onTap,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              gradient: action.gradient,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              boxShadow: [
+                BoxShadow(
+                  color: (action.gradient as LinearGradient).colors.first
+                      .withValues(alpha: 0.25),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Icon(action.icon, color: Colors.white, size: 22),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            action.label,
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecentOrders() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg, AppSpacing.xl, AppSpacing.lg, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Recent Orders', style: AppText.h3),
+          const SizedBox(height: AppSpacing.md),
+          if (_recentOrders.isEmpty)
+            _buildEmptyOrders()
+          else
+            ...(_recentOrders.take(5).map((o) => _buildOrderCard(o))),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyOrders() {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: [AppShadows.soft],
+      ),
+      child: Center(
+        child: Column(
           children: [
-            AdminStatCard(
-              icon: Icons.inventory_2_rounded,
-              value: '${_stats['products'] ?? 0}',
-              label: 'Products',
-              gradient: AppColors.accentGradient,
-            ),
-            const SizedBox(width: AppSpacing.md),
-            AdminStatCard(
-              icon: Icons.receipt_long_rounded,
-              value: '${_stats['orders'] ?? 0}',
-              label: 'Orders',
-              gradient: AppColors.infoGradient,
-            ),
-            const SizedBox(width: AppSpacing.md),
-            AdminStatCard(
-              icon: Icons.people_rounded,
-              value: '${_stats['users'] ?? 0}',
-              label: 'Users',
-              gradient: AppColors.successGradient,
-            ),
-            const SizedBox(width: AppSpacing.md),
-            AdminStatCard(
-              icon: Icons.currency_rupee_rounded,
-              value: '₹${_stats['revenue']?.toStringAsFixed(0) ?? '0'}',
-              label: 'Revenue',
-              gradient: AppColors.warningGradient,
-            ),
+            Icon(Icons.receipt_long_rounded,
+                size: 40, color: AppColors.textHint.withValues(alpha: 0.5)),
+            const SizedBox(height: AppSpacing.sm),
+            Text('No orders yet', style: AppText.bodySmall),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildQuickActions() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.xl,
-        AppSpacing.lg,
-        AppSpacing.xl,
-        0,
-      ),
-      child: Row(
-        children: [
-          _QuickActionCard(
-            icon: Icons.add_box_rounded,
-            title: 'Add Product',
-            subtitle: 'List new items',
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AdminProductsPage()),
-            ).then((_) => _load()),
-          ),
-          const SizedBox(width: AppSpacing.lg),
-          _QuickActionCard(
-            icon: Icons.bar_chart_rounded,
-            title: 'View Reports',
-            subtitle: 'Sales overview',
-            onTap: () => _showReportsSheet(),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _buildOrderCard(dynamic order) {
+    final o = order is Map<String, dynamic> ? order : <String, dynamic>{};
+    final orderId = (o['id'] ?? '').toString();
+    final shortId = orderId.length > 8 ? orderId.substring(0, 8) : orderId;
+    final amount = o['total_amount'] ?? o['total'] ?? 0;
+    final status = o['status'] ?? 'pending';
+    final payment = o['payment_method'] ?? 'COD';
+    final customerName = o['customer_name'] ?? 'Customer';
 
-  Widget _buildReportsRow() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.xl, AppSpacing.xl, 0),
-      child: _ReportRow(
-        onTap: () => _showReportsSheet(),
-      ),
-    );
-  }
-
-  void _showReportsSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.55,
-        minChildSize: 0.4,
-        maxChildSize: 0.85,
-        expand: false,
-        builder: (ctx, scrollController) => Padding(
-          padding: const EdgeInsets.fromLTRB(AppSpacing.xxl, AppSpacing.lg, AppSpacing.xxl, AppSpacing.xxl),
-          child: ListView(
-            controller: scrollController,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceDark,
-                    borderRadius: BorderRadius.circular(2),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AdminOrderDetailPage(order: o),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          boxShadow: [AppShadows.soft],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+              ),
+              child: Center(
+                child: Text(
+                  customerName.toString().substring(0, 1).toUpperCase(),
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
                   ),
                 ),
               ),
-              const SizedBox(height: AppSpacing.xxl),
-              Row(
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      gradient: AppColors.accentGradient,
-                      borderRadius: BorderRadius.circular(AppRadius.lg),
-                    ),
-                    child: const Icon(Icons.bar_chart_rounded, color: Colors.white, size: 22),
+                  Text(
+                    customerName,
+                    style: AppText.body.copyWith(fontWeight: FontWeight.w600),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(width: AppSpacing.md),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Revenue Report',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Text(
+                        '#$shortId',
+                        style: AppText.bodySmall.copyWith(
+                          color: AppColors.textHint,
+                          fontSize: 11,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.secondary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          payment,
+                          style: const TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.secondary,
                           ),
                         ),
-                        Text(
-                          'Overview of your business',
-                          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.xxl),
-              _ReportItem(
-                icon: Icons.inventory_2_rounded,
-                label: 'Total Products',
-                value: '${_stats['products'] ?? 0}',
-                color: AppColors.accent,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              _ReportItem(
-                icon: Icons.receipt_long_rounded,
-                label: 'Total Orders',
-                value: '${_stats['orders'] ?? 0}',
-                color: AppColors.info,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              _ReportItem(
-                icon: Icons.people_rounded,
-                label: 'Total Users',
-                value: '${_stats['users'] ?? 0}',
-                color: AppColors.success,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              _ReportItem(
-                icon: Icons.shopping_cart_rounded,
-                label: 'Categories',
-                value: '${_stats['categories'] ?? 0}',
-                color: AppColors.purple,
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Container(
-                height: 1,
-                color: AppColors.divider,
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              _ReportItem(
-                icon: Icons.currency_rupee_rounded,
-                label: 'Total Revenue',
-                value: '₹${_stats['revenue']?.toStringAsFixed(2) ?? '0.00'}',
-                color: AppColors.warning,
-                isHighlighted: true,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _QuickActionCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  const _QuickActionCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            decoration: BoxDecoration(
-              color: AppColors.accentBg,
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              border: Border.all(
-                color: AppColors.accentLight,
-                width: 1,
-              ),
             ),
-            child: Row(
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    gradient: AppColors.accentGradient,
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.accent.withAlpha(60),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Icon(icon, size: 22, color: Colors.white),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 14,
-                  color: AppColors.accent,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MenuCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _MenuCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        boxShadow: const [AppShadows.soft],
-      ),
-      child: Material(
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: color.withAlpha(25),
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                  ),
-                  child: Icon(icon, size: 22, color: color),
-                ),
-                const Spacer(),
                 Text(
-                  title,
+                  '₹$amount',
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
-                    fontSize: 14,
+                    fontSize: 15,
                     color: AppColors.textPrimary,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
+                const SizedBox(height: 4),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.statusColor(status.toString())
+                        .withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    status.toString().toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.statusColor(status.toString()),
+                    ),
                   ),
                 ),
               ],
             ),
-          ),
+            const SizedBox(width: AppSpacing.sm),
+            const Icon(Icons.chevron_right_rounded,
+                size: 20, color: AppColors.textHint),
+          ],
         ),
       ),
     );
   }
-}
 
-class _ReportRow extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const _ReportRow({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-            boxShadow: const [AppShadows.soft],
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  gradient: AppColors.warningGradient,
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                ),
-                child: const Icon(Icons.bar_chart_rounded, color: Colors.white, size: 22),
-              ),
-              const SizedBox(width: AppSpacing.lg),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Reports',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'Sales & revenue overview',
-                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceDim,
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
-                ),
-                child: const Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.textHint),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  void _open(Widget page) {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => page));
   }
-}
 
-class _ReportItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color color;
-  final bool isHighlighted;
-
-  const _ReportItem({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.color,
-    this.isHighlighted = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.md,
-      ),
-      decoration: BoxDecoration(
-        color: isHighlighted ? color.withAlpha(15) : AppColors.surfaceDim,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: isHighlighted
-            ? Border.all(color: color.withAlpha(40), width: 1)
-            : null,
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: color),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: AppColors.textPrimary,
-              ),
-            ),
+  void _confirmLogout() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.lg)),
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
           ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: isHighlighted ? 18 : 16,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _api.logout();
+              if (mounted) {
+                Navigator.pushReplacementNamed(context, '/login');
+              }
+            },
+            child: const Text('Logout',
+                style: TextStyle(color: AppColors.error)),
           ),
         ],
       ),
     );
   }
+}
+
+class _StatCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final IconData icon;
+  final Gradient gradient;
+
+  const _StatCard({
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.gradient,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: [AppShadows.soft],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              gradient: gradient,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: Colors.white, size: 18),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            title,
+            style: AppText.bodySmall.copyWith(fontSize: 11),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionItem {
+  final IconData icon;
+  final String label;
+  final Gradient gradient;
+  final VoidCallback onTap;
+
+  _ActionItem(this.icon, this.label, this.gradient, this.onTap);
 }
