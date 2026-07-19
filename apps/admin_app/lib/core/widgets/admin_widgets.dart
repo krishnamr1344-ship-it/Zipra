@@ -135,9 +135,9 @@ class AdminEmptyState extends StatelessWidget {
               child: Icon(icon, size: 44, color: AppColors.textHint),
             ),
             const SizedBox(height: AppSpacing.lg),
-            Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+            Text(title, style: AppText.h3),
             const SizedBox(height: AppSpacing.sm),
-            Text(subtitle, textAlign: TextAlign.center, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+            Text(subtitle, textAlign: TextAlign.center, style: AppText.bodySmall),
             if (ctaText != null && onCta != null) ...[
               const SizedBox(height: AppSpacing.xl),
               ElevatedButton.icon(
@@ -172,8 +172,33 @@ class AdminLoadingState extends StatelessWidget {
           children: [
             SizedBox(width: 36, height: 36, child: CircularProgressIndicator(strokeWidth: 3, color: AppColors.accent)),
             SizedBox(height: AppSpacing.lg),
-            Text('Loading...', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+            Text('Loading...', style: AppText.bodySmall),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class AdminShimmerList extends StatelessWidget {
+  final int itemCount;
+  final double itemHeight;
+
+  const AdminShimmerList({super.key, this.itemCount = 5, this.itemHeight = 80});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      itemCount: itemCount,
+      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
+      itemBuilder: (_, __) => Container(
+        height: itemHeight,
+        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceDim,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
         ),
       ),
     );
@@ -309,7 +334,7 @@ class AdminTabBar extends StatelessWidget {
   }
 }
 
-Widget adminSnackBar(String message, {bool isError = false, bool isSuccess = false}) {
+SnackBar adminSnackBar(String message, {bool isError = false, bool isSuccess = false}) {
   Color bg = AppColors.textPrimary;
   if (isError) bg = AppColors.error;
   if (isSuccess) bg = AppColors.success;

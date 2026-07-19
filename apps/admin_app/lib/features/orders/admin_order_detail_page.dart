@@ -56,57 +56,9 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
     } catch (_) {}
   }
 
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'Pending':
-        return const Color(0xFFF59E0B);
-      case 'Confirmed':
-        return const Color(0xFF3B82F6);
-      case 'Shipped':
-        return const Color(0xFF8B5CF6);
-      case 'Delivered':
-        return const Color(0xFF10B981);
-      case 'Cancelled':
-        return const Color(0xFFEF4444);
-      default:
-        return Colors.grey;
-    }
-  }
+  Color _statusColor(String status) => AppColors.statusColor(status);
 
-  LinearGradient _statusGradient(String status) {
-    switch (status) {
-      case 'Pending':
-        return const LinearGradient(
-            colors: [Color(0xFFF59E0B), Color(0xFFFBBF24)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight);
-      case 'Confirmed':
-        return const LinearGradient(
-            colors: [Color(0xFF3B82F6), Color(0xFF60A5FA)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight);
-      case 'Shipped':
-        return const LinearGradient(
-            colors: [Color(0xFF8B5CF6), Color(0xFFA78BFA)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight);
-      case 'Delivered':
-        return const LinearGradient(
-            colors: [Color(0xFF10B981), Color(0xFF34D399)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight);
-      case 'Cancelled':
-        return const LinearGradient(
-            colors: [Color(0xFFEF4444), Color(0xFFF87171)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight);
-      default:
-        return const LinearGradient(
-            colors: [Colors.grey, Colors.grey],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight);
-    }
-  }
+  LinearGradient _statusGradient(String status) => AppColors.statusGradient(status);
 
   IconData _statusIcon(String status) {
     switch (status) {
@@ -164,7 +116,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
-        padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+        padding: const EdgeInsets.fromLTRB(AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxxl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -323,7 +275,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
-        padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+        padding: const EdgeInsets.fromLTRB(AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxxl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

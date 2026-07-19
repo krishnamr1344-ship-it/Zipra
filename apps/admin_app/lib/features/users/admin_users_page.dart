@@ -273,13 +273,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: accent.withAlpha(50),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
+              boxShadow: [AppShadows.soft],
             ),
             child: Center(
               child: Text(

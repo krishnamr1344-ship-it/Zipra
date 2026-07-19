@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/theme.dart';
+import '../../core/widgets/admin_widgets.dart';
 import '../../core/api/admin_api_service.dart';
 import 'admin_order_detail_page.dart';
 
@@ -90,22 +91,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage>
     });
   }
 
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'Pending':
-        return AppColors.warning;
-      case 'Confirmed':
-        return AppColors.info;
-      case 'Shipped':
-        return const Color(0xFF8B5CF6);
-      case 'Delivered':
-        return AppColors.success;
-      case 'Cancelled':
-        return AppColors.error;
-      default:
-        return AppColors.textHint;
-    }
-  }
+  Color _statusColor(String status) => AppColors.statusColor(status);
 
   IconData _statusIcon(String status) {
     switch (status) {
@@ -153,23 +139,12 @@ class _AdminOrdersPageState extends State<AdminOrdersPage>
       if (!mounted) return;
       _load();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Order deleted'),
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          backgroundColor: AppColors.error,
-        ),
+        adminSnackBar('Order deleted', isError: true),
       );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$e'),
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
+          adminSnackBar('$e', isError: true),
         );
       }
     }
@@ -378,13 +353,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage>
                         : AppColors.divider.withAlpha(120),
                   ),
                   boxShadow: active
-                      ? [
-                          BoxShadow(
-                            color: AppColors.accent.withAlpha(50),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
+                      ? [AppShadows.medium]
                       : [AppShadows.soft],
                 ),
                 child: Row(

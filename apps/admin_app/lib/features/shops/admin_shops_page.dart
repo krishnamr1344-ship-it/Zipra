@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/theme.dart';
 import '../../core/api/admin_api_service.dart';
+import '../../core/widgets/admin_widgets.dart';
 
 class AdminShopsPage extends StatefulWidget {
   const AdminShopsPage({super.key});
@@ -136,11 +137,8 @@ class _AdminShopsPageState extends State<AdminShopsPage> {
                                 phoneCtrl.text.trim().isEmpty ||
                                 passwordCtrl.text.length < 8) {
                               ScaffoldMessenger.of(ctx).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                      'Fill all fields (password min 8 chars)'),
-                                  behavior: SnackBarBehavior.floating,
-                                ),
+                                adminSnackBar(
+                                    'Fill all fields (password min 8 chars)'),
                               );
                               return;
                             }
@@ -159,9 +157,7 @@ class _AdminShopsPageState extends State<AdminShopsPage> {
                             } catch (e) {
                               setSheetState(() => saving = false);
                               ScaffoldMessenger.of(ctx).showSnackBar(
-                                  SnackBar(
-                                      content: Text('$e'),
-                                      behavior: SnackBarBehavior.floating));
+                                  adminSnackBar('$e', isError: true));
                             }
                           },
                     child: saving
@@ -462,10 +458,7 @@ class _AdminShopsPageState extends State<AdminShopsPage> {
                             } catch (e) {
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                        content: Text('$e'),
-                                        behavior:
-                                            SnackBarBehavior.floating));
+                                    adminSnackBar('$e', isError: true));
                               }
                             }
                           },

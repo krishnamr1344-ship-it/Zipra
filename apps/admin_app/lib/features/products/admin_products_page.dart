@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/constants/theme.dart';
+import '../../core/widgets/admin_widgets.dart';
 import '../../core/api/admin_api_service.dart';
 
 class AdminProductsPage extends StatefulWidget {
@@ -243,7 +244,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
 
                       // -- Pricing Section --
                       Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(AppSpacing.lg),
                         decoration: BoxDecoration(
                           color: AppColors.accentBg,
                           borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -365,7 +366,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                           style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
                       const SizedBox(height: 4),
                       Text('Add product photos from URL or upload',
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                          style: const TextStyle(fontSize: 12, color: AppColors.textHint)),
                       const SizedBox(height: 12),
                       ...List.generate(
                           3,
@@ -398,7 +399,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                                           prefixIcon: images[i].text.trim().isNotEmpty &&
                                                   images[i].text.trim().startsWith('http')
                                               ? Padding(
-                                                  padding: const EdgeInsets.all(6),
+                                                  padding: const EdgeInsets.all(AppSpacing.sm),
                                                   child: ClipRRect(
                                                     borderRadius: BorderRadius.circular(AppRadius.sm),
                                                     child: Image.network(
@@ -437,9 +438,8 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                                                   setSheetState(() {});
                                                 } catch (e) {
                                                   if (ctx.mounted) {
-                                                    ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-                                                        content: Text('$e'),
-                                                        behavior: SnackBarBehavior.floating));
+                                                    ScaffoldMessenger.of(ctx).showSnackBar(
+                                                        adminSnackBar('$e', isError: true));
                                                   }
                                                 }
                                               },
@@ -476,27 +476,23 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                               ? null
                               : () async {
                                   if (catId == null || catId!.isEmpty) {
-                                    ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
-                                        content: Text('Select a category'),
-                                        behavior: SnackBarBehavior.floating));
+                                    ScaffoldMessenger.of(ctx).showSnackBar(
+                                        adminSnackBar('Select a category'));
                                     return;
                                   }
                                   if (nameCtl.text.trim().isEmpty) {
-                                    ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
-                                        content: Text('Enter product name'),
-                                        behavior: SnackBarBehavior.floating));
+                                    ScaffoldMessenger.of(ctx).showSnackBar(
+                                        adminSnackBar('Enter product name'));
                                     return;
                                   }
                                   if (originalPriceCtl.text.trim().isEmpty) {
-                                    ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
-                                        content: Text('Enter original price'),
-                                        behavior: SnackBarBehavior.floating));
+                                    ScaffoldMessenger.of(ctx).showSnackBar(
+                                        adminSnackBar('Enter original price'));
                                     return;
                                   }
                                   if (images.any((c) => c.text.trim().isEmpty)) {
-                                    ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
-                                        content: Text('Please provide at least 3 images'),
-                                        behavior: SnackBarBehavior.floating));
+                                    ScaffoldMessenger.of(ctx).showSnackBar(
+                                        adminSnackBar('Please provide at least 3 images'));
                                     return;
                                   }
 
@@ -552,10 +548,8 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                                     }
                                     if (imageUrls.length < 3) {
                                       setSheetState(() => saving = false);
-                                      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
-                                          content:
-                                              Text('Please provide at least 3 images (URL or upload)'),
-                                          behavior: SnackBarBehavior.floating));
+                                      ScaffoldMessenger.of(ctx).showSnackBar(
+                                          adminSnackBar('Please provide at least 3 images (URL or upload)'));
                                       return;
                                     }
                                     if (!ctx.mounted) return;
@@ -563,9 +557,8 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                                     _load();
                                   } catch (e) {
                                     setSheetState(() => saving = false);
-                                    ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-                                        content: Text(e.toString()),
-                                        behavior: SnackBarBehavior.floating));
+                                    ScaffoldMessenger.of(ctx).showSnackBar(
+                                        adminSnackBar(e.toString(), isError: true));
                                   }
                                 },
                           child: saving
@@ -784,7 +777,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
             SliverFillRemaining(
               child: Center(
                 child: Padding(
-                  padding: const EdgeInsets.all(40),
+                  padding: const EdgeInsets.all(AppSpacing.xxxl),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -867,7 +860,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
           } catch (e) {
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('$e'), behavior: SnackBarBehavior.floating));
+                  adminSnackBar('$e', isError: true));
             }
           }
         }
@@ -887,7 +880,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
             borderRadius: BorderRadius.circular(AppRadius.lg),
             onTap: () => _showForm(p),
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(AppSpacing.md),
               child: Row(
                 children: [
                   Stack(
@@ -930,19 +923,13 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                         right: 4,
                         child: GestureDetector(
                           onTap: () => _showForm(p),
-                          child: Container(
+                            child: Container(
                             width: 22,
                             height: 22,
-                            decoration: BoxDecoration(
+                            decoration: const BoxDecoration(
                               color: AppColors.accent,
                               shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.accent.withValues(alpha: 0.3),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
+                              boxShadow: [AppShadows.soft],
                             ),
                             child:
                                 const Icon(Icons.edit_rounded, size: 12, color: Colors.white),
@@ -1090,7 +1077,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
           } catch (e) {
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('$e'), behavior: SnackBarBehavior.floating));
+                  adminSnackBar('$e', isError: true));
             }
           }
         }
@@ -1425,7 +1412,7 @@ class _ShimmerSkeletonState extends State<_ShimmerSkeleton>
                     Container(
                       width: 64,
                       height: 64,
-                      margin: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.all(AppSpacing.md),
                       decoration: BoxDecoration(
                         color: AppColors.surfaceDark.withValues(alpha: _animation.value),
                         borderRadius: BorderRadius.circular(AppRadius.md),

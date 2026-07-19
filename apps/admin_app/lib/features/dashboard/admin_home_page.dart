@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/theme.dart';
+import '../../core/widgets/admin_widgets.dart';
 import '../../core/api/api_service.dart';
 import '../../core/api/admin_api_service.dart';
 import '../auth/admin_login_page.dart';
@@ -26,6 +27,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
   final _adminApi = AdminApiService();
   Map<String, dynamic> _user = {};
   Map<String, dynamic> _stats = {};
+  bool _loading = true;
 
   @override
   void initState() {
@@ -41,36 +43,23 @@ class _AdminHomePageState extends State<AdminHomePage> {
       setState(() {
         _user = user;
         _stats = stats;
+        _loading = false;
       });
     } catch (_) {
       if (!mounted) return;
-      setState(() {});
+      setState(() { _loading = false; });
     }
   }
 
   Future<void> _logout() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.xl),
-        ),
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
+    final confirm = await showAdminConfirmDialog(
+      context,
+      title: 'Logout',
+      message: 'Are you sure you want to logout?',
+      confirmText: 'Logout',
+      isDestructive: true,
     );
-    if (confirm == true) {
+    if (confirm) {
       await _api.logout();
       if (!mounted) return;
       Navigator.of(context).popUntil((route) => route.isFirst);
@@ -168,7 +157,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
                     icon: Icons.map_rounded,
                     title: 'Delivery Zones',
                     subtitle: 'Set service areas',
-                    color: const Color(0xFF8B5CF6),
+                    color: AppColors.purple,
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const AdminDeliveryZonePage()),
@@ -178,7 +167,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
                     icon: Icons.local_shipping_rounded,
                     title: 'Delivery Fees',
                     subtitle: 'Manage charges',
-                    color: const Color(0xFF14B8A6),
+                    color: AppColors.teal,
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const AdminDeliveryFeePage()),
@@ -208,7 +197,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
                     icon: Icons.store_rounded,
                     title: 'Shops',
                     subtitle: 'Shop owners',
-                    color: const Color(0xFF14B8A6),
+                    color: AppColors.teal,
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const AdminShopsPage()),
@@ -372,59 +361,44 @@ class _AdminHomePageState extends State<AdminHomePage> {
   }
 
   Widget _buildStatsRow() {
+    if (_loading) {
+      return const Padding(
+        padding: EdgeInsets.fromLTRB(AppSpacing.xl, 0, AppSpacing.xl, 0),
+        child: AdminShimmerList(itemCount: 1, itemHeight: 100),
+      );
+    }
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.xl,
-        0,
-        AppSpacing.xl,
-        0,
-      ),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.xl, 0, AppSpacing.xl, 0),
       child: Transform.translate(
         offset: const Offset(0, -AppSpacing.md),
         child: Row(
           children: [
-            _StatCard(
+            AdminStatCard(
               icon: Icons.inventory_2_rounded,
               value: '${_stats['products'] ?? 0}',
               label: 'Products',
-              gradient: const LinearGradient(
-                colors: [Color(0xFFF97316), Color(0xFFFB923C)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              gradient: AppColors.accentGradient,
             ),
             const SizedBox(width: AppSpacing.md),
-            _StatCard(
+            AdminStatCard(
               icon: Icons.receipt_long_rounded,
               value: '${_stats['orders'] ?? 0}',
               label: 'Orders',
-              gradient: const LinearGradient(
-                colors: [Color(0xFF3B82F6), Color(0xFF60A5FA)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              gradient: AppColors.infoGradient,
             ),
             const SizedBox(width: AppSpacing.md),
-            _StatCard(
+            AdminStatCard(
               icon: Icons.people_rounded,
               value: '${_stats['users'] ?? 0}',
               label: 'Users',
-              gradient: const LinearGradient(
-                colors: [Color(0xFF10B981), Color(0xFF34D399)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              gradient: AppColors.successGradient,
             ),
             const SizedBox(width: AppSpacing.md),
-            _StatCard(
+            AdminStatCard(
               icon: Icons.currency_rupee_rounded,
               value: '₹${_stats['revenue']?.toStringAsFixed(0) ?? '0'}',
               label: 'Revenue',
-              gradient: const LinearGradient(
-                colors: [Color(0xFFF59E0B), Color(0xFFFBBF24)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              gradient: AppColors.warningGradient,
             ),
           ],
         ),
@@ -559,7 +533,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
                 icon: Icons.shopping_cart_rounded,
                 label: 'Categories',
                 value: '${_stats['categories'] ?? 0}',
-                color: const Color(0xFF8B5CF6),
+                color: AppColors.purple,
               ),
               const SizedBox(height: AppSpacing.lg),
               Container(
@@ -576,74 +550,6 @@ class _AdminHomePageState extends State<AdminHomePage> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  final IconData icon;
-  final String value;
-  final String label;
-  final Gradient gradient;
-
-  const _StatCard({
-    required this.icon,
-    required this.value,
-    required this.label,
-    required this.gradient,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          gradient: gradient,
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          boxShadow: [
-            BoxShadow(
-              color: gradient.colors.first.withAlpha(50),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: Colors.white.withAlpha(30),
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-              ),
-              child: Icon(icon, size: 18, color: Colors.white),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                color: Colors.white.withAlpha(200),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -758,13 +664,7 @@ class _MenuCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0x0A000000),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: const [AppShadows.soft],
       ),
       child: Material(
         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -829,13 +729,7 @@ class _ReportRow extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(AppRadius.lg),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0x0A000000),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
+            boxShadow: const [AppShadows.soft],
           ),
           child: Row(
             children: [
