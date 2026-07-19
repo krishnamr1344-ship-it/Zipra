@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-const String _baseUrl = 'https://zipra-api-583825347591.asia-south1.run.app';
+const String _baseUrl = 'https://zipra-api-txlyzg2aeq-el.a.run.app';
 const String _tokenKey = 'auth_token';
 
 class ApiException implements Exception {

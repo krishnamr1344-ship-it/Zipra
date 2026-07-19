@@ -12,7 +12,7 @@ part 'address_api.dart';
 part 'offer_api.dart';
 part 'upload_api.dart';
 
-const String _baseUrl = 'https://zipra-api-583825347591.asia-south1.run.app';
+const String _baseUrl = 'https://zipra-api-txlyzg2aeq-el.a.run.app';
 const String _tokenKey = 'auth_token';
 
 class ApiServiceBase {
