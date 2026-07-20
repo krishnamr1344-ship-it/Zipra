@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.models import Category
-from app.schemas import CategoryCreate, CategoryResponse
+from app.schemas import CategoryResponse
 
 router = APIRouter(prefix="/api")
 

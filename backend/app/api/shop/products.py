@@ -1,11 +1,10 @@
 import os
-import re
 import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, status
 from sqlalchemy.orm import Session
-from sqlalchemy import update
+from sqlalchemy import func, update
 
 from app.db.session import get_db
 from app.models import Product, ProductImage, Category, Shop
@@ -136,6 +135,7 @@ def update_shop_product(product_id: str, body: ShopProductCreate, request: Reque
         old_img.is_deleted = True
     for i, url in enumerate(body.images):
         db.add(ProductImage(product_id=product.id, image_url=url.strip(), sort_order=i))
+    product.approval_status = "pending"
     product.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(product)
@@ -199,13 +199,12 @@ async def upload_shop_product_image(
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
     ext = file.filename.split(".")[-1] if file.filename else "jpg"
-    safe_name = re.sub(r'[^a-zA-Z0-9_.-]', '_', file.filename or 'upload')
     filename = f"{uuid.uuid4()}.{ext}"
     os.makedirs("uploads", exist_ok=True)
     content = await file.read()
     with open(f"uploads/{filename}", "wb") as f:
         f.write(content)
-    max_sort = db.query(db.func.max(ProductImage.sort_order)).filter(
+    max_sort = db.query(func.max(ProductImage.sort_order)).filter(
         ProductImage.product_id == product_id, ProductImage.is_deleted == False
     ).scalar() or 0
     img = ProductImage(product_id=product.id, image_url=f"/uploads/{filename}", sort_order=max_sort + 1)

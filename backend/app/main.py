@@ -16,7 +16,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from app.db import engine, SessionLocal, Base
-from app.core.config import FRONTEND_URL, ADMIN_EMAIL, ADMIN_PASSWORD
+from app.core.config import ADMIN_EMAIL, ADMIN_PASSWORD
 from app.core.security import hash_password
 from app.middleware.rate_limit import RateLimitMiddleware
 

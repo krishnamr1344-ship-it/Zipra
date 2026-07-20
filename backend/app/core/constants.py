@@ -17,6 +17,8 @@ PUBLIC_PATHS = {
     "/redoc",
 }
 
+PUBLIC_PREFIXES = {"/api/products/", "/api/categories/"}
+
 AUTH_RATE_LIMIT_PATHS = {"/api/auth/social", "/api/auth/login-email", "/api/shop/login"}
 
 VALID_PAYMENT_METHODS = {"cod", "COD"}

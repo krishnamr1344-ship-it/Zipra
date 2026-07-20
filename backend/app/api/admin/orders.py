@@ -72,6 +72,7 @@ def list_orders(request: Request, db: Session = Depends(get_db)):
         result.append({
             "id": str(o.id), "status": o.status,
             "total_amount": float(o.total_amount), "payment_method": o.payment_method,
+            "delivery_fee": float(o.delivery_fee) if o.delivery_fee else 0,
             "items": items, "created_at": o.created_at,
             "user_id": user_id,
             "user_name": user_name,

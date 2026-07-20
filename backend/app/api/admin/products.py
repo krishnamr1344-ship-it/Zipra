@@ -1,8 +1,8 @@
 import os
-import re
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from sqlalchemy import update
 
@@ -120,14 +120,13 @@ async def upload_product_image(product_id: str, request: Request, file: UploadFi
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
 
     ext = file.filename.split(".")[-1] if file.filename else "jpg"
-    safe_name = re.sub(r'[^a-zA-Z0-9_.-]', '_', file.filename or 'upload')
     filename = f"{uuid.uuid4()}.{ext}"
     os.makedirs("uploads", exist_ok=True)
     content = await file.read()
     with open(f"uploads/{filename}", "wb") as f:
         f.write(content)
 
-    max_sort = db.query(db.func.max(ProductImage.sort_order)).filter(ProductImage.product_id == product_id, ProductImage.is_deleted == False).scalar() or 0
+    max_sort = db.query(func.max(ProductImage.sort_order)).filter(ProductImage.product_id == product_id, ProductImage.is_deleted == False).scalar() or 0
     img = ProductImage(product_id=product.id, image_url=f"/uploads/{filename}", sort_order=max_sort + 1)
     db.add(img)
     db.commit()

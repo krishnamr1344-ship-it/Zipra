@@ -22,7 +22,7 @@ def _pack_to_admin_response(pack: ComboPack) -> dict:
                 "product_name": prod.name if prod else "",
                 "product_price": float(prod.price) if prod else 0,
                 "product_unit": prod.unit if prod else "",
-                "product_image": prod.images[0].image_url if prod and prod.images else None,
+                "product_image": next((img.image_url for img in prod.images if not img.is_deleted), None) if prod else None,
                 "quantity": pi.quantity,
             })
     return {

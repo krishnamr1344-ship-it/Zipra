@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/constants/theme.dart';
 import '../../core/api/admin_api_service.dart';
 
@@ -177,6 +179,242 @@ class _AdminProductApprovalsPageState extends State<AdminProductApprovalsPage> {
         ),
       );
     }
+  }
+
+  void _showEditForm(Map<String, dynamic> product) {
+    final nameCtl = TextEditingController(text: product['name'] ?? '');
+    final origPriceCtl = TextEditingController(
+      text: product['original_price']?.toString() ?? '',
+    );
+    final offerCtl = TextEditingController(
+      text: product['price']?.toString() ?? '',
+    );
+    final unitCtl = TextEditingController(text: product['unit'] ?? '');
+    final stockCtl =
+        TextEditingController(text: product['stock']?.toString() ?? '0');
+    final images = List.generate(
+        3,
+        (i) => TextEditingController(
+              text: product['images'] != null && i < (product['images'] as List).length
+                  ? (product['images'] as List)[i]?.toString() ?? ''
+                  : '',
+            ));
+    String? catId = product['category_id'];
+    bool saving = false;
+
+    InputDecoration inputDeco(String label) {
+      return InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
+        filled: true,
+        fillColor: AppColors.surfaceDim,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      );
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(ctx).size.height * 0.92,
+          ),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceDark,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.of(ctx).viewInsets.bottom,
+                    left: 24, right: 24, top: 20,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 48, height: 48,
+                            decoration: BoxDecoration(
+                              gradient: AppColors.accentGradient,
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                            ),
+                            child: const Icon(Icons.edit_rounded, color: Colors.white, size: 24),
+                          ),
+                          const SizedBox(width: 14),
+                          const Text('Edit Product',
+                              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      TextField(controller: nameCtl, decoration: inputDeco('Product Name')),
+                      const SizedBox(height: AppSpacing.md),
+                      TextField(controller: origPriceCtl, decoration: inputDeco('Original Price'),
+                          keyboardType: TextInputType.number),
+                      const SizedBox(height: AppSpacing.md),
+                      TextField(controller: offerCtl, decoration: inputDeco('Offer Price'),
+                          keyboardType: TextInputType.number),
+                      const SizedBox(height: AppSpacing.md),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(controller: unitCtl, decoration: inputDeco('Unit'),
+                                keyboardType: TextInputType.text),
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: TextField(controller: stockCtl, decoration: inputDeco('Stock'),
+                                keyboardType: TextInputType.number),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      const Text('Images (URL or upload)',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                      const SizedBox(height: AppSpacing.sm),
+                      ...List.generate(3, (i) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: images[i],
+                                  decoration: InputDecoration(
+                                    hintText: 'Image ${i + 1} URL',
+                                    hintStyle: const TextStyle(fontSize: 13, color: AppColors.textHint),
+                                    filled: true,
+                                    fillColor: AppColors.surfaceDim,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(AppRadius.md),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              GestureDetector(
+                                onTap: () async {
+                                  final picker = ImagePicker();
+                                  final picked = await picker.pickImage(source: ImageSource.gallery);
+                                  if (picked == null) return;
+                                  try {
+                                    final result = await _api.uploadProductImage(
+                                        product['id'], File(picked.path));
+                                    images[i].text = result['image_url'];
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('$e'), behavior: SnackBarBehavior.floating),
+                                      );
+                                    }
+                                  }
+                                },
+                                child: Container(
+                                  width: 44, height: 44,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surfaceDim,
+                                    borderRadius: BorderRadius.circular(AppRadius.md),
+                                  ),
+                                  child: images[i].text.isNotEmpty && !images[i].text.startsWith('http')
+                                      ? ClipRRect(
+                                          borderRadius: BorderRadius.circular(AppRadius.md),
+                                          child: Image.file(File(images[i].text), width: 44, height: 44, fit: BoxFit.cover),
+                                        )
+                                      : images[i].text.startsWith('http')
+                                          ? ClipRRect(
+                                              borderRadius: BorderRadius.circular(AppRadius.md),
+                                              child: Image.network(images[i].text, width: 44, height: 44, fit: BoxFit.cover, errorBuilder: (_, e, s) => const Icon(Icons.image, color: AppColors.textHint)),
+                                            )
+                                          : const Icon(Icons.image, color: AppColors.textHint, size: 22),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                      const SizedBox(height: AppSpacing.lg),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: saving
+                              ? null
+                              : () async {
+                                  setSheetState(() => saving = true);
+                                  try {
+                                    final List<String> urls = [];
+                                    for (final c in images) {
+                                      final val = c.text.trim();
+                                      if (val.startsWith('http')) urls.add(val);
+                                    }
+                                    final data = {
+                                      'category_id': catId ?? '',
+                                      'name': nameCtl.text,
+                                      'price': double.tryParse(offerCtl.text) ?? 0,
+                                      'unit': unitCtl.text,
+                                      'stock': int.tryParse(stockCtl.text) ?? 0,
+                                      'images': urls,
+                                      'original_price': double.tryParse(origPriceCtl.text) ?? 0,
+                                    };
+                                    await _api.updateProduct(product['id'], data);
+                                    if (!context.mounted) return;
+                                    if (!ctx.mounted) return;
+                                    Navigator.pop(ctx);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Product updated'), backgroundColor: AppColors.success, behavior: SnackBarBehavior.floating),
+                                    );
+                                    _load();
+                                  } catch (e) {
+                                    setSheetState(() => saving = false);
+                                    if (ctx.mounted) {
+                                      ScaffoldMessenger.of(ctx).showSnackBar(
+                                        SnackBar(content: Text('$e'), behavior: SnackBarBehavior.floating),
+                                      );
+                                    }
+                                  }
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.accent,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                            elevation: 0,
+                          ),
+                          child: saving
+                              ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                              : const Text('Save Changes', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -438,7 +676,21 @@ class _AdminProductApprovalsPageState extends State<AdminProductApprovalsPage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: AppSpacing.lg),
+                    const SizedBox(height: AppSpacing.sm),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: () => _showEditForm(p),
+                        icon: const Icon(Icons.edit_rounded, size: 16),
+                        label: const Text('Edit details'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.accent,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
                     Row(
                       children: [
                         Expanded(

@@ -4,7 +4,6 @@ from datetime import datetime, timedelta, timezone
 
 import bcrypt
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel, field_validator
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -13,8 +12,7 @@ from app.schemas.user import (
     LogoutRequest, SocialLoginRequest, EmailLoginRequest,
     ForgotPasswordRequest, ResetPasswordRequest, ChangePasswordRequest,
 )
-from app.core.security import hash_password, verify_password, create_jwt, decode_jwt
-from app.core.config import JWT_SECRET, JWT_EXPIRY_MINUTES, BCRYPT_ROUNDS
+from app.core.security import hash_password, create_jwt, decode_jwt
 
 
 MAX_TOKEN_LENGTH = 2048
@@ -74,7 +72,7 @@ def _verify_firebase_token(id_token: str) -> dict:
 
 
 def _generic_error():
-    return HTTPException(
+    raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid credentials",
     )
@@ -117,12 +115,10 @@ def social_login(body: SocialLoginRequest, db: Session = Depends(get_db)):
             detail="Email not available from authentication provider",
         )
 
-    user = db.query(User).filter(User.email == token_email).first()
+    user = db.query(User).filter(User.email == token_email, User.is_deleted == False).first()
     if user:
-        if user.is_deleted:
-            user.is_deleted = False
-            user.name = (body.name or token_email.split("@")[0]).strip() or "User"
-            user.phone = body.phone or ""
+        user.name = (body.name or token_email.split("@")[0]).strip() or "User"
+        user.phone = body.phone or ""
     else:
         user = User(
             email=token_email,

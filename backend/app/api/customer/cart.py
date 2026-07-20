@@ -80,7 +80,7 @@ def update_cart_item(item_id: str, body: CartUpdateRequest, request: Request, db
     if body.quantity == 0:
         item.is_deleted = True
         db.commit()
-        raise HTTPException(status_code=status.HTTP_200_OK, detail="Item removed from cart")
+        return MessageResponse(message="Item removed from cart")
 
     product = db.query(Product).filter(Product.id == item.product_id).first()
     if product and product.stock < body.quantity:

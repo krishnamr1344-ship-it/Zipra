@@ -44,6 +44,7 @@ def get_product_or_404(prod_id: str, db: Session) -> Product:
     prod = db.query(Product).filter(
         Product.id == prod_id,
         Product.is_deleted == False,
+        Product.approval_status == "approved",
     ).first()
     if not prod:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")

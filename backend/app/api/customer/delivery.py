@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
+from shapely.errors import GEOSException
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -32,7 +33,7 @@ def check_delivery_zone(body: ZoneCheckRequest, db: Session = Depends(get_db)):
             if polygon.contains(point):
                 return ZoneCheckResponse(serviceable=True)
         return ZoneCheckResponse(serviceable=False, message="Sorry, delivery not available in your area")
-    except Exception:
+    except (GEOSException, ValueError, json.JSONDecodeError, ImportError):
         return ZoneCheckResponse(serviceable=True, message="No delivery zones configured — allowing all areas")
 
 

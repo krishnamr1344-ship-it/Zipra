@@ -1,5 +1,3 @@
-import os
-import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -85,8 +83,7 @@ def update_shop(shop_id: str, body: ShopUpdate, request: Request, db: Session = 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shop not found")
     update_data = body.model_dump(exclude_unset=True)
     for key, value in update_data.items():
-        if value is not None:
-            setattr(shop, key, value)
+        setattr(shop, key, value)
     shop.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(shop)
@@ -205,8 +202,7 @@ def update_delivery_partner(partner_id: str, body: DeliveryPartnerUpdate, reques
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Delivery partner not found")
     update_data = body.model_dump(exclude_unset=True)
     for key, value in update_data.items():
-        if value is not None:
-            setattr(partner, key, value)
+        setattr(partner, key, value)
     db.commit()
     db.refresh(partner)
     return DeliveryPartnerResponse(

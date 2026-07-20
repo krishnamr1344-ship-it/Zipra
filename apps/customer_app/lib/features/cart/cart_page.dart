@@ -7,7 +7,6 @@ class CartPage extends StatelessWidget {
   const CartPage({super.key});
 
   static const double _freeDeliveryThreshold = 499;
-  static const int _shippingCharge = 29;
 
   @override
   Widget build(BuildContext context) {
@@ -320,7 +319,6 @@ class CartPage extends StatelessWidget {
     final subtotal = cartNotifier.total;
     final totalItems = cartNotifier.itemCount;
     final isFreeDelivery = subtotal >= _freeDeliveryThreshold;
-    final deliveryFee = isFreeDelivery ? 0 : _shippingCharge;
     final savings = items.fold<int>(0, (sum, i) => sum + ((i.originalPrice - i.price) * i.count));
 
     return Container(

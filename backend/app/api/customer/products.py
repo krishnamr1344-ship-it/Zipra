@@ -46,6 +46,7 @@ def get_product(product_id: str, db: Session = Depends(get_db)):
     p = db.query(Product).outerjoin(Shop, Product.shop_id == Shop.id).filter(
         Product.id == product_id,
         Product.is_deleted == False,
+        Product.approval_status == "approved",
         or_(
             (Product.shop_id == None),
             ((Shop.is_active == True) & (Shop.is_open == True) & (Shop.is_deleted == False)),

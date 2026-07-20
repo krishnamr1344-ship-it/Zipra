@@ -12,7 +12,7 @@ from app.core.config import (
     RATE_LIMIT_WINDOW_SECONDS,
     RATE_LIMIT_BLOCK_MINUTES,
 )
-from app.core.constants import PUBLIC_PATHS, AUTH_RATE_LIMIT_PATHS, FAILURE_CODES
+from app.core.constants import PUBLIC_PATHS, PUBLIC_PREFIXES, AUTH_RATE_LIMIT_PATHS, FAILURE_CODES
 from app.core.security import decode_jwt
 from app.db.session import SessionLocal
 from app.models import TokenBlacklist, User
@@ -55,7 +55,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             if block:
                 return block
 
-        if path not in PUBLIC_PATHS:
+        if path not in PUBLIC_PATHS and not any(path.startswith(p) for p in PUBLIC_PREFIXES):
             auth_header = request.headers.get("Authorization")
             if not auth_header or not auth_header.startswith("Bearer "):
                 return JSONResponse(

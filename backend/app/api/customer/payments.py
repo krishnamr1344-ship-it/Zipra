@@ -63,7 +63,7 @@ def process_payment(body: PaymentProcessRequest, request: Request, db: Session =
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
 
-    if order.status == "cancelled":
+    if order.status == "Cancelled":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Payment cannot be processed for a cancelled order")
 
     existing_payment = db.query(Payment).filter(

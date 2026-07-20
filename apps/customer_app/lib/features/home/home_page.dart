@@ -44,7 +44,6 @@ class _HomePageState extends State<HomePage> {
   bool _loadingProducts = true;
   bool _serviceable = true;
   bool _zoneChecked = false;
-  bool _isLoggedIn = false;
 
   List<Map<String, dynamic>> _offers = [];
   final _searchCtl = TextEditingController();
@@ -88,8 +87,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _checkAuth() async {
     final token = await _api.getToken();
-    if (mounted) setState(() => _isLoggedIn = token != null);
-    if (token != null) _loadProfile();
+    if (mounted && token != null) _loadProfile();
   }
 
   Future<void> _loadGpsAddress() async {

@@ -33,7 +33,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       if (!mounted) return;
       final user = info['user'] as Map<String, dynamic>;
       final idToken = info['token'] as String;
-      final body = await ApiService().socialLogin(
+      await ApiService().socialLogin(
         user['email'] ?? '',
         user['name'] ?? '',
         idToken,

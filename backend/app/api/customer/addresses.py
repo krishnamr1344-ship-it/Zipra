@@ -156,8 +156,8 @@ def create_address_from_gps(body: GpsAddressCreate, request: Request, db: Sessio
 
     existing_gps = db.query(Address).filter(
         Address.user_id == user_id,
-        Address.latitude != None,
-        Address.longitude != None,
+        Address.latitude.isnot(None),
+        Address.longitude.isnot(None),
         Address.is_deleted == False,
     ).first()
 
