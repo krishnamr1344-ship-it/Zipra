@@ -44,7 +44,7 @@ class CartItem {
     qty: j['qty']?.toString() ?? '',
     price: (j['price'] as num?)?.toInt() ?? 0,
     originalPrice: (j['originalPrice'] as num?)?.toInt() ?? 0,
-    icon: IconData(j['iconCodePoint'] ?? 0, fontFamily: 'MaterialIcons'),
+    icon: IconData(j['iconCodePoint'] as int? ?? 0, fontFamily: 'MaterialIcons'),
     color: Color(j['colorValue'] ?? 0xFF2196F3),
     productId: j['productId']?.toString() ?? '',
     imageUrl: j['imageUrl']?.toString() ?? '',
