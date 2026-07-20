@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:zipra_shop/core/constants/theme.dart';
 import 'package:zipra_shop/core/api/shop_api_service.dart';
 import 'package:zipra_shop/core/models/shop_product.dart';
@@ -521,10 +522,10 @@ class _ProductCard extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: product.images.isNotEmpty
-          ? Image.network(
-              resolveImageUrl(product.images.first),
+          ? CachedNetworkImage(
+              imageUrl: resolveImageUrl(product.images.first),
               fit: BoxFit.cover,
-              errorBuilder: (_, a, b) => const Center(
+              errorWidget: (_, __, ___) => const Center(
                 child: Icon(Icons.image_outlined, color: AppColors.textHint, size: 28),
               ),
             )

@@ -93,35 +93,44 @@ class _OrdersPageState extends State<OrdersPage> {
                       ],
                     ),
                   )
-                : ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      if (hasApi) ...[
-                        ..._apiOrders.map((o) => _OrderCard(
-                          id: o['id']?.toString() ?? '',
-                          status: o['status'] ?? 'Pending',
-                          total: (o['total_amount'] ?? 0).toInt(),
-                          itemCount: (o['items'] as List?)?.length ?? 0,
-                          date: o['created_at'] != null ? (DateTime.tryParse(o['created_at'].toString()) ?? DateTime.now()) : DateTime.now(),
-                          items: ((o['items'] as List?)?.cast<Map<String, dynamic>>() ?? []).map((i) => _OrderItemPreview(name: i['product_name'] ?? '', qty: i['quantity'] ?? 1, price: (i['product_price'] ?? 0).toInt())).toList(),
-                          onTap: () => _openApiDetail(context, o),
-                        )),
-                      ],
-                      if (hasLocal) ...[
-                        if (hasApi) const SizedBox(height: 8),
-                        ...orderNotifier.orders.map((order) => _OrderCard(
-                          id: order.id,
-                          status: order.status,
-                          total: order.total,
-                          itemCount: order.items.length,
-                          date: order.date,
-                          items: order.items.map((i) => _OrderItemPreview(name: i.name, qty: i.count, price: i.price)).toList(),
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OrderDetailPage(order: order))),
-                        )),
-                      ],
-                    ],
-                  ),
+                : _buildOrderList(hasApi, hasLocal),
       ),
+    );
+  }
+
+  Widget _buildOrderList(bool hasApi, bool hasLocal) {
+    final totalItems = (hasApi ? _apiOrders.length : 0) + (hasLocal ? orderNotifier.orders.length : 0);
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: totalItems + (hasApi && hasLocal ? 1 : 0),
+      itemBuilder: (ctx, i) {
+        if (hasApi && hasLocal && i == _apiOrders.length) {
+          return const SizedBox(height: 8);
+        }
+        if (i < _apiOrders.length) {
+          final o = _apiOrders[i];
+          return _OrderCard(
+            id: o['id']?.toString() ?? '',
+            status: o['status'] ?? 'Pending',
+            total: (o['total_amount'] ?? 0).toInt(),
+            itemCount: (o['items'] as List?)?.length ?? 0,
+            date: o['created_at'] != null ? (DateTime.tryParse(o['created_at'].toString()) ?? DateTime.now()) : DateTime.now(),
+            items: ((o['items'] as List?)?.cast<Map<String, dynamic>>() ?? []).map((i) => _OrderItemPreview(name: i['product_name'] ?? '', qty: i['quantity'] ?? 1, price: (i['product_price'] ?? 0).toInt())).toList(),
+            onTap: () => _openApiDetail(context, o),
+          );
+        }
+        final idx = i - _apiOrders.length - (hasApi && hasLocal ? 1 : 0);
+        final order = orderNotifier.orders[idx];
+        return _OrderCard(
+          id: order.id,
+          status: order.status,
+          total: order.total,
+          itemCount: order.items.length,
+          date: order.date,
+          items: order.items.map((i) => _OrderItemPreview(name: i.name, qty: i.count, price: i.price)).toList(),
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OrderDetailPage(order: order))),
+        );
+      },
     );
   }
 

@@ -161,7 +161,7 @@ class CartPage extends StatelessWidget {
                 height: 100,
                 color: AppColors.chipBg,
                 child: item.imageUrl.isNotEmpty
-                    ? Image.network(item.imageUrl, fit: BoxFit.contain,
+                    ? Image.network(resolveImageUrl(item.imageUrl), fit: BoxFit.contain,
                         loadingBuilder: (ctx, child, loadingProgress) {
                           if (loadingProgress == null) return child;
                           return Center(child: CircularProgressIndicator(strokeWidth: 2));

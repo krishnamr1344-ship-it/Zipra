@@ -7,6 +7,7 @@ import 'package:zipra_shop/core/models/shop_order.dart';
 import 'package:zipra_shop/core/models/earning.dart';
 import 'package:zipra_shop/features/auth/login_page.dart';
 import 'package:zipra_shop/features/products/shop_products_page.dart';
+import 'package:zipra_shop/features/products/shop_product_form_page.dart';
 import 'package:zipra_shop/features/orders/shop_orders_page.dart';
 import 'package:zipra_shop/features/earnings/shop_earnings_page.dart';
 import 'package:zipra_shop/features/profile/shop_profile_page.dart';
@@ -40,13 +41,19 @@ class _ShopHomePageState extends State<ShopHomePage> {
 
   Future<void> _loadData() async {
     try {
-      final shop = await _api.getShopProfile();
-      final newOrdersList = await _api.getOrders(status: 'new');
-      final allProducts = await _api.getProducts();
-      final summaryData = await _api.getEarningsSummary();
-      final allOrders = await _api.getOrders();
+      final results = await Future.wait([
+        _api.getShopProfile(),
+        _api.getOrders(status: 'new'),
+        _api.getProducts(),
+        _api.getEarningsSummary(),
+        _api.getOrders(),
+      ]);
       if (!mounted) return;
-      final summary = EarningSummary.fromJson(summaryData);
+      final shop = results[0] as Map<String, dynamic>;
+      final newOrdersList = results[1] as List;
+      final allProducts = results[2] as List;
+      final summary = EarningSummary.fromJson(results[3] as Map<String, dynamic>);
+      final allOrders = results[4] as List;
       setState(() {
         _shop = ShopModel.fromJson(shop);
         _newOrders = newOrdersList.length;
@@ -70,12 +77,34 @@ class _ShopHomePageState extends State<ShopHomePage> {
   }
 
   Future<void> _toggleOpen() async {
+    if (_shop == null) return;
+    final previous = _shop!;
+    setState(() {
+      _shop = ShopModel(
+        id: previous.id,
+        ownerId: previous.ownerId,
+        name: previous.name,
+        description: previous.description,
+        logoUrl: previous.logoUrl,
+        bannerUrl: previous.bannerUrl,
+        address: previous.address,
+        city: previous.city,
+        state: previous.state,
+        pincode: previous.pincode,
+        latitude: previous.latitude,
+        longitude: previous.longitude,
+        phone: previous.phone,
+        email: previous.email,
+        gstNumber: previous.gstNumber,
+        isActive: previous.isActive,
+        isOpen: !previous.isOpen,
+        createdAt: previous.createdAt,
+      );
+    });
     try {
-      final msg = await _api.toggleOpen();
-      await _loadData();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      await _api.toggleOpen();
     } catch (e) {
+      setState(() => _shop = previous);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
@@ -329,7 +358,7 @@ class _ShopHomePageState extends State<ShopHomePage> {
                       ),
                     ),
                     Transform.scale(
-                      scale: 0.85,
+                      scale: 1.3,
                       child: Switch(
                         value: isOpen,
                         onChanged: (_) => _toggleOpen(),
@@ -449,7 +478,10 @@ class _ShopHomePageState extends State<ShopHomePage> {
                   icon: Icons.add_box_rounded,
                   title: 'Add Product',
                   gradient: AppColors.accentGradient,
-                   onTap: () => setState(() { _currentIndex = 1; }),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ShopProductFormPage()),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),

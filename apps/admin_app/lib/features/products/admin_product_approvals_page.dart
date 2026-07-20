@@ -341,10 +341,10 @@ class _AdminProductApprovalsPageState extends State<AdminProductApprovalsPage> {
                                           borderRadius: BorderRadius.circular(AppRadius.md),
                                           child: Image.file(File(images[i].text), width: 44, height: 44, fit: BoxFit.cover),
                                         )
-                                      : images[i].text.startsWith('http')
+                                      : images[i].text.isNotEmpty
                                           ? ClipRRect(
                                               borderRadius: BorderRadius.circular(AppRadius.md),
-                                              child: Image.network(images[i].text, width: 44, height: 44, fit: BoxFit.cover, errorBuilder: (_, e, s) => const Icon(Icons.image, color: AppColors.textHint)),
+                                              child: Image.network(AdminApiService.resolveImageUrl(images[i].text), width: 44, height: 44, fit: BoxFit.cover, errorBuilder: (_, e, s) => const Icon(Icons.image, color: AppColors.textHint)),
                                             )
                                           : const Icon(Icons.image, color: AppColors.textHint, size: 22),
                                 ),
@@ -599,11 +599,11 @@ class _AdminProductApprovalsPageState extends State<AdminProductApprovalsPage> {
                             borderRadius:
                                 BorderRadius.circular(AppRadius.md),
                           ),
-                          child: thumb != null && thumb.startsWith('http')
+                          child: thumb != null && thumb.isNotEmpty
                               ? ClipRRect(
                                   borderRadius:
                                       BorderRadius.circular(AppRadius.md),
-                                  child: Image.network(thumb,
+                                  child: Image.network(AdminApiService.resolveImageUrl(thumb),
                                       width: 60,
                                       height: 60,
                                       fit: BoxFit.cover,

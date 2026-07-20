@@ -1,5 +1,3 @@
-import os
-import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, status
@@ -183,13 +181,8 @@ async def upload_shop_product_image(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
+    from app.utils.storage import upload_to_gcs
     user_id = require_shop_owner(request)
-    MAX_FILE_SIZE = 10 * 1024 * 1024
-    ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}
-    if file.size and file.size > MAX_FILE_SIZE:
-        raise HTTPException(status_code=400, detail="File too large (max 10MB)")
-    if file.content_type and file.content_type not in ALLOWED_TYPES:
-        raise HTTPException(status_code=400, detail="Only JPG, PNG, WebP allowed")
     shop = get_shop_for_owner(user_id, db)
     product = db.query(Product).filter(
         Product.id == product_id,
@@ -198,16 +191,11 @@ async def upload_shop_product_image(
     ).first()
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
-    ext = file.filename.split(".")[-1] if file.filename else "jpg"
-    filename = f"{uuid.uuid4()}.{ext}"
-    os.makedirs("uploads", exist_ok=True)
-    content = await file.read()
-    with open(f"uploads/{filename}", "wb") as f:
-        f.write(content)
+    image_url = await upload_to_gcs(file, folder="products")
     max_sort = db.query(func.max(ProductImage.sort_order)).filter(
         ProductImage.product_id == product_id, ProductImage.is_deleted == False
     ).scalar() or 0
-    img = ProductImage(product_id=product.id, image_url=f"/uploads/{filename}", sort_order=max_sort + 1)
+    img = ProductImage(product_id=product.id, image_url=image_url, sort_order=max_sort + 1)
     db.add(img)
     db.commit()
     db.refresh(img)

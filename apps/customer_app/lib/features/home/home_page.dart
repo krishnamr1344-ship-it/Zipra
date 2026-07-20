@@ -248,13 +248,19 @@ class _HomePageState extends State<HomePage> {
   Future<void> _loadData() async {
     setState(() => _loadingProducts = true);
     try {
-      final cats = await _api.getCategories();
-      final prods = await _api.getProducts();
-      _offers = (await _api.getOffers()).cast<Map<String, dynamic>>();
+      final results = await Future.wait([
+        _api.getCategories(),
+        _api.getProducts(),
+        _api.getOffers(),
+      ]);
       if (!mounted) return;
+      final cats = results[0] as List;
+      final prods = results[1] as List;
+      final offers = results[2] as List;
       setState(() {
         _categories = ['All', ...cats.map<String>((c) => c['name']?.toString() ?? '')];
         _allProducts = prods.cast<Map<String, dynamic>>();
+        _offers = offers.cast<Map<String, dynamic>>();
         _loadingProducts = false;
       });
     } catch (_) {
@@ -808,7 +814,7 @@ class _HomePageState extends State<HomePage> {
                           ? ClipRRect(
                               borderRadius: BorderRadius.circular(8),
                               child: Image.network(
-                                imageUrl,
+                                resolveImageUrl(imageUrl!),
                                 fit: BoxFit.contain,
                                 errorBuilder: (_, __, ___) =>
                                     _catIconWidget(cat, bgColor),

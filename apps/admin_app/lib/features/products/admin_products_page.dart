@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants/theme.dart';
 import '../../core/widgets/admin_widgets.dart';
 import '../../core/api/admin_api_service.dart';
@@ -399,18 +400,17 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                                             borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
                                           ),
                                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                          prefixIcon: images[i].text.trim().isNotEmpty &&
-                                                  images[i].text.trim().startsWith('http')
+                                          prefixIcon: images[i].text.trim().isNotEmpty
                                               ? Padding(
                                                   padding: const EdgeInsets.all(AppSpacing.sm),
                                                   child: ClipRRect(
                                                     borderRadius: BorderRadius.circular(AppRadius.sm),
-                                                    child: Image.network(
-                                                      images[i].text.trim(),
+                                                    child: CachedNetworkImage(
+                                                      imageUrl: AdminApiService.resolveImageUrl(images[i].text.trim()),
                                                       width: 32,
                                                       height: 32,
                                                       fit: BoxFit.cover,
-                                                      errorBuilder: (_, e, s) => const SizedBox(),
+                                                      errorWidget: (_, __, ___) => const SizedBox(),
                                                     ),
                                                   ),
                                                 )
@@ -903,14 +903,14 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                           color: AppColors.surfaceDim,
                           borderRadius: BorderRadius.circular(AppRadius.md),
                         ),
-                        child: thumb != null && thumb.startsWith('http')
+                        child: thumb != null && thumb.isNotEmpty
                             ? ClipRRect(
                                 borderRadius: BorderRadius.circular(AppRadius.md),
-                                child: Image.network(thumb,
+                                child: CachedNetworkImage(imageUrl: AdminApiService.resolveImageUrl(thumb),
                                     width: 64,
                                     height: 64,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (_, e, s) => Center(
+                                    errorWidget: (_, __, ___) => Center(
                                         child: Text(
                                           ((p['name']?.toString().isEmpty ?? true ? '?' : p['name'].toString()[0])).toUpperCase(),
                                           style: const TextStyle(
@@ -1120,13 +1120,13 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                           borderRadius:
                               const BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
                         ),
-                        child: thumb != null && thumb.startsWith('http')
+                        child: thumb != null && thumb.isNotEmpty
                             ? ClipRRect(
                                 borderRadius: const BorderRadius.vertical(
                                     top: Radius.circular(AppRadius.lg)),
-                                child: Image.network(thumb,
+                                child: CachedNetworkImage(imageUrl: AdminApiService.resolveImageUrl(thumb),
                                     fit: BoxFit.cover,
-                                    errorBuilder: (_, e, s) => const Center(
+                                    errorWidget: (_, __, ___) => const Center(
                                         child: Icon(Icons.image, size: 36, color: AppColors.textHint))),
                               )
                             : const Center(
@@ -1338,11 +1338,11 @@ class _ProductSearchDelegate extends SearchDelegate<String> {
               color: AppColors.surfaceDim,
               borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
-            child: thumb != null && thumb.startsWith('http')
+            child: thumb != null && thumb.isNotEmpty
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(AppRadius.sm),
-                    child: Image.network(thumb, fit: BoxFit.cover,
-                        errorBuilder: (_, e, s) => const Icon(Icons.image, color: AppColors.textHint)),
+                    child: CachedNetworkImage(imageUrl: AdminApiService.resolveImageUrl(thumb), fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) => const Icon(Icons.image, color: AppColors.textHint)),
                   )
                 : Center(
                     child: Text(

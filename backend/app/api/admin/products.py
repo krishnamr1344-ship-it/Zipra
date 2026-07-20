@@ -1,6 +1,3 @@
-import os
-import uuid
-
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -108,26 +105,16 @@ def delete_product(product_id: str, request: Request, db: Session = Depends(get_
 
 @router.post("/products/{product_id}/upload-image", status_code=status.HTTP_201_CREATED)
 async def upload_product_image(product_id: str, request: Request, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    from app.utils.storage import upload_to_gcs
     require_admin(request)
-    MAX_FILE_SIZE = 10 * 1024 * 1024
-    ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}
-    if file.size and file.size > MAX_FILE_SIZE:
-        raise HTTPException(status_code=400, detail="File too large (max 10MB)")
-    if file.content_type and file.content_type not in ALLOWED_TYPES:
-        raise HTTPException(status_code=400, detail="Only JPG, PNG, WebP allowed")
     product = db.query(Product).filter(Product.id == product_id, Product.is_deleted == False).first()
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
 
-    ext = file.filename.split(".")[-1] if file.filename else "jpg"
-    filename = f"{uuid.uuid4()}.{ext}"
-    os.makedirs("uploads", exist_ok=True)
-    content = await file.read()
-    with open(f"uploads/{filename}", "wb") as f:
-        f.write(content)
+    image_url = await upload_to_gcs(file, folder="products")
 
     max_sort = db.query(func.max(ProductImage.sort_order)).filter(ProductImage.product_id == product_id, ProductImage.is_deleted == False).scalar() or 0
-    img = ProductImage(product_id=product.id, image_url=f"/uploads/{filename}", sort_order=max_sort + 1)
+    img = ProductImage(product_id=product.id, image_url=image_url, sort_order=max_sort + 1)
     db.add(img)
     db.commit()
     db.refresh(img)

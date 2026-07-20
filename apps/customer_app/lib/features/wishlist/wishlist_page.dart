@@ -130,7 +130,7 @@ class _WishlistPageState extends State<WishlistPage> {
                 child: SizedBox(
                   width: 80, height: 80,
                   child: imageUrl.isNotEmpty
-                      ? Image.network(imageUrl, fit: BoxFit.contain, errorBuilder: (_, _, _) => _fallbackImg())
+                      ? Image.network(resolveImageUrl(imageUrl), fit: BoxFit.contain, errorBuilder: (_, _, _) => _fallbackImg())
                       : _fallbackImg(),
                 ),
               ),

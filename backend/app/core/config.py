@@ -14,5 +14,8 @@ RATE_LIMIT_MAX_ATTEMPTS = int(os.getenv("RATE_LIMIT_MAX_ATTEMPTS", "10"))
 RATE_LIMIT_WINDOW_SECONDS = int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "60"))
 RATE_LIMIT_BLOCK_MINUTES = int(os.getenv("RATE_LIMIT_BLOCK_MINUTES", "5"))
 
+GCS_BUCKET = os.getenv("GCS_BUCKET", "zipra-uploads")
+GCS_PROJECT = os.getenv("GCS_PROJECT", "")
+
 if not JWT_SECRET:
     raise RuntimeError("JWT_SECRET not set in .env file")

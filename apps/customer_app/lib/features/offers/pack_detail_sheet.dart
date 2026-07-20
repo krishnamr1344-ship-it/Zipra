@@ -121,7 +121,7 @@ class _PackDetailSheetState extends State<PackDetailSheet> {
                           child: item.productImage != null
                               ? ClipRRect(
                                   borderRadius: BorderRadius.circular(12),
-                                  child: Image.network(item.productImage!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.shopping_bag, color: AppColors.primary)),
+                                  child: Image.network(resolveImageUrl(item.productImage!), fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.shopping_bag, color: AppColors.primary)),
                                 )
                               : const Icon(Icons.shopping_bag, color: AppColors.primary),
                         ),

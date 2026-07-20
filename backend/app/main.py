@@ -119,7 +119,6 @@ app.include_router(shop_products_router)
 app.include_router(shop_orders_router)
 app.include_router(shop_earnings_router)
 
-# Static files
 os.makedirs("uploads", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 

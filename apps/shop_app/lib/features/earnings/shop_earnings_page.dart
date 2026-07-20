@@ -69,147 +69,161 @@ class _ShopEarningsPageState extends State<ShopEarningsPage> {
           ? _buildShimmer()
           : RefreshIndicator(
               onRefresh: _loadData,
-              child: ListView(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                children: [
-                  if (_summary != null) ...[
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(AppSpacing.xl),
-                      decoration: BoxDecoration(
-                        gradient: AppColors.primaryGradient,
-                        borderRadius: BorderRadius.circular(AppRadius.lg),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.3),
-                            blurRadius: 16,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Total Settled',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
+              child: CustomScrollView(
+                slivers: [
+                  SliverPadding(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate([
+                        if (_summary != null) ...[
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(AppSpacing.xl),
+                            decoration: BoxDecoration(
+                              gradient: AppColors.primaryGradient,
+                              borderRadius: BorderRadius.circular(AppRadius.lg),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.primary.withValues(alpha: 0.3),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Total Settled',
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: AppSpacing.xs),
+                                Text(
+                                  '₹${_summary!.totalSettled.toStringAsFixed(0)}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: AppSpacing.xs),
-                          Text(
-                            '₹${_summary!.totalSettled.toStringAsFixed(0)}',
-                            style: const TextStyle(
+                          const SizedBox(height: AppSpacing.lg),
+                          Row(
+                            children: [
+                              _SummaryMiniCard(
+                                title: 'Today',
+                                amount: _summary!.today,
+                                color: AppColors.primary,
+                                icon: Icons.today_rounded,
+                              ),
+                              const SizedBox(width: AppSpacing.md),
+                              _SummaryMiniCard(
+                                title: 'This Week',
+                                amount: _summary!.thisWeek,
+                                color: AppColors.info,
+                                icon: Icons.date_range_rounded,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          Row(
+                            children: [
+                              _SummaryMiniCard(
+                                title: 'This Month',
+                                amount: _summary!.thisMonth,
+                                color: AppColors.success,
+                                icon: Icons.calendar_month_rounded,
+                              ),
+                              const SizedBox(width: AppSpacing.md),
+                              _SummaryMiniCard(
+                                title: 'Pending',
+                                amount: _summary!.totalPending,
+                                color: AppColors.warning,
+                                icon: Icons.pending_rounded,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.xl),
+                        ],
+                        Row(
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                'Transactions',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                            ),
+                            _FilterChip(
+                              label: 'All',
+                              selected: _filter == 'all',
+                              onTap: () => setState(() => _filter = 'all'),
+                            ),
+                            const SizedBox(width: 6),
+                            _FilterChip(
+                              label: 'Pending',
+                              selected: _filter == 'pending',
+                              onTap: () => setState(() => _filter = 'pending'),
+                            ),
+                            const SizedBox(width: 6),
+                            _FilterChip(
+                              label: 'Settled',
+                              selected: _filter == 'settled',
+                              onTap: () => setState(() => _filter = 'settled'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        if (_filteredEarnings.isEmpty)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxxl),
+                            decoration: BoxDecoration(
                               color: Colors.white,
-                              fontSize: 32,
-                              fontWeight: FontWeight.w700,
+                              borderRadius: BorderRadius.circular(AppRadius.lg),
+                              boxShadow: [AppShadows.soft],
+                            ),
+                            child: const Column(
+                              children: [
+                                Icon(Icons.account_balance_wallet_outlined, size: 48, color: AppColors.surfaceDark),
+                                SizedBox(height: AppSpacing.md),
+                                Text(
+                                  'No transactions found',
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
+                      ]),
                     ),
-                    const SizedBox(height: AppSpacing.lg),
-                    Row(
-                      children: [
-                        _SummaryMiniCard(
-                          title: 'Today',
-                          amount: _summary!.today,
-                          color: AppColors.primary,
-                          icon: Icons.today_rounded,
-                        ),
-                        const SizedBox(width: AppSpacing.md),
-                        _SummaryMiniCard(
-                          title: 'This Week',
-                          amount: _summary!.thisWeek,
-                          color: AppColors.info,
-                          icon: Icons.date_range_rounded,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    Row(
-                      children: [
-                        _SummaryMiniCard(
-                          title: 'This Month',
-                          amount: _summary!.thisMonth,
-                          color: AppColors.success,
-                          icon: Icons.calendar_month_rounded,
-                        ),
-                        const SizedBox(width: AppSpacing.md),
-                        _SummaryMiniCard(
-                          title: 'Pending',
-                          amount: _summary!.totalPending,
-                          color: AppColors.warning,
-                          icon: Icons.pending_rounded,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                  ],
-
-                  Row(
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Transactions',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                      ),
-                      _FilterChip(
-                        label: 'All',
-                        selected: _filter == 'all',
-                        onTap: () => setState(() => _filter = 'all'),
-                      ),
-                      const SizedBox(width: 6),
-                      _FilterChip(
-                        label: 'Pending',
-                        selected: _filter == 'pending',
-                        onTap: () => setState(() => _filter = 'pending'),
-                      ),
-                      const SizedBox(width: 6),
-                      _FilterChip(
-                        label: 'Settled',
-                        selected: _filter == 'settled',
-                        onTap: () => setState(() => _filter = 'settled'),
-                      ),
-                    ],
                   ),
-                  const SizedBox(height: AppSpacing.md),
-
-                  if (_filteredEarnings.isEmpty)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxxl),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(AppRadius.lg),
-                        boxShadow: [AppShadows.soft],
-                      ),
-                      child: const Column(
-                        children: [
-                          Icon(Icons.account_balance_wallet_outlined, size: 48, color: AppColors.surfaceDark),
-                          SizedBox(height: AppSpacing.md),
-                          Text(
-                            'No transactions found',
-                            style: TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                            ),
+                  if (_filteredEarnings.isNotEmpty)
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (ctx, i) => Padding(
+                            padding: const EdgeInsets.only(bottom: 0),
+                            child: _EarningCard(earning: _filteredEarnings[i]),
                           ),
-                        ],
+                          childCount: _filteredEarnings.length,
+                        ),
                       ),
-                    )
-                  else
-                    ...(_filteredEarnings.map((e) => _EarningCard(earning: e))),
-
-                  const SizedBox(height: AppSpacing.lg),
+                    ),
+                  const SliverPadding(padding: EdgeInsets.only(bottom: AppSpacing.lg)),
                 ],
               ),
             ),

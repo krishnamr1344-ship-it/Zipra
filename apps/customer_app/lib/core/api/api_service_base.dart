@@ -123,6 +123,11 @@ class ApiServiceBase {
   }
 }
 
+String resolveImageUrl(String url) {
+  if (url.startsWith('http')) return url;
+  return '$_baseUrl$url';
+}
+
 class ApiException implements Exception {
   final String message;
   ApiException(this.message);

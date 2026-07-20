@@ -15,6 +15,11 @@ class AdminApiService {
     };
   }
 
+  static String resolveImageUrl(String url) {
+    if (url.startsWith('http')) return url;
+    return '$_baseUrl$url';
+  }
+
   Never _handleError(http.Response res) {
     if (res.statusCode == 401) {
       throw ApiException('Session expired. Please login again.');

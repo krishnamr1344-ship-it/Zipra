@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../core/api/api_service.dart';
 import '../../core/constants/theme.dart';
 import '../../core/models/cart_model.dart';
 
@@ -119,14 +120,15 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                             _timer?.cancel();
                             _startAutoPlay();
                           },
-                          children: displayImages.map((url) => url.startsWith('http')
-                              ? Image.network(url, fit: BoxFit.cover,
-                                  loadingBuilder: (ctx, child, loadingProgress) {
-                                    if (loadingProgress == null) return child;
-                                    return const Center(child: CircularProgressIndicator(strokeWidth: 2));
-                                  },
-                                  errorBuilder: (_, __, ___) => _fallbackImage())
-                              : _fallbackImage()).toList(),
+                          children: displayImages.map((url) => Image.network(
+                                resolveImageUrl(url),
+                                fit: BoxFit.cover,
+                                loadingBuilder: (ctx, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                                },
+                                errorBuilder: (_, __, ___) => _fallbackImage(),
+                              )).toList(),
                         )
                       else
                         _fallbackImage(),
