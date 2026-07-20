@@ -35,7 +35,6 @@ async def upload_to_gcs(file: UploadFile, folder: str = "products") -> str:
         bucket = client.bucket(GCS_BUCKET)
         blob = bucket.blob(blob_name)
         blob.upload_from_string(content, content_type=file.content_type or "image/jpeg")
-        blob.make_public()
         return blob.public_url
 
     import os
