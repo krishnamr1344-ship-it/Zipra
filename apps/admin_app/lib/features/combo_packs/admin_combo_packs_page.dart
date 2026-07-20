@@ -29,8 +29,12 @@ class _AdminComboPacksPageState extends State<AdminComboPacksPage> {
         _packs = data.cast<Map<String, dynamic>>();
         _loading = false;
       });
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load combo packs: $e')),
+      );
     }
   }
 
@@ -636,7 +640,7 @@ class _AdminComboPacksPageState extends State<AdminComboPacksPage> {
             Row(
               children: [
                 Text(
-                  '₹${pack['total_price']?.toStringAsFixed(0) ?? '0'}',
+                  '₹${(num.tryParse(pack['total_price']?.toString() ?? '0') ?? 0).toStringAsFixed(0)}',
                   style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,

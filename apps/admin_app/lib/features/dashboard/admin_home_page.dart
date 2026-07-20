@@ -39,7 +39,13 @@ class _AdminHomePageState extends State<AdminHomePage> {
       List<dynamic> orders = [];
       try {
         orders = await _adminApi.getOrders();
-      } catch (_) {}
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to load recent orders: $e')),
+          );
+        }
+      }
       if (!mounted) return;
       setState(() {
         _user = user;
@@ -47,11 +53,14 @@ class _AdminHomePageState extends State<AdminHomePage> {
         _recentOrders = orders.length > 5 ? orders.sublist(0, 5) : orders;
         _loading = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() {
         _loading = false;
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load dashboard: $e')),
+      );
     }
   }
 
@@ -107,7 +116,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
                 ),
                 child: Center(
                   child: Text(
-                    name.toString().substring(0, 1).toUpperCase(),
+                    (name?.toString().isEmpty ?? true ? 'A' : name.toString()[0]).toUpperCase(),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 20,
@@ -404,7 +413,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
               ),
               child: Center(
                 child: Text(
-                  customerName.toString().substring(0, 1).toUpperCase(),
+                  (customerName?.toString().isEmpty ?? true ? 'A' : customerName.toString()[0]).toUpperCase(),
                   style: const TextStyle(
                     color: AppColors.primary,
                     fontWeight: FontWeight.w700,
@@ -503,19 +512,19 @@ class _AdminHomePageState extends State<AdminHomePage> {
   void _confirmLogout() {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.lg)),
         title: const Text('Logout'),
         content: const Text('Are you sure you want to logout?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogCtx),
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.pop(dialogCtx);
               await _api.logout();
               if (mounted) {
                 Navigator.pushReplacementNamed(context, '/login');

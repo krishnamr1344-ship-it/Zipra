@@ -3,6 +3,7 @@ import uuid
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy import update
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -49,6 +50,7 @@ def _order_to_response(order: Order) -> OrderResponse:
         id=str(order.id),
         status=order.status,
         total_amount=float(order.total_amount),
+        delivery_fee=float(order.delivery_fee or 0),
         payment_method=order.payment_method,
         items=items,
         delivery_address=delivery_address,
@@ -108,10 +110,51 @@ def create_order(body: OrderCreateRequest, request: Request, db: Session = Depen
             "subtotal": subtotal,
         })
 
+    # Check delivery zone if user has GPS coordinates
+    if addr.latitude is not None and addr.longitude is not None:
+        zones = db.query(DeliveryZone).filter(
+            DeliveryZone.is_deleted == False,
+            DeliveryZone.is_active == True,
+        ).all()
+        if zones:
+            from shapely.geometry import shape as shapely_shape
+            from shapely.geometry import Point
+            point = Point(float(addr.longitude), float(addr.latitude))
+            in_zone = False
+            for z in zones:
+                try:
+                    import json as _json
+                    geom = _json.loads(z.geojson_data)
+                    polygon = shapely_shape(geom)
+                    if polygon.contains(point):
+                        in_zone = True
+                        break
+                except Exception:
+                    continue
+            if not in_zone:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Delivery not available in your area",
+                )
+
+    for oi_data in order_items_data:
+        result = db.execute(
+            update(Product)
+            .where(Product.id == oi_data["product_id"], Product.stock >= oi_data["quantity"])
+            .values(stock=Product.stock - oi_data["quantity"])
+        )
+        if result.rowcount == 0:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Insufficient stock for {oi_data['product_name']}",
+            )
+
     order = Order(
         user_id=user_id,
         address_id=addr.id,
         total_amount=total + (body.delivery_fee or Decimal("0.00")),
+        delivery_fee=body.delivery_fee or Decimal("0.00"),
         payment_method=body.payment_method,
     )
     db.add(order)
@@ -120,11 +163,19 @@ def create_order(body: OrderCreateRequest, request: Request, db: Session = Depen
     for oi_data in order_items_data:
         oi = OrderItem(order_id=order.id, **oi_data)
         db.add(oi)
-        product = get_product_or_404(str(oi_data["product_id"]), db)
-        product.stock -= oi_data["quantity"]
 
     for ci in cart_items:
         ci.is_deleted = True
+
+    payment = Payment(
+        order_id=order.id,
+        user_id=user_id,
+        method="COD",
+        amount=order.total_amount,
+        status="pending",
+    )
+    payment.transaction_id = str(uuid.uuid4()).replace("-", "")[:16].upper()
+    db.add(payment)
 
     shop_orders_map = {}
     for oi_data in order_items_data:
@@ -169,45 +220,65 @@ def create_order_direct(body: OrderDirectCreateRequest, request: Request, db: Se
             "subtotal": subtotal,
         })
 
+    for oi_data in order_items_data:
+        result = db.execute(
+            update(Product)
+            .where(Product.id == oi_data["product_id"], Product.stock >= oi_data["quantity"])
+            .values(stock=Product.stock - oi_data["quantity"])
+        )
+        if result.rowcount == 0:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Insufficient stock for {oi_data['product_name']}",
+            )
+
     address_id = body.address_id
-    if address_id:
-        addr = db.query(Address).filter(
-            Address.id == address_id,
-            Address.user_id == user_id,
-            Address.is_deleted == False,
-        ).first()
-        if not addr:
-            address_id = None
-        else:
-            if addr.latitude is not None and addr.longitude is not None:
-                zones = db.query(DeliveryZone).filter(
-                    DeliveryZone.is_deleted == False,
-                    DeliveryZone.is_active == True,
-                ).all()
-                if zones:
-                    from shapely.geometry import shape as shapely_shape
-                    from shapely.geometry import Point
-                    point = Point(float(addr.longitude), float(addr.latitude))
-                    in_zone = False
-                    for z in zones:
-                        try:
-                            geom = json.loads(z.geojson_data)
-                            polygon = shapely_shape(geom)
-                            if polygon.contains(point):
-                                in_zone = True
-                                break
-                        except Exception:
-                            continue
-                    if not in_zone:
-                        raise HTTPException(
-                            status_code=status.HTTP_403_FORBIDDEN,
-                            detail="Delivery not available in your area",
-                        )
+    if not address_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Delivery address is required",
+        )
+    addr = db.query(Address).filter(
+        Address.id == address_id,
+        Address.user_id == user_id,
+        Address.is_deleted == False,
+    ).first()
+    if not addr:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Address not found",
+        )
+    if addr.latitude is not None and addr.longitude is not None:
+        zones = db.query(DeliveryZone).filter(
+            DeliveryZone.is_deleted == False,
+            DeliveryZone.is_active == True,
+        ).all()
+        if zones:
+            from shapely.geometry import shape as shapely_shape
+            from shapely.geometry import Point
+            point = Point(float(addr.longitude), float(addr.latitude))
+            in_zone = False
+            for z in zones:
+                try:
+                    geom = json.loads(z.geojson_data)
+                    polygon = shapely_shape(geom)
+                    if polygon.contains(point):
+                        in_zone = True
+                        break
+                except Exception:
+                    continue
+            if not in_zone:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Delivery not available in your area",
+                )
 
     order = Order(
         user_id=user_id,
         address_id=address_id,
         total_amount=total + (body.delivery_fee or Decimal("0.00")),
+        delivery_fee=body.delivery_fee or Decimal("0.00"),
         payment_method=body.payment_method,
     )
     db.add(order)
@@ -216,18 +287,18 @@ def create_order_direct(body: OrderDirectCreateRequest, request: Request, db: Se
     for oi_data in order_items_data:
         oi = OrderItem(order_id=order.id, **oi_data)
         db.add(oi)
-        product = get_product_or_404(str(oi_data["product_id"]), db)
-        product.stock -= oi_data["quantity"]
 
     payment_rec = Payment(
         order_id=order.id,
         user_id=user_id,
         method=body.payment_method,
         status="success",
-        amount=total,
+        amount=total + (body.delivery_fee or Decimal("0.00")),
     )
     payment_rec.transaction_id = str(uuid.uuid4()).replace("-", "")[:16].upper()
     db.add(payment_rec)
+
+    order.status = "Confirmed"
 
     shop_orders_map = {}
     for oi_data in order_items_data:

@@ -41,8 +41,8 @@ class _WishlistPageState extends State<WishlistPage> {
     return ListenableBuilder(
       listenable: wishlistNotifier,
       builder: (_, _) {
-        _products = _products.where((p) => wishlistNotifier.contains(p['name'] ?? '')).toList();
-        if (_products.isEmpty && !_loading) return _empty();
+        final filtered = _products.where((p) => wishlistNotifier.contains(p['name'] ?? '')).toList();
+        if (filtered.isEmpty && !_loading) return _empty();
         return Scaffold(
           appBar: AppBar(
             title: const Text('Wishlist', style: TextStyle(color: Colors.white)),
@@ -56,8 +56,8 @@ class _WishlistPageState extends State<WishlistPage> {
                   onRefresh: _load,
                   child: ListView.builder(
                     padding: const EdgeInsets.all(16),
-                    itemCount: _products.length,
-                    itemBuilder: (_, i) => _productCard(_products[i]),
+                    itemCount: filtered.length,
+                    itemBuilder: (_, i) => _productCard(filtered[i]),
                   ),
                 ),
         );
@@ -90,6 +90,7 @@ class _WishlistPageState extends State<WishlistPage> {
 
   Widget _productCard(Map<String, dynamic> p) {
     final name = p['name'] ?? '';
+    final pid = p['id']?.toString() ?? '';
     final price = (p['price'] ?? 0).toInt();
     final originalPrice = (p['original_price'] ?? 0).toInt();
     final unit = p['unit'] ?? '';
@@ -111,9 +112,13 @@ class _WishlistPageState extends State<WishlistPage> {
           price: price,
           originalPrice: originalPrice,
           qty: unit,
-          images: images.cast<String>(),
+          images: images.map((img) {
+            if (img is String) return img;
+            if (img is Map) return img['image_url']?.toString() ?? img['url']?.toString() ?? '';
+            return '';
+          }).where((s) => s.isNotEmpty).toList(),
           productId: p['id'] ?? '',
-          onAdd: (qty) => _addToCart(name, price, originalPrice, unit, imageUrl, qty),
+          onAdd: (qty) => _addToCart(pid, name, price, originalPrice, unit, imageUrl, qty),
         ))),
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -173,7 +178,7 @@ class _WishlistPageState extends State<WishlistPage> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  _buildCartBtn(name, price, originalPrice, unit, imageUrl),
+                  _buildCartBtn(pid, name, price, originalPrice, unit, imageUrl),
                 ],
               ),
             ],
@@ -183,10 +188,10 @@ class _WishlistPageState extends State<WishlistPage> {
     );
   }
 
-  Widget _buildCartBtn(String name, int price, int originalPrice, String unit, String imageUrl) {
-    final inCart = cartNotifier.items.any((e) => e.name == name);
+  Widget _buildCartBtn(String pid, String name, int price, int originalPrice, String unit, String imageUrl) {
+    final inCart = cartNotifier.items.any((e) => e.productId == pid && pid.isNotEmpty);
     return GestureDetector(
-      onTap: inCart ? null : () => _addToCart(name, price, originalPrice, unit, imageUrl, 1),
+      onTap: inCart ? null : () => _addToCart(pid, name, price, originalPrice, unit, imageUrl, 1),
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: inCart ? 10 : 14, vertical: 8),
         decoration: BoxDecoration(
@@ -207,17 +212,19 @@ class _WishlistPageState extends State<WishlistPage> {
     );
   }
 
-  void _addToCart(String name, int price, int originalPrice, String unit, String imageUrl, int qty) {
-    final existing = cartNotifier.items.where((e) => e.name == name).firstOrNull;
+  void _addToCart(String pid, String name, int price, int originalPrice, String unit, String imageUrl, int qty) {
+    final existing = cartNotifier.items.where((e) => e.productId == pid && pid.isNotEmpty).firstOrNull;
     if (existing != null) {
-      cartNotifier.updateCount(name, qty);
-    } else {
-      cartNotifier.add(CartItem(
-        name: name, qty: unit, price: price, originalPrice: originalPrice,
-        icon: Icons.shopping_bag, color: AppColors.success,
-        imageUrl: imageUrl, count: qty,
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Already in cart'), behavior: SnackBarBehavior.floating),
+      );
+      return;
     }
+    cartNotifier.add(CartItem(
+      name: name, qty: unit, price: price, originalPrice: originalPrice,
+      icon: Icons.shopping_bag, color: AppColors.success,
+      productId: pid, imageUrl: imageUrl, count: qty,
+    ));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('$name added to cart'), behavior: SnackBarBehavior.floating, duration: const Duration(seconds: 1)),
     );

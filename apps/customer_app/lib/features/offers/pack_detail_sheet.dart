@@ -21,8 +21,12 @@ class _PackDetailSheetState extends State<PackDetailSheet> {
     try {
       final result = await _api.addPackToCart(widget.pack.id);
       if (!mounted) return;
-      for (final item in result['items'] as List<dynamic>) {
-        final itemPrice = widget.pack.totalPrice / widget.pack.items.length;
+      for (final item in (result['items'] as List<dynamic>? ?? [])) {
+        final packItem = widget.pack.items.firstWhere(
+          (pi) => pi.productId == item['product_id']?.toString(),
+          orElse: () => widget.pack.items.first,
+        );
+        final itemPrice = packItem.productPrice;
         cartNotifier.add(CartItem(
           name: item['product_name'] ?? '',
           qty: '${item['quantity'] ?? 1}',

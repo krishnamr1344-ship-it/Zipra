@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.models import CartItem
+from app.models import CartItem, Product
 from app.schemas import CartAddRequest, CartUpdateRequest, CartItemResponse, MessageResponse
 from app.utils.helpers import get_user_id, get_user, get_cart_item_or_404, get_product_or_404
 
@@ -81,6 +81,10 @@ def update_cart_item(item_id: str, body: CartUpdateRequest, request: Request, db
         item.is_deleted = True
         db.commit()
         raise HTTPException(status_code=status.HTTP_200_OK, detail="Item removed from cart")
+
+    product = db.query(Product).filter(Product.id == item.product_id).first()
+    if product and product.stock < body.quantity:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Insufficient stock")
 
     item.quantity = body.quantity
     db.commit()

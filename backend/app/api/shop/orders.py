@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy import update
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -16,19 +17,25 @@ def _shop_order_to_response(so: ShopOrder, db: Session) -> ShopOrderResponse:
     order = so.order
     user = db.query(User).filter(User.id == order.user_id).first() if order else None
     address = db.query(Address).filter(Address.id == order.address_id).first() if order and order.address_id else None
+    shop_product_ids = {str(p.id) for p in db.query(Product).filter(
+        Product.shop_id == so.shop_id,
+        Product.is_deleted == False,
+    ).all()}
     items = []
+    shop_total = Decimal("0.00")
     if order:
         order_items = db.query(OrderItem).filter(
             OrderItem.order_id == order.id,
             OrderItem.is_deleted == False,
         ).all()
-        items = [
-            OrderItemResponse(
-                id=str(oi.id), product_id=str(oi.product_id),
-                product_name=oi.product_name, product_price=float(oi.product_price),
-                quantity=oi.quantity, subtotal=float(oi.subtotal),
-            ) for oi in order_items
-        ]
+        for oi in order_items:
+            if str(oi.product_id) in shop_product_ids:
+                items.append(OrderItemResponse(
+                    id=str(oi.id), product_id=str(oi.product_id),
+                    product_name=oi.product_name, product_price=float(oi.product_price),
+                    quantity=oi.quantity, subtotal=float(oi.subtotal),
+                ))
+                shop_total += Decimal(str(oi.subtotal))
     addr_str = None
     if address:
         parts = [address.address_line1, address.city, address.state, address.pincode]
@@ -40,7 +47,7 @@ def _shop_order_to_response(so: ShopOrder, db: Session) -> ShopOrderResponse:
         customer_phone=user.phone if user else None,
         delivery_address=addr_str,
         items=items,
-        total_amount=float(order.total_amount) if order else 0,
+        total_amount=float(shop_total),
         payment_method=order.payment_method if order else "COD",
         accepted_at=so.accepted_at,
         packing_at=so.packing_at,
@@ -97,6 +104,12 @@ def accept_order(order_id: str, request: Request, db: Session = Depends(get_db))
     so.status = "accepted"
     so.accepted_at = datetime.now(timezone.utc)
     so.updated_at = datetime.now(timezone.utc)
+
+    parent_order = db.query(Order).filter(Order.id == so.order_id).first()
+    if parent_order and parent_order.status == "Pending":
+        parent_order.status = "Confirmed"
+        parent_order.updated_at = datetime.now(timezone.utc)
+
     db.commit()
     db.refresh(so)
     return _shop_order_to_response(so, db)
@@ -189,8 +202,14 @@ def mark_delivered(order_id: str, request: Request, db: Session = Depends(get_db
 
     parent_order = db.query(Order).filter(Order.id == so.order_id).first()
     if parent_order:
-        parent_order.status = "delivered"
-        parent_order.updated_at = datetime.now(timezone.utc)
+        all_shop_orders = db.query(ShopOrder).filter(ShopOrder.order_id == parent_order.id, ShopOrder.is_deleted == False).all()
+        active_statuses = {"new", "accepted", "packing", "ready_for_pickup", "out_for_delivery"}
+        active_shops = [so2 for so2 in all_shop_orders if so2.status in active_statuses]
+        if not active_shops:
+            delivered_shops = [so2 for so2 in all_shop_orders if so2.status == "delivered"]
+            if delivered_shops:
+                parent_order.status = "delivered"
+                parent_order.updated_at = datetime.now(timezone.utc)
 
     db.commit()
     db.refresh(so)
@@ -225,9 +244,27 @@ def cancel_order(order_id: str, body: ShopOrderStatusUpdate, request: Request, d
     ).all()}
     for oi in order_items:
         if str(oi.product_id) in shop_product_ids:
-            product = db.query(Product).filter(Product.id == oi.product_id).first()
-            if product:
-                product.stock += oi.quantity
+            db.execute(
+                update(Product)
+                .where(Product.id == oi.product_id)
+                .values(stock=Product.stock + oi.quantity)
+            )
+
+    parent_order = db.query(Order).filter(Order.id == so.order_id).first()
+    if parent_order:
+        all_shop_orders = db.query(ShopOrder).filter(
+            ShopOrder.order_id == parent_order.id,
+            ShopOrder.is_deleted == False,
+        ).all()
+        active_statuses = {"new", "accepted", "packing", "ready_for_pickup", "out_for_delivery"}
+        active_shops = [so2 for so2 in all_shop_orders if so2.status in active_statuses]
+        if not active_shops:
+            delivered_shops = [so2 for so2 in all_shop_orders if so2.status == "delivered"]
+            if not delivered_shops:
+                parent_order.status = "cancelled"
+            else:
+                parent_order.status = "delivered"
+            parent_order.updated_at = datetime.now(timezone.utc)
 
     db.commit()
     db.refresh(so)

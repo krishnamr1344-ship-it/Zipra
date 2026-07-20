@@ -15,8 +15,14 @@ class FirebaseService {
     return _instance!;
   }
 
-  FirebaseAuth get auth => _auth!;
-  GoogleSignIn get googleSignIn => _googleSignIn!;
+  FirebaseAuth get auth {
+    if (_auth == null) throw StateError('FirebaseService not initialized. Call initialize() first.');
+    return _auth!;
+  }
+  GoogleSignIn get googleSignIn {
+    if (_googleSignIn == null) throw StateError('FirebaseService not initialized. Call initialize() first.');
+    return _googleSignIn!;
+  }
 
   static Future<void> initialize() async {
     await Firebase.initializeApp();

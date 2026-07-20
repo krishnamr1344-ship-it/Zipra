@@ -30,9 +30,12 @@ class _AdminShopsPageState extends State<AdminShopsPage> {
         _shops = shops;
         _loading = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load shops: $e')),
+      );
     }
   }
 
@@ -382,7 +385,7 @@ class _AdminShopsPageState extends State<AdminShopsPage> {
 
   Widget _buildShopCard(Map<String, dynamic> s) {
     final isActive = s['is_active'] ?? true;
-    final initial = (s['name'] ?? 'S').toString()[0].toUpperCase();
+    final initial = (s['name']?.toString().isEmpty ?? true ? 'S' : s['name'].toString()[0]).toUpperCase();
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),

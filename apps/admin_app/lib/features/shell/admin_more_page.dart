@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../core/constants/theme.dart';
+import '../../core/constants/theme.dart';
 import '../categories/admin_categories_page.dart';
 import '../delivery/admin_delivery_zone_page.dart';
 import '../delivery/admin_delivery_fee_page.dart';

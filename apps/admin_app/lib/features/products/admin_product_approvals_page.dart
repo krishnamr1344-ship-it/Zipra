@@ -372,8 +372,7 @@ class _AdminProductApprovalsPageState extends State<AdminProductApprovalsPage> {
                                           errorBuilder: (_, e, s) =>
                                           Center(
                                             child: Text(
-                                                (p['name'] ?? '')[0]
-                                                    .toString()
+                                                (p['name']?.toString().isEmpty ?? true ? '' : p['name'].toString()[0])
                                                     .toUpperCase(),
                                                 style: const TextStyle(
                                                     fontSize: 22,
@@ -383,8 +382,7 @@ class _AdminProductApprovalsPageState extends State<AdminProductApprovalsPage> {
                                 )
                               : Center(
                                   child: Text(
-                                      (p['name'] ?? '?')[0]
-                                          .toString()
+                                      (p['name']?.toString().isEmpty ?? true ? '?' : p['name'].toString()[0])
                                           .toUpperCase(),
                                       style: const TextStyle(
                                           fontSize: 22,

@@ -76,6 +76,12 @@ class _ShopProfilePageState extends State<ShopProfilePage> {
   }
 
   Future<void> _save() async {
+    if (_nameCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Shop name cannot be empty')),
+      );
+      return;
+    }
     setState(() => _saving = true);
     try {
       await _api.updateShopProfile({

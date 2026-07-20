@@ -7,6 +7,7 @@ from app.models import User, Shop
 from app.schemas import ShopLoginRequest, ShopResponse, ShopUpdate
 from app.core.security import create_jwt
 from app.utils.helpers import get_user_id
+from app.core.security import decode_jwt
 
 router = APIRouter(prefix="/api/shop")
 
@@ -47,7 +48,11 @@ def shop_login(body: ShopLoginRequest, db: Session = Depends(get_db)):
 
 @router.get("/profile", response_model=ShopResponse)
 def get_shop_profile(request: Request, db: Session = Depends(get_db)):
-    user_id = get_user_id(request)
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    payload = decode_jwt(token)
+    if payload.get("role") != "shop_owner":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Shop owner access required")
+    user_id = payload.get("sub")
     shop = db.query(Shop).filter(Shop.owner_id == user_id, Shop.is_deleted == False).first()
     if not shop:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shop not found")
@@ -64,7 +69,11 @@ def get_shop_profile(request: Request, db: Session = Depends(get_db)):
 
 @router.put("/profile", response_model=ShopResponse)
 def update_shop_profile(body: ShopUpdate, request: Request, db: Session = Depends(get_db)):
-    user_id = get_user_id(request)
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    payload = decode_jwt(token)
+    if payload.get("role") != "shop_owner":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Shop owner access required")
+    user_id = payload.get("sub")
     shop = db.query(Shop).filter(Shop.owner_id == user_id, Shop.is_deleted == False).first()
     if not shop:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shop not found")
@@ -86,7 +95,11 @@ def update_shop_profile(body: ShopUpdate, request: Request, db: Session = Depend
 
 @router.post("/toggle-open")
 def toggle_shop_open(request: Request, db: Session = Depends(get_db)):
-    user_id = get_user_id(request)
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    payload = decode_jwt(token)
+    if payload.get("role") != "shop_owner":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Shop owner access required")
+    user_id = payload.get("sub")
     shop = db.query(Shop).filter(Shop.owner_id == user_id, Shop.is_deleted == False).first()
     if not shop:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shop not found")

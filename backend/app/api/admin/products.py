@@ -1,11 +1,13 @@
 import os
+import re
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, status
 from sqlalchemy.orm import Session
+from sqlalchemy import update
 
 from app.db.session import get_db
-from app.models import Category, Product, ProductImage
+from app.models import Category, Product, ProductImage, Shop
 from app.schemas import ProductCreate, ProductResponse, MessageResponse
 from app.utils.helpers import require_admin
 
@@ -34,8 +36,13 @@ def create_product(body: ProductCreate, request: Request, db: Session = Depends(
     cat = db.query(Category).filter(Category.id == body.category_id, Category.is_deleted == False).first()
     if not cat:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
+    if not body.shop_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="shop_id is required — assign product to a shop")
+    shop = db.query(Shop).filter(Shop.id == body.shop_id, Shop.is_deleted == False).first()
+    if not shop:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shop not found")
     product = Product(
-        category_id=body.category_id, name=body.name.strip(),
+        category_id=body.category_id, shop_id=body.shop_id, name=body.name.strip(),
         description=body.description.strip() if body.description else None,
         price=body.price, original_price=body.original_price, unit=body.unit.strip().lower(),
         stock=body.stock,
@@ -102,11 +109,18 @@ def delete_product(product_id: str, request: Request, db: Session = Depends(get_
 @router.post("/products/{product_id}/upload-image", status_code=status.HTTP_201_CREATED)
 async def upload_product_image(product_id: str, request: Request, file: UploadFile = File(...), db: Session = Depends(get_db)):
     require_admin(request)
+    MAX_FILE_SIZE = 10 * 1024 * 1024
+    ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}
+    if file.size and file.size > MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+    if file.content_type and file.content_type not in ALLOWED_TYPES:
+        raise HTTPException(status_code=400, detail="Only JPG, PNG, WebP allowed")
     product = db.query(Product).filter(Product.id == product_id, Product.is_deleted == False).first()
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
 
     ext = file.filename.split(".")[-1] if file.filename else "jpg"
+    safe_name = re.sub(r'[^a-zA-Z0-9_.-]', '_', file.filename or 'upload')
     filename = f"{uuid.uuid4()}.{ext}"
     os.makedirs("uploads", exist_ok=True)
     content = await file.read()

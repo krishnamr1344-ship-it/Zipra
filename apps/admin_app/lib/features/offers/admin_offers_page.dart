@@ -225,6 +225,7 @@ class _AdminOffersPageState extends State<AdminOffersPage> {
       ),
     );
     if (result == null) return;
+    if (!mounted) return;
     try {
       if (offer != null) {
         await _api.updateOffer(offer['id'], result);

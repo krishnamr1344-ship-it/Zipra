@@ -33,9 +33,12 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
         _loading = false;
       });
       _applyFilter();
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load users: $e')),
+      );
     }
   }
 
@@ -243,7 +246,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     final role = (u['role'] ?? 'user').toString();
     final isAdmin = role == 'admin';
     final accent = _avatarColor(role);
-    final initial = (u['name']?.toString() ?? 'U')[0].toUpperCase();
+    final initial = (u['name']?.toString().isEmpty ?? true ? 'U' : u['name'].toString()[0]).toUpperCase();
     final phone = u['phone']?.toString();
     final createdAt = u['created_at']?.toString();
     final dateStr = createdAt != null && createdAt.length >= 10 ? createdAt.substring(0, 10) : '-';

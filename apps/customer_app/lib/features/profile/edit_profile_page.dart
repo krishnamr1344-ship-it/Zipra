@@ -31,6 +31,20 @@ class _EditProfilePageState extends State<EditProfilePage> {
       return;
     }
     setState(() => _saving = true);
+    try {
+      await _api.put('/auth/profile', {
+        'name': _nameCtl.text.trim(),
+        'phone': _phoneCtl.text.trim(),
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save profile: $e')),
+        );
+      }
+      setState(() => _saving = false);
+      return;
+    }
     await _api.saveUser(_nameCtl.text.trim(), _emailCtl.text.trim(), phone: _phoneCtl.text.trim());
     if (!mounted) return;
     Navigator.pop(context, {

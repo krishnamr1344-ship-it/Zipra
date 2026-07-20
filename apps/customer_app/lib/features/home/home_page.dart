@@ -255,7 +255,7 @@ class _HomePageState extends State<HomePage> {
       _offers = (await _api.getOffers()).cast<Map<String, dynamic>>();
       if (!mounted) return;
       setState(() {
-        _categories = ['All', ...cats.map<String>((c) => c['name'] as String)];
+        _categories = ['All', ...cats.map<String>((c) => c['name']?.toString() ?? '')];
         _allProducts = prods.cast<Map<String, dynamic>>();
         _loadingProducts = false;
       });
@@ -935,7 +935,7 @@ class _HomePageState extends State<HomePage> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
-                                '${o['discount_percent']}% OFF',
+                                '${o['discount_percent'] ?? 0}% OFF',
                                 style: const TextStyle(
                                   color: Color(0xFFFF6B00),
                                   fontSize: 11,
@@ -1035,19 +1035,22 @@ class _HomePageState extends State<HomePage> {
                   cartMap: {
                     for (final p in products)
                       p.id.hashCode: cartNotifier.items.any(
-                        (e) => e.name == p.name,
+                        (e) => e.productId == p.id && p.id.isNotEmpty,
                       ),
                   },
                   favMap: {
                     for (final p in products)
                       p.name: wishlistNotifier.contains(p.name),
                   },
-                  getQuantity: (name) =>
-                      cartNotifier.items
-                          .where((e) => e.name == name)
-                          .firstOrNull
-                          ?.count ??
-                      0,
+                  getQuantity: (name) {
+                    final match = products.where((e) => e.name == name);
+                    if (match.isEmpty) return 0;
+                    return cartNotifier.items
+                        .where((e) => e.productId == match.first.id)
+                        .firstOrNull
+                        ?.count ??
+                        0;
+                  },
                   getImages: (gp) {
                     final p = products.firstWhere((e) => e.name == gp.name);
                     return p.images;
@@ -1071,21 +1074,15 @@ class _HomePageState extends State<HomePage> {
                   },
                   onIncrement: (gp) {
                     final p = products.firstWhere((e) => e.name == gp.name);
-                    cartNotifier.updateCount(p.name, 1);
+                    cartNotifier.updateCount(p.id, 1);
                   },
                   onDecrement: (gp) {
                     final p = products.firstWhere((e) => e.name == gp.name);
-                    cartNotifier.updateCount(p.name, -1);
+                    cartNotifier.updateCount(p.id, -1);
                   },
                   onFav: (gp) => wishlistNotifier.toggle(gp.name),
                   onTap: (gp) {
                     final p = products.firstWhere((e) => e.name == gp.name);
-                    final count =
-                        cartNotifier.items
-                            .where((e) => e.name == p.name)
-                            .firstOrNull
-                            ?.count ??
-                        0;
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -1103,9 +1100,9 @@ class _HomePageState extends State<HomePage> {
                           onAdd: (qty) async {
                             if (!await _requireLogin()) return;
                             if (!mounted) return;
-                            final existing = cartNotifier.items.where((e) => e.name == p.name).firstOrNull;
+                            final existing = cartNotifier.items.where((e) => e.productId == p.id && p.id.isNotEmpty).firstOrNull;
                             if (existing != null) {
-                              cartNotifier.updateCount(p.name, qty);
+                              cartNotifier.updateCount(p.id, qty);
                             } else {
                               cartNotifier.add(CartItem(
                                 name: p.name,

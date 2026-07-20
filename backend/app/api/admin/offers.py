@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.models import ComboPack, ComboPackItem, Product, Offer
+from app.models import ComboPack, ComboPackItem, Product, Offer, Shop
 from app.schemas import (
     ComboPackCreate, ComboPackUpdate, OfferCreate, OfferUpdate, OfferResponse, MessageResponse,
 )
@@ -63,6 +63,14 @@ def create_combo_pack(body: ComboPackCreate, request: Request, db: Session = Dep
         prod = db.query(Product).filter(Product.id == item.product_id, Product.is_deleted == False).first()
         if not prod:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Product {item.product_id} not found")
+        if prod.approval_status != "approved":
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Product '{prod.name}' is not approved (status: {prod.approval_status})")
+        if prod.shop_id:
+            shop = db.query(Shop).filter(Shop.id == prod.shop_id, Shop.is_deleted == False, Shop.is_active == True).first()
+            if not shop:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Product '{prod.name}' belongs to an inactive or deleted shop")
+        if prod.stock <= 0:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Product '{prod.name}' is out of stock")
         db.add(ComboPackItem(pack_id=pack.id, product_id=item.product_id, quantity=item.quantity))
     db.commit()
     db.refresh(pack)
@@ -96,6 +104,14 @@ def update_combo_pack(pack_id: str, body: ComboPackUpdate, request: Request, db:
             prod = db.query(Product).filter(Product.id == item.product_id, Product.is_deleted == False).first()
             if not prod:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Product {item.product_id} not found")
+            if prod.approval_status != "approved":
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Product '{prod.name}' is not approved (status: {prod.approval_status})")
+            if prod.shop_id:
+                shop = db.query(Shop).filter(Shop.id == prod.shop_id, Shop.is_deleted == False, Shop.is_active == True).first()
+                if not shop:
+                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Product '{prod.name}' belongs to an inactive or deleted shop")
+            if prod.stock <= 0:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Product '{prod.name}' is out of stock")
             db.add(ComboPackItem(pack_id=pack.id, product_id=item.product_id, quantity=item.quantity))
     db.commit()
     db.refresh(pack)

@@ -40,9 +40,12 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
         _loading = false;
       });
       _applyFilter();
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load products: $e')),
+      );
     }
   }
 
@@ -544,14 +547,22 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                                       try {
                                         final result = await _api.uploadProductImage(productId, File(path));
                                         imageUrls.add(result['image_url']);
-                                      } catch (_) {}
+                                      } catch (e) {
+                                        if (ctx.mounted) {
+                                          ScaffoldMessenger.of(ctx).showSnackBar(
+                                              adminSnackBar('Image upload failed: $e', isError: true));
+                                        }
+                                      }
                                     }
-                                    if (imageUrls.length < 3) {
-                                      setSheetState(() => saving = false);
-                                      ScaffoldMessenger.of(ctx).showSnackBar(
-                                          adminSnackBar('Please provide at least 3 images (URL or upload)'));
-                                      return;
-                                    }
+                    if (imageUrls.length < 3) {
+                      setSheetState(() => saving = false);
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                          adminSnackBar('Please provide at least 3 images (URL or upload)'));
+                      return;
+                    }
+                    if (localPaths.isNotEmpty && imageUrls.isNotEmpty) {
+                      await _api.updateProduct(productId, {'images': imageUrls});
+                    }
                                     if (!ctx.mounted) return;
                                     Navigator.pop(ctx);
                                     _load();
@@ -901,7 +912,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                                     fit: BoxFit.cover,
                                     errorBuilder: (_, e, s) => Center(
                                         child: Text(
-                                          p['name'][0].toString().toUpperCase(),
+                                          ((p['name']?.toString().isEmpty ?? true ? '?' : p['name'].toString()[0])).toUpperCase(),
                                           style: const TextStyle(
                                               fontSize: 24,
                                               fontWeight: FontWeight.bold,
@@ -910,7 +921,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                               )
                             : Center(
                                 child: Text(
-                                  p['name'][0].toString().toUpperCase(),
+                                  ((p['name']?.toString().isEmpty ?? true ? '?' : p['name'].toString()[0])).toUpperCase(),
                                   style: const TextStyle(
                                       fontSize: 24,
                                       fontWeight: FontWeight.bold,
@@ -1334,9 +1345,10 @@ class _ProductSearchDelegate extends SearchDelegate<String> {
                         errorBuilder: (_, e, s) => const Icon(Icons.image, color: AppColors.textHint)),
                   )
                 : Center(
-                    child: Text(p['name'][0].toString().toUpperCase(),
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, color: AppColors.accent))),
+                    child: Text(
+                      ((p['name']?.toString().isEmpty ?? true ? '?' : p['name'].toString()[0])).toUpperCase(),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, color: AppColors.accent))),
           ),
           title: Text(p['name'] ?? '',
               style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),

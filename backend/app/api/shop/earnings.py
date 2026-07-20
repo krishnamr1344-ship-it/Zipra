@@ -57,7 +57,7 @@ def earnings_summary(request: Request, db: Session = Depends(get_db)):
     return EarningSummary(
         today=_sum(today_start, today_start + timedelta(days=1)),
         this_week=_sum(week_start, week_start + timedelta(days=7)),
-        this_month=_sum(month_start, month_start + timedelta(days=32)),
+        this_month=_sum(month_start, (month_start.replace(day=28) + timedelta(days=4)).replace(day=1)),
         total_pending=_sum(datetime.min.replace(tzinfo=timezone.utc), now, status="pending"),
         total_settled=_sum(datetime.min.replace(tzinfo=timezone.utc), now, status="settled"),
     )

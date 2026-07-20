@@ -82,8 +82,8 @@ class ResetPasswordRequest(BaseModel):
     def password_strength(cls, v):
         if len(v) < 8:
             raise ValueError("Password must be at least 8 characters")
-        if len(v) > MAX_TOKEN_LENGTH:
-            raise ValueError(f"Password must not exceed {MAX_TOKEN_LENGTH} characters")
+        if len(v) > MAX_PASSWORD_LENGTH:
+            raise ValueError(f"Password must not exceed {MAX_PASSWORD_LENGTH} characters")
         return v
 
 

@@ -15,7 +15,7 @@ from app.core.config import (
 from app.core.constants import PUBLIC_PATHS, AUTH_RATE_LIMIT_PATHS, FAILURE_CODES
 from app.core.security import decode_jwt
 from app.db.session import SessionLocal
-from app.models import TokenBlacklist
+from app.models import TokenBlacklist, User
 
 _rate_store: dict[str, list[float]] = defaultdict(list)
 _blocked_ips: dict[str, float] = {}
@@ -82,6 +82,18 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     return JSONResponse(
                         status_code=401,
                         content={"detail": "Token has been revoked"},
+                    )
+
+                user = db.query(User).filter(User.id == payload.get("sub")).first()
+                if not user or user.is_deleted:
+                    return JSONResponse(
+                        status_code=401,
+                        content={"detail": "User no longer exists"},
+                    )
+                if user.role != payload.get("role", "user"):
+                    return JSONResponse(
+                        status_code=401,
+                        content={"detail": "Token role mismatch — please re-login"},
                     )
             finally:
                 db.close()

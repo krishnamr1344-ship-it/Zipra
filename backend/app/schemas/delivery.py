@@ -31,6 +31,13 @@ class DeliveryFeeUpdate(BaseModel):
     fee: Optional[Decimal] = None
     is_active: Optional[bool] = None
 
+    @field_validator("fee")
+    @classmethod
+    def validate_fee(cls, v):
+        if v is not None and v <= 0:
+            raise ValueError("Fee must be positive")
+        return v
+
 
 class DeliveryFeeResponse(BaseModel):
     id: str

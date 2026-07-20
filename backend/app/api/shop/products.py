@@ -1,9 +1,11 @@
 import os
+import re
 import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, status
 from sqlalchemy.orm import Session
+from sqlalchemy import update
 
 from app.db.session import get_db
 from app.models import Product, ProductImage, Category, Shop
@@ -130,7 +132,6 @@ def update_shop_product(product_id: str, body: ShopProductCreate, request: Reque
     product.original_price = body.original_price
     product.unit = body.unit.strip().lower()
     product.stock = body.stock
-    product.approval_status = "pending"
     for old_img in product.images:
         old_img.is_deleted = True
     for i, url in enumerate(body.images):
@@ -183,6 +184,12 @@ async def upload_shop_product_image(
     db: Session = Depends(get_db),
 ):
     user_id = require_shop_owner(request)
+    MAX_FILE_SIZE = 10 * 1024 * 1024
+    ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}
+    if file.size and file.size > MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+    if file.content_type and file.content_type not in ALLOWED_TYPES:
+        raise HTTPException(status_code=400, detail="Only JPG, PNG, WebP allowed")
     shop = get_shop_for_owner(user_id, db)
     product = db.query(Product).filter(
         Product.id == product_id,
@@ -192,6 +199,7 @@ async def upload_shop_product_image(
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
     ext = file.filename.split(".")[-1] if file.filename else "jpg"
+    safe_name = re.sub(r'[^a-zA-Z0-9_.-]', '_', file.filename or 'upload')
     filename = f"{uuid.uuid4()}.{ext}"
     os.makedirs("uploads", exist_ok=True)
     content = await file.read()

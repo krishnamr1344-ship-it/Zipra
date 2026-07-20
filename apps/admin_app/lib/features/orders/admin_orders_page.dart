@@ -64,9 +64,12 @@ class _AdminOrdersPageState extends State<AdminOrdersPage>
         _loading = false;
       });
       _applyFilters();
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load orders: $e')),
+      );
     }
   }
 
@@ -493,7 +496,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage>
     final items =
         (o['items'] as List?)?.cast<Map<String, dynamic>>() ?? [];
     final statusColor = _statusColor(o['status'] ?? '');
-    final userInitial = (o['user_name']?.toString() ?? 'U')[0].toUpperCase();
+    final userInitial = (o['user_name']?.toString().isEmpty ?? true ? 'U' : o['user_name'].toString()[0]).toUpperCase();
     final shortId = o['id'].toString().length > 8
         ? o['id'].toString().substring(0, 8)
         : o['id'].toString();
@@ -625,7 +628,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage>
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  '₹${o['total_amount']?.toStringAsFixed(0) ?? '0'}',
+                                  '₹${(double.tryParse(o['total_amount']?.toString() ?? '0') ?? 0).toStringAsFixed(0)}',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 17,

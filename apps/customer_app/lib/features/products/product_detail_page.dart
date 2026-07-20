@@ -46,10 +46,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           ? ((widget.originalPrice - widget.price) * 100 ~/ widget.originalPrice)
           : 0;
 
-  bool get _inCart => cartNotifier.items.any((e) => e.name == widget.name);
+  bool get _inCart => cartNotifier.items.any((e) => e.productId == widget.productId && widget.productId.isNotEmpty);
 
   int get _effectiveQty => _inCart
-      ? (cartNotifier.items.where((e) => e.name == widget.name).firstOrNull?.count ?? 1)
+      ? (cartNotifier.items.where((e) => e.productId == widget.productId).firstOrNull?.count ?? 1)
       : _pendingQty;
 
   @override
@@ -120,7 +120,12 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                             _startAutoPlay();
                           },
                           children: displayImages.map((url) => url.startsWith('http')
-                              ? Image.network(url, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _fallbackImage())
+                              ? Image.network(url, fit: BoxFit.cover,
+                                  loadingBuilder: (ctx, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                                  },
+                                  errorBuilder: (_, __, ___) => _fallbackImage())
                               : _fallbackImage()).toList(),
                         )
                       else
@@ -319,7 +324,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                 GestureDetector(
                                   onTap: () {
                                     if (_inCart) {
-                                      cartNotifier.updateCount(widget.name, -1);
+                                      cartNotifier.updateCount(widget.productId, -1);
                                     } else if (_pendingQty > 1) {
                                       setState(() => _pendingQty--);
                                     }
@@ -345,7 +350,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                 GestureDetector(
                                   onTap: () {
                                     if (_inCart) {
-                                      cartNotifier.updateCount(widget.name, 1);
+                                      cartNotifier.updateCount(widget.productId, 1);
                                     } else {
                                       setState(() => _pendingQty++);
                                     }
@@ -391,7 +396,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 height: 52,
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    if (_inCart) return;
                     widget.onAdd(_pendingQty);
                   },
                   icon: Icon(_inCart ? Icons.check : Icons.add_shopping_cart, size: 20),

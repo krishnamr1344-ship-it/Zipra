@@ -41,7 +41,13 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
       final zones = await _api.getDeliveryZones();
       if (!mounted) return;
       setState(() => _savedZones = zones.cast<Map<String, dynamic>>());
-    } catch (_) {}
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load zones: $e')),
+        );
+      }
+    }
   }
 
   void _onMapTap(TapPosition tap, LatLng point) {
@@ -97,7 +103,13 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
         _drawingMode = true;
       });
       _fitBounds(pts);
-    } catch (_) {}
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to parse zone data: $e')),
+        );
+      }
+    }
   }
 
   void _cancelEdit() {
@@ -533,7 +545,7 @@ class _AdminDeliveryZonePageState extends State<AdminDeliveryZonePage> {
                                       BorderRadius.circular(AppRadius.sm),
                                 ),
                                 child: Text(
-                                    z['id']?.toString().substring(0, 6) ?? '',
+                                    z['id']?.toString().substring(0, (z['id']?.toString() ?? '').length.clamp(0, 6)) ?? '',
                                     style: const TextStyle(
                                         fontSize: 10,
                                         color: AppColors.accent,

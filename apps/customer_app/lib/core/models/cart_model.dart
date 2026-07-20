@@ -40,15 +40,15 @@ class CartItem {
   };
 
   factory CartItem.fromJson(Map<String, dynamic> j) => CartItem(
-    name: j['name'],
-    qty: j['qty'],
-    price: j['price'],
-    originalPrice: j['originalPrice'] ?? 0,
-    icon: IconData(j['iconCodePoint'], fontFamily: 'MaterialIcons'),
-    color: Color(j['colorValue']),
-    productId: j['productId'] ?? '',
-    imageUrl: j['imageUrl'] ?? '',
-    count: j['count'] ?? 1,
+    name: j['name']?.toString() ?? '',
+    qty: j['qty']?.toString() ?? '',
+    price: (j['price'] as num?)?.toInt() ?? 0,
+    originalPrice: (j['originalPrice'] as num?)?.toInt() ?? 0,
+    icon: IconData(j['iconCodePoint'] ?? 0, fontFamily: 'MaterialIcons'),
+    color: Color(j['colorValue'] ?? 0xFF2196F3),
+    productId: j['productId']?.toString() ?? '',
+    imageUrl: j['imageUrl']?.toString() ?? '',
+    count: (j['count'] as num?)?.toInt() ?? 1,
   );
 }
 
@@ -59,34 +59,58 @@ class CartNotifier extends ChangeNotifier {
   int get itemCount => _items.fold(0, (sum, item) => sum + item.count);
   int get total => _items.fold(0, (sum, item) => sum + (item.price * item.count));
 
-  void add(CartItem item) {
-    final existing = _items.where((i) => i.name == item.name).firstOrNull;
+  Future<void> init() async {
+    final prefs = await SharedPreferences.getInstance();
+    final data = prefs.getString('cart');
+    _items.clear();
+    if (data != null) {
+      try {
+        final list = jsonDecode(data) as List;
+        _items.addAll(list.map((j) => CartItem.fromJson(j as Map<String, dynamic>)));
+        notifyListeners();
+      } catch (_) {
+        _items.clear();
+      }
+    }
+  }
+
+  Future<void> _save() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('cart', jsonEncode(_items.map((i) => i.toJson()).toList()));
+  }
+
+  Future<void> add(CartItem item) async {
+    final existing = _items.where((i) => i.productId == item.productId && i.productId.isNotEmpty).firstOrNull;
     if (existing != null) {
       existing.count++;
     } else {
       _items.add(item);
     }
     notifyListeners();
+    _save();
   }
 
-  void updateCount(String name, int delta) {
-    final item = _items.where((i) => i.name == name).firstOrNull;
+  Future<void> updateCount(String productId, int delta) async {
+    final item = _items.where((i) => i.productId == productId).firstOrNull;
     if (item == null) return;
     item.count += delta;
     if (item.count <= 0) {
       _items.remove(item);
     }
     notifyListeners();
+    _save();
   }
 
-  void removeAll(String name) {
-    _items.removeWhere((i) => i.name == name);
+  Future<void> removeAll(String productId) async {
+    _items.removeWhere((i) => i.productId == productId);
     notifyListeners();
+    _save();
   }
 
-  void clear() {
+  Future<void> clear() async {
     _items.clear();
     notifyListeners();
+    _save();
   }
 }
 
@@ -100,16 +124,37 @@ class WishlistNotifier extends ChangeNotifier {
 
   bool contains(String name) => _items.contains(name);
 
+  Future<void> init() async {
+    final prefs = await SharedPreferences.getInstance();
+    final data = prefs.getStringList('wishlist');
+    _items.clear();
+    if (data != null) {
+      _items.addAll(data);
+      notifyListeners();
+    }
+  }
+
+  Future<void> _save() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('wishlist', _items.toList());
+  }
+
   void toggle(String name) {
     if (_items.contains(name)) {
       _items.remove(name);
     } else {
       _items.add(name);
     }
+    _save();
     notifyListeners();
   }
 
-  bool remove(String name) => _items.remove(name);
+  bool remove(String name) {
+    final result = _items.remove(name);
+    _save();
+    notifyListeners();
+    return result;
+  }
 }
 
 final wishlistNotifier = WishlistNotifier();
@@ -140,11 +185,15 @@ class OrderData {
   };
 
   factory OrderData.fromJson(Map<String, dynamic> j) => OrderData(
-    id: j['id'],
-    total: j['total'],
-    status: j['status'],
-    date: DateTime.parse(j['date']),
-    items: (j['items'] as List).map((i) => CartItem.fromJson(i)).toList(),
+    id: j['id']?.toString() ?? '',
+    total: (j['total_amount'] ?? j['total'] ?? 0).toInt(),
+    status: j['status']?.toString() ?? 'Pending',
+    date: j['created_at'] != null
+        ? DateTime.tryParse(j['created_at'].toString()) ?? DateTime.now()
+        : j['date'] != null
+            ? DateTime.tryParse(j['date'].toString()) ?? DateTime.now()
+            : DateTime.now(),
+    items: (j['items'] as List? ?? []).map((i) => CartItem.fromJson(i as Map<String, dynamic>)).toList(),
   );
 }
 
@@ -168,6 +217,12 @@ class OrderNotifier extends ChangeNotifier {
   Future<void> _save() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('orders', jsonEncode(_orders.map((o) => o.toJson()).toList()));
+  }
+
+  Future<void> clear() async {
+    _orders.clear();
+    await _save();
+    notifyListeners();
   }
 
   Future<void> add(List<CartItem> items, int total) async {

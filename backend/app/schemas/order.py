@@ -25,6 +25,15 @@ class OrderCreateRequest(BaseModel):
             raise ValueError(f"Payment method must be one of: {', '.join(sorted(VALID_PAYMENT_METHODS))}")
         return "COD"
 
+    @field_validator("delivery_fee")
+    @classmethod
+    def valid_fee(cls, v):
+        if v is not None and v < 0:
+            raise ValueError("Delivery fee cannot be negative")
+        if v is not None and v > 500:
+            raise ValueError("Delivery fee exceeds maximum allowed")
+        return v
+
 
 class OrderDirectCreateRequest(BaseModel):
     items: list[OrderItemInput] = Field(min_length=1)
@@ -39,6 +48,15 @@ class OrderDirectCreateRequest(BaseModel):
         if v not in VALID_PAYMENT_METHODS:
             raise ValueError(f"Payment method must be one of: {', '.join(sorted(VALID_PAYMENT_METHODS))}")
         return "COD"
+
+    @field_validator("delivery_fee")
+    @classmethod
+    def valid_fee(cls, v):
+        if v is not None and v < 0:
+            raise ValueError("Delivery fee cannot be negative")
+        if v is not None and v > 500:
+            raise ValueError("Delivery fee exceeds maximum allowed")
+        return v
 
 
 class OrderItemResponse(BaseModel):

@@ -11,6 +11,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 from app.db import engine, SessionLocal, Base
 from app.core.config import FRONTEND_URL, ADMIN_EMAIL, ADMIN_PASSWORD
@@ -63,13 +66,31 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+class BodySizeLimitMiddleware(BaseHTTPMiddleware):
+    MAX_BODY = 10 * 1024 * 1024  # 10MB
+
+    async def dispatch(self, request: Request, call_next):
+        if request.headers.get('content-length', '0').isdigit():
+            if int(request.headers['content-length']) > self.MAX_BODY:
+                return JSONResponse({"detail": "Request body too large"}, status_code=413)
+        return await call_next(request)
+
+
+app.add_middleware(BodySizeLimitMiddleware)
+
 # CORS
+origins = [
+    "http://localhost:5000",
+    "http://localhost:5001",
+    "http://localhost:5002",
+    "https://zipra-api-583825347591.asia-south1.run.app",
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_URL],
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Rate Limiting + JWT Middleware

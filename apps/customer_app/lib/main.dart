@@ -5,6 +5,7 @@ import 'core/utils/firebase_service.dart';
 import 'core/utils/app_info.dart';
 import 'core/constants/theme.dart';
 import 'core/utils/ssl_overrides.dart';
+import 'core/models/cart_model.dart';
 
 void main() async {
   configureSslOverrides();
@@ -21,6 +22,8 @@ void main() async {
       debugPrint('Firebase init failed: $e\n$s');
     }
     await AppInfo.load();
+    await cartNotifier.init();
+    await wishlistNotifier.init();
 
     runApp(const MyApp());
 }

@@ -70,6 +70,15 @@ class PremiumProductCard extends StatelessWidget {
                         child: Image.network(
                           imageUrl,
                           fit: BoxFit.contain,
+                          loadingBuilder: (ctx, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Center(child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                  : null,
+                            ));
+                          },
                           errorBuilder: (_, _, _) => Icon(
                             Icons.shopping_bag_outlined,
                             size: 48,

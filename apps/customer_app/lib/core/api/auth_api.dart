@@ -15,6 +15,8 @@ mixin AuthApi on ApiServiceBase {
       } catch (_) {}
     }
     await _clearToken();
+    cartNotifier.clear();
+    orderNotifier.clear();
   }
 
   /// Exchange a Firebase ID token for a backend JWT.

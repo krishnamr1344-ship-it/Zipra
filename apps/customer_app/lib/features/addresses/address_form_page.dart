@@ -65,9 +65,9 @@ class _AddressFormPageState extends State<AddressFormPage> {
         'house_number': _houseCtl.text.trim(),
         'floor_number': _floorCtl.text.trim(),
         'landmark': _landmarkCtl.text.trim(),
-        'latitude': _latitude,
-        'longitude': _longitude,
-        'state': _stateCtl.text.trim().isNotEmpty ? _stateCtl.text.trim() : 'Tamil Nadu',
+        'latitude': _latitude != 0 ? _latitude : null,
+        'longitude': _longitude != 0 ? _longitude : null,
+        'state': _stateCtl.text.trim().isNotEmpty ? _stateCtl.text.trim() : '',
       };
 
       Map<String, dynamic> result;
@@ -78,17 +78,21 @@ class _AddressFormPageState extends State<AddressFormPage> {
       }
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('gps_address_id', result['id'] ?? '');
-      await prefs.setString('gps_address_line', result['address_line1'] ?? '');
-      await prefs.setString('gps_address_line2', result['address_line2'] ?? '');
-      await prefs.setString('gps_city', result['city'] ?? '');
-      await prefs.setString('gps_address_type', result['address_type'] ?? '');
-      await prefs.setString('gps_house_number', result['house_number'] ?? '');
-      await prefs.setString('gps_floor_number', result['floor_number'] ?? '');
-      await prefs.setString('gps_landmark', result['landmark'] ?? '');
-      await prefs.setString('gps_latitude', '${result['latitude'] ?? ''}');
-      await prefs.setString('gps_longitude', '${result['longitude'] ?? ''}');
-      await prefs.setString('gps_pincode', result['pincode'] ?? '');
+      final hasGps = (result['latitude'] != null && result['latitude'] != 0 &&
+                      result['longitude'] != null && result['longitude'] != 0);
+      if (hasGps) {
+        await prefs.setString('gps_address_id', result['id'] ?? '');
+        await prefs.setString('gps_address_line', result['address_line1'] ?? '');
+        await prefs.setString('gps_address_line2', result['address_line2'] ?? '');
+        await prefs.setString('gps_city', result['city'] ?? '');
+        await prefs.setString('gps_address_type', result['address_type'] ?? '');
+        await prefs.setString('gps_house_number', result['house_number'] ?? '');
+        await prefs.setString('gps_floor_number', result['floor_number'] ?? '');
+        await prefs.setString('gps_landmark', result['landmark'] ?? '');
+        await prefs.setString('gps_latitude', '${result['latitude'] ?? ''}');
+        await prefs.setString('gps_longitude', '${result['longitude'] ?? ''}');
+        await prefs.setString('gps_pincode', result['pincode'] ?? '');
+      }
 
       if (!mounted) return;
       Navigator.pop(context, result);

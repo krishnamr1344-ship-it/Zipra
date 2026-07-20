@@ -106,7 +106,15 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
   }
 
   void _changeStatus() {
-    final statuses = ['Confirmed', 'Shipped', 'Delivered', 'Cancelled'];
+    const validTransitions = {
+      'Pending': ['Confirmed', 'Cancelled'],
+      'Confirmed': ['Shipped', 'Cancelled'],
+      'Shipped': ['Delivered', 'Cancelled'],
+      'Delivered': <String>[],
+      'Cancelled': <String>[],
+    };
+    final current = _order['status'] as String? ?? 'Pending';
+    final statuses = validTransitions[current] ?? [];
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -381,9 +389,13 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
   @override
   Widget build(BuildContext context) {
     final statusColor = _statusColor(_order['status']);
-    final gps = _order['user_gps_address'] as Map<String, dynamic>?;
+    final gps = _order['user_gps_address'] is Map<String, dynamic>
+        ? _order['user_gps_address'] as Map<String, dynamic>
+        : null;
     final deliveryAddr =
-        _order['delivery_address'] as Map<String, dynamic>?;
+        _order['delivery_address'] is Map<String, dynamic>
+            ? _order['delivery_address'] as Map<String, dynamic>
+            : null;
     final shortId = _order['id'].toString().length > 8
         ? _order['id'].toString().substring(0, 8)
         : _order['id'].toString();
@@ -490,10 +502,10 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                                           color: Colors.white.withAlpha(150)),
                                       const SizedBox(width: 6),
                                       Text(
-                                        _order['created_at']
-                                                ?.toString()
-                                                .substring(0, 10) ??
-                                            '',
+                                        (() {
+                                          final s = _order['created_at']?.toString() ?? '';
+                                          return s.length >= 10 ? s.substring(0, 10) : s;
+                                        })(),
                                         style: TextStyle(
                                             fontSize: 13,
                                             color: Colors.white.withAlpha(180)),
@@ -504,7 +516,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                               ),
                               const Spacer(),
                               Text(
-                                '₹${_order['total_amount']?.toStringAsFixed(2) ?? '0.00'}',
+                                '₹${(double.tryParse(_order['total_amount']?.toString() ?? '0') ?? 0).toStringAsFixed(2)}',
                                 style: const TextStyle(
                                   fontSize: 30,
                                   fontWeight: FontWeight.bold,
@@ -585,7 +597,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                                 color: Colors.white70)),
                         const SizedBox(height: 2),
                         Text(
-                          '₹${_order['total_amount']?.toStringAsFixed(0) ?? '0'}',
+                          '₹${(double.tryParse(_order['total_amount']?.toString() ?? '0') ?? 0).toStringAsFixed(0)}',
                           style: const TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
@@ -834,7 +846,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                                           color: AppColors.textPrimary)),
                                   const SizedBox(height: 3),
                                   Text(
-                                    'Qty: ${item['quantity']} × ₹${item['product_price']?.toStringAsFixed(0) ?? '0'}',
+                                    'Qty: ${item['quantity']} × ₹${(double.tryParse(item['product_price']?.toString() ?? '0') ?? 0).toStringAsFixed(0)}',
                                     style: const TextStyle(
                                         fontSize: 12,
                                         color: AppColors.textSecondary),
@@ -843,7 +855,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                               ),
                             ),
                             Text(
-                              '₹${item['subtotal']?.toStringAsFixed(2) ?? '0.00'}',
+                              '₹${(double.tryParse(item['subtotal']?.toString() ?? '0') ?? 0).toStringAsFixed(2)}',
                               style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 15,
@@ -870,7 +882,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                                   color: AppColors.textPrimary)),
                           const Spacer(),
                           Text(
-                            '₹${_order['total_amount']?.toStringAsFixed(2) ?? '0.00'}',
+                            '₹${(double.tryParse(_order['total_amount']?.toString() ?? '0') ?? 0).toStringAsFixed(2)}',
                             style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
@@ -1001,7 +1013,9 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                           ),
                           child: Center(
                             child: Text(
-                              (_order['user_name']?.toString() ?? 'U')[0]
+                              (_order['user_name']?.toString().isEmpty ?? true
+                                      ? 'U'
+                                      : _order['user_name'].toString()[0])
                                   .toUpperCase(),
                               style: const TextStyle(
                                   fontSize: 22,

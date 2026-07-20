@@ -35,10 +35,10 @@ class ApiService {
   Future<Map<String, dynamic>> getSavedUser() async {
     final prefs = await SharedPreferences.getInstance();
     return {
-      'name': prefs.getString('user_name') ?? 'Admin',
+      'name': prefs.getString('user_name') ?? '',
       'email': prefs.getString('user_email') ?? '',
       'phone': prefs.getString('user_phone') ?? '',
-      'role': prefs.getString('user_role') ?? 'admin',
+      'role': prefs.getString('user_role') ?? '',
     };
   }
 
@@ -77,11 +77,15 @@ class ApiService {
     final body = jsonDecode(res.body);
     final user = body['user'] as Map<String, dynamic>;
     await _saveToken(body['token'] as String);
+    final role = user['role'] as String? ?? '';
+    if (role != 'admin') {
+      throw ApiException('Access denied. Admin only.');
+    }
     await _saveUserLocally(
       user['name'] ?? '',
       user['email'] ?? '',
       '',
-      user['role'] ?? 'admin',
+      role,
     );
     return body;
   }

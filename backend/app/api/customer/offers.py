@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.models import ComboPack, ComboPackItem, CartItem, Product, Offer
+from app.models import ComboPack, ComboPackItem, CartItem, Product, Offer, Shop
 from app.schemas import (
     ComboPackResponse, ComboPackItemResponse, PackAddRequest, OfferResponse, MessageResponse,
 )
@@ -50,13 +50,24 @@ def list_combo_packs(db: Session = Depends(get_db)):
 
     result = []
     for pack in packs:
-        all_in_stock = True
+        all_valid = True
         for pi in pack.items:
             if not pi.is_deleted and pi.product:
-                if pi.product.stock < pi.quantity:
-                    all_in_stock = False
+                prod = pi.product
+                if prod.stock < pi.quantity:
+                    all_valid = False
                     break
-        if not all_in_stock:
+                if prod.approval_status != "approved":
+                    all_valid = False
+                    break
+                if prod.shop_id:
+                    shop = db.query(Shop).filter(
+                        Shop.id == prod.shop_id, Shop.is_deleted == False, Shop.is_active == True,
+                    ).first()
+                    if not shop:
+                        all_valid = False
+                        break
+        if not all_valid:
             continue
         result.append(_pack_to_response(pack))
     return result
@@ -85,6 +96,20 @@ def add_pack_to_cart(body: PackAddRequest, request: Request, db: Session = Depen
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Insufficient stock for {prod.name}",
             )
+        if prod.approval_status != "approved":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Product '{prod.name}' is no longer available",
+            )
+        if prod.shop_id:
+            shop = db.query(Shop).filter(
+                Shop.id == prod.shop_id, Shop.is_deleted == False, Shop.is_active == True,
+            ).first()
+            if not shop:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Shop for '{prod.name}' is currently unavailable",
+                )
         existing = db.query(CartItem).filter(
             CartItem.user_id == user_id,
             CartItem.product_id == pi.product_id,

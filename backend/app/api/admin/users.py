@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.models import User, Address
+from app.models import User, Address, Order, CartItem
 from app.schemas import MessageResponse
 from app.utils.helpers import require_admin
 
@@ -56,5 +56,8 @@ def delete_user(user_id: str, request: Request, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     user.is_deleted = True
+    db.query(Order).filter(Order.user_id == user_id).update({"is_deleted": True})
+    db.query(CartItem).filter(CartItem.user_id == user_id).update({"is_deleted": True})
+    db.query(Address).filter(Address.user_id == user_id).update({"is_deleted": True})
     db.commit()
     return MessageResponse(message="User deleted")

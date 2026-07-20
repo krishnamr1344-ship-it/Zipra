@@ -12,6 +12,7 @@ NAME_REGEX_MSG = "Invalid name format (only letters, spaces, dots, hyphens; 2-50
 
 class ProductCreate(BaseModel):
     category_id: str
+    shop_id: Optional[str] = None
     name: str
     description: Optional[str] = None
     price: Decimal

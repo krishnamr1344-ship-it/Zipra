@@ -30,6 +30,11 @@ class _OrdersPageState extends State<OrdersPage> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _loading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not load orders')),
+        );
+      }
     }
   }
 
@@ -74,6 +79,17 @@ class _OrdersPageState extends State<OrdersPage> {
                         const Text('No orders yet', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
                         const SizedBox(height: 8),
                         const Text('Your placed orders will appear here', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: _refresh,
+                          icon: const Icon(Icons.refresh, size: 18),
+                          label: const Text('Retry'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
                       ],
                     ),
                   )
@@ -86,7 +102,7 @@ class _OrdersPageState extends State<OrdersPage> {
                           status: o['status'] ?? 'Pending',
                           total: (o['total_amount'] ?? 0).toInt(),
                           itemCount: (o['items'] as List?)?.length ?? 0,
-                          date: o['created_at'] != null ? DateTime.parse(o['created_at']) : DateTime.now(),
+                          date: o['created_at'] != null ? (DateTime.tryParse(o['created_at'].toString()) ?? DateTime.now()) : DateTime.now(),
                           items: ((o['items'] as List?)?.cast<Map<String, dynamic>>() ?? []).map((i) => _OrderItemPreview(name: i['product_name'] ?? '', qty: i['quantity'] ?? 1, price: (i['product_price'] ?? 0).toInt())).toList(),
                           onTap: () => _openApiDetail(context, o),
                         )),
@@ -120,7 +136,7 @@ class _OrdersPageState extends State<OrdersPage> {
       id: o['id']?.toString() ?? '',
       total: (o['total_amount'] ?? 0).toInt(),
       status: o['status'] ?? 'Pending',
-      date: o['created_at'] != null ? DateTime.parse(o['created_at']) : DateTime.now(),
+      date: o['created_at'] != null ? (DateTime.tryParse(o['created_at'].toString()) ?? DateTime.now()) : DateTime.now(),
       deliveryAddress: addr,
       items: items.map((i) => CartItem(
         name: i['product_name'] ?? '',

@@ -111,6 +111,12 @@ class _ShopProductFormPageState extends State<ShopProductFormPage> {
       );
       return;
     }
+    if (!_isEditing && _existingImages.isEmpty && _newImages.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please add at least 3 product images')),
+      );
+      return;
+    }
     setState(() {
       _saving = true;
     });
@@ -141,19 +147,22 @@ class _ShopProductFormPageState extends State<ShopProductFormPage> {
           'images': <String>[],
         };
         final result = await _api.createProduct(data);
-        productId = result['id'] as String?;
+        final createdId = result['id']?.toString();
+        if (createdId == null) {
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to get product ID')));
+          return;
+        }
+        productId = createdId;
       }
-      if (productId != null) {
-        for (final file in _newImages) {
-          try {
-            final imageUrl = await _api.uploadProductImage(productId, file.path);
-            if (imageUrl.isNotEmpty) {
-              _existingImages.add(imageUrl);
-              setState(() {});
-            }
-          } catch (e) {
-            debugPrint('Image upload failed: $e');
+      for (final file in _newImages) {
+        try {
+          final imageUrl = await _api.uploadProductImage(productId, file.path);
+          if (imageUrl.isNotEmpty) {
+            _existingImages.add(imageUrl);
+            setState(() {});
           }
+        } catch (e) {
+          debugPrint('Image upload failed: $e');
         }
       }
       if (!mounted) return;

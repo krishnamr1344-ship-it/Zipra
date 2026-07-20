@@ -99,8 +99,28 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
       return null;
     }
     if (_gpsAddressId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please refresh your GPS location first'), behavior: SnackBarBehavior.floating));
-      return null;
+      try {
+        final token = await _api.getToken();
+        if (token == null) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Session expired. Please login again.'), behavior: SnackBarBehavior.floating));
+            Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginPage()), (r) => false);
+          }
+          return null;
+        }
+        final addr = await _api.createAddress({
+          'address_line1': _line1Ctl.text.trim(),
+          'address_line2': _line2Ctl.text.trim(),
+          'city': _cityCtl.text.trim(),
+          'pincode': _pincodeCtl.text.trim(),
+          'landmark': _landmarkCtl.text.trim(),
+          'address_type': 'Home',
+        });
+        return addr;
+      } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'), behavior: SnackBarBehavior.floating));
+        return null;
+      }
     }
     try {
       final token = await _api.getToken();

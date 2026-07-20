@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/cart_model.dart';
 
 part 'auth_api.dart';
 part 'product_api.dart';
@@ -35,6 +36,8 @@ class ApiServiceBase {
     await prefs.remove('user_email');
     await prefs.remove('user_phone');
     await prefs.remove('user_role');
+    await prefs.remove('cart');
+    await prefs.remove('orders');
   }
 
   // ─── API Helpers ───────────────────────────────────────────────
@@ -107,6 +110,16 @@ class ApiServiceBase {
       'Content-Type': 'application/json',
       if (token != null) 'Authorization': 'Bearer $token',
     };
+  }
+
+  Future<Map<String, dynamic>> put(String path, Map<String, dynamic> body) async {
+    final headers = await _authHeaders(required: true);
+    final res = await http.put(
+      Uri.parse('$_baseUrl/api$path'),
+      headers: headers,
+      body: jsonEncode(body),
+    );
+    return _handleResponse(res);
   }
 }
 

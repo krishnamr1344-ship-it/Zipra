@@ -1,8 +1,10 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.models import Order, Address, ShopOrder
+from app.models import Order, Address, ShopOrder, Product, OrderItem, Earning
 from app.schemas import StatusUpdateRequest, MessageResponse
 from app.utils.helpers import require_admin
 
@@ -87,9 +89,62 @@ def update_order_status(order_id: str, body: StatusUpdateRequest, request: Reque
     order = db.query(Order).filter(Order.id == order_id, Order.is_deleted == False).first()
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
-    order.status = body.status
+    VALID_TRANSITIONS = {
+        "Pending": ["Confirmed", "Cancelled"],
+        "Confirmed": ["Shipped", "Cancelled"],
+        "Shipped": ["Delivered", "Cancelled"],
+        "Delivered": [],
+        "Cancelled": [],
+    }
+    target = body.status.capitalize() if body.status and body.status.lower() not in ("cancelled",) else body.status
+    if target.lower() == "cancelled":
+        target = "Cancelled"
+    if order.status not in VALID_TRANSITIONS:
+        raise HTTPException(400, detail=f"Cannot transition from '{order.status}' — unknown current status")
+    if target not in VALID_TRANSITIONS.get(order.status, []):
+        raise HTTPException(400, detail=f"Cannot transition from '{order.status}' to '{target}'")
+
+    if target == "Delivered":
+        shop_orders = db.query(ShopOrder).filter(
+            ShopOrder.order_id == order_id, ShopOrder.is_deleted == False,
+        ).all()
+        if shop_orders and not all(so.status == "delivered" for so in shop_orders):
+            pending_shops = [so.shop_id for so in shop_orders if so.status != "delivered"]
+            raise HTTPException(400, detail=f"Cannot mark Delivered — {len(pending_shops)} shop(s) haven't delivered yet")
+    if target == "Shipped":
+        shop_orders = db.query(ShopOrder).filter(
+            ShopOrder.order_id == order_id, ShopOrder.is_deleted == False,
+        ).all()
+        if shop_orders and any(so.status == "new" for so in shop_orders):
+            raise HTTPException(400, detail="Cannot mark Shipped — some shops haven't accepted the order yet")
+
+    order.status = target
+    order.updated_at = datetime.now(timezone.utc)
+    if target == "Cancelled":
+        shop_orders = db.query(ShopOrder).filter(
+            ShopOrder.order_id == order_id,
+            ShopOrder.is_deleted == False,
+        ).all()
+        already_cancelled_shop_ids = set()
+        for so in shop_orders:
+            if so.status == "cancelled":
+                already_cancelled_shop_ids.add(str(so.shop_id))
+        for so in shop_orders:
+            if so.status not in ("delivered", "cancelled"):
+                so.status = "cancelled"
+                so.cancelled_at = datetime.now(timezone.utc)
+                so.cancellation_reason = "Cancelled by admin"
+                so.updated_at = datetime.now(timezone.utc)
+        for oi in order.items:
+            if not oi.is_deleted:
+                product = db.query(Product).filter(Product.id == oi.product_id).first()
+                if product and product.shop_id and str(product.shop_id) not in already_cancelled_shop_ids:
+                    product.stock += oi.quantity
+        earnings = db.query(Earning).filter(Earning.order_id == order_id).all()
+        for e in earnings:
+            e.status = "cancelled"
     db.commit()
-    return MessageResponse(message=f"Order status updated to {body.status}")
+    return MessageResponse(message=f"Order status updated to {target}")
 
 
 @router.delete("/orders/{order_id}", response_model=MessageResponse)
@@ -98,12 +153,23 @@ def delete_order(order_id: str, request: Request, db: Session = Depends(get_db))
     order = db.query(Order).filter(Order.id == order_id, Order.is_deleted == False).first()
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
-    order.is_deleted = True
     shop_orders = db.query(ShopOrder).filter(
         ShopOrder.order_id == order_id,
         ShopOrder.is_deleted == False,
     ).all()
+    already_cancelled_shop_ids = set()
     for so in shop_orders:
+        if so.status == "cancelled":
+            already_cancelled_shop_ids.add(str(so.shop_id))
         so.is_deleted = True
+    for oi in order.items:
+        if not oi.is_deleted:
+            product = db.query(Product).filter(Product.id == oi.product_id).first()
+            if product and product.shop_id and str(product.shop_id) not in already_cancelled_shop_ids:
+                product.stock += oi.quantity
+    earnings = db.query(Earning).filter(Earning.order_id == order_id).all()
+    for e in earnings:
+        e.status = "cancelled"
+    order.is_deleted = True
     db.commit()
     return MessageResponse(message="Order deleted")

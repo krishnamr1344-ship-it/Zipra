@@ -53,8 +53,9 @@ class ShopUpdate(BaseModel):
     bank_account_number: Optional[str] = None
     bank_ifsc: Optional[str] = None
     bank_name: Optional[str] = None
-    is_active: Optional[bool] = None
     is_open: Optional[bool] = None
+
+    model_config = {"extra": "forbid"}
 
 
 class ShopResponse(BaseModel):

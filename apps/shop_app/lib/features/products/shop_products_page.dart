@@ -19,7 +19,7 @@ class _ShopProductsPageState extends State<ShopProductsPage>
   List<ShopProduct> _pending = [];
   List<ShopProduct> _approved = [];
   List<ShopProduct> _rejected = [];
-  bool _loading = true;
+  bool _loading = false;
 
   @override
   void initState() {
@@ -136,7 +136,8 @@ class _ShopProductsPageState extends State<ShopProductsPage>
           ),
         ],
       ),
-    ).then((_) { ctrl.dispose(); });
+    );
+    ctrl.dispose();
     if (newStock == null) return;
     try {
       await _api.updateStock(product.id, newStock);

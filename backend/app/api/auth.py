@@ -176,11 +176,11 @@ def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
     user.password_reset_token = reset_token
     user.password_reset_token_expires = datetime.now(timezone.utc) + timedelta(hours=1)
     db.commit()
-    return {"message": "If the email exists, a reset link has been sent", "reset_token": reset_token}
+    return {"message": "Password reset instructions sent to your email"}
 
 
 @router.post("/reset-password", status_code=status.HTTP_200_OK)
-def reset_password(body: ResetPasswordRequest, db: Session = Depends(get_db)):
+def reset_password(body: ResetPasswordRequest, request: Request, db: Session = Depends(get_db)):
     user = db.query(User).filter(
         User.password_reset_token == body.token,
         User.is_deleted == False,
@@ -192,6 +192,16 @@ def reset_password(body: ResetPasswordRequest, db: Session = Depends(get_db)):
     user.password_hash = hash_password(body.new_password)
     user.password_reset_token = None
     user.password_reset_token_expires = None
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    if token:
+        payload = decode_jwt(token)
+        if payload and payload.get("jti"):
+            exp = payload.get("exp")
+            blacklist_entry = TokenBlacklist(
+                token_jti=payload["jti"],
+                expires_at=datetime.fromtimestamp(exp, tz=timezone.utc) if exp else datetime.now(timezone.utc) + timedelta(minutes=30),
+            )
+            db.add(blacklist_entry)
     db.commit()
     return {"message": "Password reset successful"}
 
@@ -202,10 +212,21 @@ def change_password(body: ChangePasswordRequest, request: Request, db: Session =
     if not user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
-    if not user or not user.password_hash:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid current password")
-    if not bcrypt.checkpw(body.current_password.encode("utf-8"), user.password_hash.encode("utf-8")):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid current password")
+    if not user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User not found")
+    if user.password_hash:
+        if not bcrypt.checkpw(body.current_password.encode("utf-8"), user.password_hash.encode("utf-8")):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid current password")
     user.password_hash = hash_password(body.new_password)
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    if token:
+        payload = decode_jwt(token)
+        if payload and payload.get("jti"):
+            exp = payload.get("exp")
+            blacklist_entry = TokenBlacklist(
+                token_jti=payload["jti"],
+                expires_at=datetime.fromtimestamp(exp, tz=timezone.utc) if exp else datetime.now(timezone.utc) + timedelta(minutes=30),
+            )
+            db.add(blacklist_entry)
     db.commit()
     return {"message": "Password changed successfully"}

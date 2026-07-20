@@ -40,7 +40,11 @@ class ShopApiService {
     };
   }
 
-  Map<String, dynamic> _handleResponse(http.Response res) {
+  Future<Map<String, dynamic>> _handleResponse(http.Response res) async {
+    if (res.statusCode == 401) {
+      await clearToken();
+      throw ShopApiException('Session expired. Please login again.');
+    }
     if (res.statusCode >= 200 && res.statusCode < 300) {
       final decoded = jsonDecode(res.body);
       if (decoded is Map<String, dynamic>) return decoded;
@@ -52,7 +56,11 @@ class ShopApiService {
     throw ShopApiException(msg);
   }
 
-  List<dynamic> _handleListResponse(http.Response res) {
+  Future<List<dynamic>> _handleListResponse(http.Response res) async {
+    if (res.statusCode == 401) {
+      await clearToken();
+      throw ShopApiException('Session expired. Please login again.');
+    }
     if (res.statusCode != 200) {
       debugPrint('API Error ${res.statusCode}: ${res.body}');
       throw ShopApiException(_tryDecodeDetail(res.body) ?? 'Request failed (${res.statusCode})');
@@ -78,9 +86,12 @@ class ShopApiService {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
     );
-    final body = _handleResponse(res);
-    await _saveToken(body['token']?.toString() ?? '');
-    final user = body['user'] as Map<String, dynamic>;
+    final body = await _handleResponse(res);
+    final token = body['token']?.toString();
+    if (token == null || token.isEmpty) throw ShopApiException('Login failed: no token received');
+    await _saveToken(token);
+    final user = body['user'] as Map<String, dynamic>?;
+    if (user == null) throw ShopApiException('Login failed: invalid response');
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('shop_owner_name', user['name'] ?? '');
     await prefs.setString('shop_owner_email', user['email'] ?? '');
@@ -117,7 +128,7 @@ class ShopApiService {
       Uri.parse('$_baseUrl/api/shop/toggle-open'),
       headers: await _headers(),
     );
-    final body = _handleResponse(res);
+    final body = await _handleResponse(res);
     return body['is_open'] == true ? 'Shop is now open' : 'Shop is now closed';
   }
 
@@ -162,7 +173,7 @@ class ShopApiService {
       Uri.parse('$_baseUrl/api/shop/products/$productId'),
       headers: await _headers(),
     );
-    final body = _handleResponse(res);
+    final body = await _handleResponse(res);
     return body['message']?.toString() ?? 'Done';
   }
 

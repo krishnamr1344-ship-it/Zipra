@@ -161,6 +161,10 @@ class CartPage extends StatelessWidget {
                 color: AppColors.chipBg,
                 child: item.imageUrl.isNotEmpty
                     ? Image.network(item.imageUrl, fit: BoxFit.contain,
+                        loadingBuilder: (ctx, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Center(child: CircularProgressIndicator(strokeWidth: 2));
+                        },
                         errorBuilder: (_, __, ___) => _fallbackIcon(item))
                     : _fallbackIcon(item),
               ),
@@ -176,7 +180,7 @@ class CartPage extends StatelessWidget {
                   Align(
                     alignment: Alignment.topRight,
                     child: GestureDetector(
-                      onTap: () => cartNotifier.removeAll(item.name),
+                      onTap: () => cartNotifier.removeAll(item.productId),
                       child: Container(
                         width: 28,
                         height: 28,
@@ -268,7 +272,7 @@ class CartPage extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           GestureDetector(
-            onTap: () => cartNotifier.updateCount(item.name, -1),
+            onTap: () => cartNotifier.updateCount(item.productId, -1),
             child: Container(
               width: 36,
               height: 36,
@@ -291,7 +295,7 @@ class CartPage extends StatelessWidget {
                     fontWeight: FontWeight.w700, fontSize: 15, color: AppColors.textPrimary)),
           ),
           GestureDetector(
-            onTap: () => cartNotifier.updateCount(item.name, 1),
+            onTap: () => cartNotifier.updateCount(item.productId, 1),
             child: Container(
               width: 36,
               height: 36,

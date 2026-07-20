@@ -1,10 +1,11 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.models import Product
+from app.models import Product, Shop
 from app.schemas import ProductResponse
 
 router = APIRouter(prefix="/api")
@@ -12,7 +13,14 @@ router = APIRouter(prefix="/api")
 
 @router.get("/products", response_model=list[ProductResponse])
 def list_products(category_id: Optional[str] = None, db: Session = Depends(get_db)):
-    query = db.query(Product).filter(Product.is_deleted == False, Product.approval_status == "approved")
+    query = db.query(Product).outerjoin(Shop, Product.shop_id == Shop.id).filter(
+        Product.is_deleted == False,
+        Product.approval_status == "approved",
+        or_(
+            (Product.shop_id == None),
+            ((Shop.is_active == True) & (Shop.is_open == True) & (Shop.is_deleted == False)),
+        ),
+    )
     if category_id:
         query = query.filter(Product.category_id == category_id)
     products = query.order_by(Product.name).all()
@@ -35,7 +43,14 @@ def list_products(category_id: Optional[str] = None, db: Session = Depends(get_d
 
 @router.get("/products/{product_id}", response_model=ProductResponse)
 def get_product(product_id: str, db: Session = Depends(get_db)):
-    p = db.query(Product).filter(Product.id == product_id, Product.is_deleted == False).first()
+    p = db.query(Product).outerjoin(Shop, Product.shop_id == Shop.id).filter(
+        Product.id == product_id,
+        Product.is_deleted == False,
+        or_(
+            (Product.shop_id == None),
+            ((Shop.is_active == True) & (Shop.is_open == True) & (Shop.is_deleted == False)),
+        ),
+    ).first()
     if not p:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
     return ProductResponse(

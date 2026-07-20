@@ -20,8 +20,8 @@ def dashboard_stats(request: Request, db: Session = Depends(get_db)):
     categories = db.query(Category).filter(Category.is_deleted == False).count()
     orders = db.query(Order).filter(Order.is_deleted == False).count()
     users = db.query(User).filter(User.is_deleted == False).count()
-    delivered = db.query(Order).filter(Order.is_deleted == False, Order.status == "Delivered").with_entities(Order.total_amount).all()
-    total = sum(float(r[0]) for r in delivered) if delivered else 0.0
+    from sqlalchemy import func
+    total = db.query(func.coalesce(func.sum(Order.total_amount), 0)).filter(Order.is_deleted == False, Order.status == "Delivered").scalar()
     return {
         "products": products,
         "categories": categories,

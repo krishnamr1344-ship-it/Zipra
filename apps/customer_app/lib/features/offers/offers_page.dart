@@ -31,7 +31,12 @@ class _OffersPageState extends State<OffersPage> {
         _loading = false;
       });
     } catch (_) {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not load offers')),
+        );
+      }
     }
   }
 
