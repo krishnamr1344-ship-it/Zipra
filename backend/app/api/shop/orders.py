@@ -9,14 +9,15 @@ from app.db.session import get_db
 from app.models import ShopOrder, Order, OrderItem, Product, User, Address, Earning
 from app.schemas import ShopOrderResponse, ShopOrderStatusUpdate, OrderItemResponse, MessageResponse
 from app.utils.helpers import require_shop_owner, get_shop_for_owner
+from sqlalchemy.orm import joinedload
 
 router = APIRouter(prefix="/api/shop/orders", tags=["shop-orders"])
 
 
-def _shop_order_to_response(so: ShopOrder, db: Session) -> ShopOrderResponse:
+def _shop_order_to_response(so: ShopOrder, db: Session, users: dict = None, addresses: dict = None) -> ShopOrderResponse:
     order = so.order
-    user = db.query(User).filter(User.id == order.user_id).first() if order else None
-    address = db.query(Address).filter(Address.id == order.address_id).first() if order and order.address_id else None
+    user = (users or {}).get(str(order.user_id)) if order and users else (db.query(User).filter(User.id == order.user_id).first() if order else None)
+    address = (addresses or {}).get(str(order.address_id)) if order and order.address_id and addresses else (db.query(Address).filter(Address.id == order.address_id).first() if order and order.address_id else None)
     shop_product_ids = {str(p.id) for p in db.query(Product).filter(
         Product.shop_id == so.shop_id,
         Product.is_deleted == False,
@@ -67,11 +68,17 @@ def list_shop_orders(
 ):
     user_id = require_shop_owner(request)
     shop = get_shop_for_owner(user_id, db)
-    query = db.query(ShopOrder).filter(ShopOrder.shop_id == shop.id, ShopOrder.is_deleted == False)
+    query = db.query(ShopOrder).options(joinedload(ShopOrder.order)).filter(ShopOrder.shop_id == shop.id, ShopOrder.is_deleted == False)
     if status_filter:
         query = query.filter(ShopOrder.status == status_filter)
     shop_orders = query.order_by(ShopOrder.created_at.desc()).all()
-    return [_shop_order_to_response(so, db) for so in shop_orders]
+    if not shop_orders:
+        return []
+    user_ids = {so.order.user_id for so in shop_orders if so.order}
+    users = {str(u.id): u for u in db.query(User).filter(User.id.in_(user_ids)).all()} if user_ids else {}
+    address_ids = {so.order.address_id for so in shop_orders if so.order and so.order.address_id}
+    addresses = {str(a.id): a for a in db.query(Address).filter(Address.id.in_(address_ids)).all()} if address_ids else {}
+    return [_shop_order_to_response(so, db, users, addresses) for so in shop_orders]
 
 
 @router.get("/{order_id}", response_model=ShopOrderResponse)

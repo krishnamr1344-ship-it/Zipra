@@ -40,20 +40,16 @@ class _ShopHomePageState extends State<ShopHomePage> {
 
   Future<void> _loadData() async {
     try {
-      final results = await Future.wait([
-        _api.getShopProfile(),
-        _api.getOrders(status: 'new'),
-        _api.getProducts(),
-        _api.getEarningsSummary(),
-        _api.getOrders(),
-      ]);
+      final shop = await _api.getShopProfile();
+      final newOrdersList = await _api.getOrders(status: 'new');
+      final allProducts = await _api.getProducts();
+      final summaryData = await _api.getEarningsSummary();
+      final allOrders = await _api.getOrders();
       if (!mounted) return;
-      final allProducts = results[2] as List;
-      final summary = EarningSummary.fromJson(results[3] as Map<String, dynamic>);
-      final allOrders = results[4] as List;
+      final summary = EarningSummary.fromJson(summaryData);
       setState(() {
-        _shop = ShopModel.fromJson(results[0] as Map<String, dynamic>);
-        _newOrders = (results[1] as List).length;
+        _shop = ShopModel.fromJson(shop);
+        _newOrders = newOrdersList.length;
         _totalProducts = allProducts.length;
         _pendingProducts = allProducts
             .where((p) => (p as Map<String, dynamic>)['approval_status'] == 'pending')

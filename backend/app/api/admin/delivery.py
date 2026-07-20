@@ -23,11 +23,11 @@ def dashboard_stats(request: Request, db: Session = Depends(get_db)):
     from sqlalchemy import func
     total = db.query(func.coalesce(func.sum(Order.total_amount), 0)).filter(Order.is_deleted == False, Order.status == "Delivered").scalar()
     return {
-        "products": products,
-        "categories": categories,
-        "orders": orders,
-        "users": users,
-        "revenue": round(total, 2),
+        "total_products": products,
+        "total_categories": categories,
+        "total_orders": orders,
+        "total_users": users,
+        "total_revenue": round(total, 2),
     }
 
 
