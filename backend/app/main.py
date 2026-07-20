@@ -56,6 +56,7 @@ Base.metadata.create_all(bind=engine)
 # Auto-migrate
 with engine.connect() as conn:
     conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS original_price NUMERIC(10,2) NULL"))
+    conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS discount_percent INTEGER NOT NULL DEFAULT 0"))
     conn.commit()
 
 app = FastAPI(
