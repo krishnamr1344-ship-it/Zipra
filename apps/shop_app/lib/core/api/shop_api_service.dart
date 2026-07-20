@@ -43,9 +43,11 @@ class ShopApiService {
   Future<Map<String, dynamic>> _handleResponse(http.Response res) async {
     if (res.statusCode == 401) {
       await clearToken();
+      onSessionExpired?.call();
       throw ShopApiException('Session expired. Please login again.');
     }
     if (res.statusCode >= 200 && res.statusCode < 300) {
+      if (res.body.isEmpty) return {};
       final decoded = jsonDecode(res.body);
       if (decoded is Map<String, dynamic>) return decoded;
       if (decoded is Map) return Map<String, dynamic>.from(decoded);
@@ -56,15 +58,19 @@ class ShopApiService {
     throw ShopApiException(msg);
   }
 
+  static void Function()? onSessionExpired;
+
   Future<List<dynamic>> _handleListResponse(http.Response res) async {
     if (res.statusCode == 401) {
       await clearToken();
+      onSessionExpired?.call();
       throw ShopApiException('Session expired. Please login again.');
     }
-    if (res.statusCode != 200) {
+    if (res.statusCode < 200 || res.statusCode >= 300) {
       debugPrint('API Error ${res.statusCode}: ${res.body}');
       throw ShopApiException(_tryDecodeDetail(res.body) ?? 'Request failed (${res.statusCode})');
     }
+    if (res.body.isEmpty) return [];
     final decoded = jsonDecode(res.body);
     if (decoded is List) return decoded;
     return [];

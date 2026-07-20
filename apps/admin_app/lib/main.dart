@@ -1,12 +1,15 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'core/constants/theme.dart';
 import 'core/api/api_service.dart';
+import 'core/network/ssl_overrides.dart';
 import 'features/auth/admin_login_page.dart';
 import 'features/shell/admin_shell.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  if (Platform.isAndroid) configureSslOverrides();
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.dark,
@@ -100,11 +103,13 @@ class _AppEntryState extends State<_AppEntry> {
       final token = await api.getToken();
       final user = await api.getSavedUser();
       final role = user['role'] ?? '';
+      if (!mounted) return;
       setState(() {
         _authenticated = token != null && role == 'admin';
         _checking = false;
       });
     } catch (_) {
+      if (!mounted) return;
       setState(() {
         _authenticated = false;
         _checking = false;

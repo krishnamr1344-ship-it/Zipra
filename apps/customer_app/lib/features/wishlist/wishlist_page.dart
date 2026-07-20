@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/constants/theme.dart';
 import '../../core/models/cart_model.dart';
 import '../../core/api/api_service.dart';
+import '../auth/login_page.dart';
 import '../products/product_detail_page.dart';
 
 class WishlistPage extends StatefulWidget {
@@ -212,10 +213,16 @@ class _WishlistPageState extends State<WishlistPage> {
     );
   }
 
-  void _addToCart(String pid, String name, int price, int originalPrice, String unit, String imageUrl, int qty) {
+  Future<void> _addToCart(String pid, String name, int price, int originalPrice, String unit, String imageUrl, int qty) async {
+    final token = await _api.getToken();
+    if (token == null) {
+      if (!mounted) return;
+      await Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginPage()));
+      return;
+    }
     final existing = cartNotifier.items.where((e) => e.productId == pid && pid.isNotEmpty).firstOrNull;
     if (existing != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Already in cart'), behavior: SnackBarBehavior.floating),
       );
       return;
@@ -225,7 +232,7 @@ class _WishlistPageState extends State<WishlistPage> {
       icon: Icons.shopping_bag, color: AppColors.success,
       productId: pid, imageUrl: imageUrl, count: qty,
     ));
-    ScaffoldMessenger.of(context).showSnackBar(
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('$name added to cart'), behavior: SnackBarBehavior.floating, duration: const Duration(seconds: 1)),
     );
   }

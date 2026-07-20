@@ -6,12 +6,20 @@ import 'core/utils/ssl_overrides.dart';
 import 'features/auth/login_page.dart';
 import 'features/dashboard/shop_home_page.dart';
 
+final GlobalKey<NavigatorState> shopNavigatorKey = GlobalKey<NavigatorState>();
+
 void main() async {
   configureSslOverrides();
   WidgetsFlutterBinding.ensureInitialized();
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
     debugPrint('FATAL: ${details.exception}\n${details.stack}');
+  };
+  ShopApiService.onSessionExpired = () {
+    shopNavigatorKey.currentState?.pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (_) => false,
+    );
   };
   await AppInfo.load();
   runApp(const ZipraShopApp());
@@ -23,6 +31,7 @@ class ZipraShopApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: shopNavigatorKey,
       title: 'Zipra Shop',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(

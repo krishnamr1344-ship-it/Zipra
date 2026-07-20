@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/theme.dart';
 import '../../core/models/cart_model.dart';
+import '../../core/api/api_service.dart';
+import '../auth/login_page.dart';
 import '../payment/payment_page.dart';
 
 class CartPage extends StatelessWidget {
@@ -409,10 +411,16 @@ class CartPage extends StatelessWidget {
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => PaymentPage(total: subtotal)),
-                ),
+                onPressed: () async {
+                  final token = await ApiService().getToken();
+                  if (token == null) {
+                    if (!context.mounted) return;
+                    await Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginPage()));
+                    return;
+                  }
+                  if (!context.mounted) return;
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => PaymentPage(total: subtotal)));
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,

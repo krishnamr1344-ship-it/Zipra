@@ -395,17 +395,20 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               child: SizedBox(
                 height: 52,
                 child: ElevatedButton.icon(
-                  onPressed: () {
+                  onPressed: widget.stock <= 0 ? null : () {
                     widget.onAdd(_pendingQty);
                   },
-                  icon: Icon(_inCart ? Icons.check : Icons.add_shopping_cart, size: 20),
+                  icon: Icon(
+                    widget.stock <= 0 ? Icons.block : _inCart ? Icons.check : Icons.add_shopping_cart,
+                    size: 20,
+                  ),
                   label: Text(
-                    _inCart ? 'Added to Cart' : 'Add to Cart — ₹$totalPrice',
+                    widget.stock <= 0 ? 'Out of Stock' : _inCart ? 'Added to Cart' : 'Add to Cart — ₹$totalPrice',
                     style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _inCart ? Colors.green.shade100 : widget.color,
-                    foregroundColor: _inCart ? widget.color : Colors.white,
+                    backgroundColor: widget.stock <= 0 ? Colors.grey.shade300 : _inCart ? Colors.green.shade100 : widget.color,
+                    foregroundColor: widget.stock <= 0 ? Colors.grey.shade600 : _inCart ? widget.color : Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),

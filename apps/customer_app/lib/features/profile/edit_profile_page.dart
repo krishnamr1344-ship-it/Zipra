@@ -34,6 +34,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     try {
       await _api.put('/auth/profile', {
         'name': _nameCtl.text.trim(),
+        'email': _emailCtl.text.trim(),
         'phone': _phoneCtl.text.trim(),
       });
     } catch (e) {

@@ -449,7 +449,7 @@ class _ShopHomePageState extends State<ShopHomePage> {
                   icon: Icons.add_box_rounded,
                   title: 'Add Product',
                   gradient: AppColors.accentGradient,
-                   onTap: () => setState(() { _currentIndex = 2; }),
+                   onTap: () => setState(() { _currentIndex = 1; }),
                 ),
               ),
               const SizedBox(width: 12),
