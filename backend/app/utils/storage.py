@@ -3,7 +3,7 @@ from fastapi import UploadFile, HTTPException, status
 
 from app.core.config import GCS_BUCKET
 
-ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"}
 MAX_FILE_SIZE = 10 * 1024 * 1024
 
 _storage_client = None
@@ -23,11 +23,12 @@ def _get_client():
 async def upload_to_gcs(file: UploadFile, folder: str = "products") -> str:
     if file.size and file.size > MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail="File too large (max 10MB)")
-    if file.content_type and file.content_type not in ALLOWED_TYPES:
-        raise HTTPException(status_code=400, detail="Only JPG, PNG, WebP allowed")
+    ext = (".{}".format(file.filename.split(".")[-1])).lower() if file.filename else ""
+    if ext and ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="Only JPG, PNG, WebP, HEIC allowed")
 
-    ext = file.filename.split(".")[-1] if file.filename else "jpg"
-    blob_name = f"{folder}/{uuid.uuid4()}.{ext}"
+    use_ext = ext.lstrip(".") if ext else "jpg"
+    blob_name = f"{folder}/{uuid.uuid4()}.{use_ext}"
     content = await file.read()
 
     client = _get_client()
